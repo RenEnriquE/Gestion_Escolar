@@ -228,7 +228,8 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       return aa.localeCompare(ab, "es");
     });
 
-  const actsForTipo = (tipoId) => actividades.filter(a => a.tipos.includes(tipoId));
+  const actsForTipo = (tipoId) => actividades.filter(a => a.tipos.includes(tipoId) && ["Activa","Finalizada"].includes(a.estado));
+  const tiposConActividades = tipos.filter(t => actsForTipo(t.id).length > 0);
   const emptyForm = { nombres: "", apellidos: "", fechaNac: "", sexo: "M", apoderado: "", apoderado2: "", telefono: "", email: "", observaciones: "", socioAprendilandia: false };
   const openNew = () => { setForm(emptyForm); setEditAlumno(null); setModalOpen(true); };
   const openEdit = (al) => {
@@ -277,7 +278,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, fontWeight: 700 }}>Nombre</th>
-                {tipos.slice(0, 4).map(t => <th key={t.id} style={{ textAlign: "center", padding: "12px 10px", color: t.color, fontSize: 11, fontWeight: 700 }}>{t.nombre}</th>)}
+                {tiposConActividades.map(t => <th key={t.id} style={{ textAlign: "center", padding: "12px 10px", color: t.color, fontSize: 11, fontWeight: 700 }}>{t.nombre}</th>)}
                 <th style={{ textAlign: "center", padding: "12px 10px", color: PALETTE.muted, fontSize: 12 }}>Acciones</th>
               </tr>
             </thead>
@@ -289,7 +290,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
                       ? al.nombres + " " + al.apellidos
                       : al.nombre}
                   </td>
-                  {tipos.slice(0, 4).map(t => {
+                  {tiposConActividades.map(t => {
                     const acts = actsForTipo(t.id);
                     const done = acts.filter(a => participacion[a.id]?.[al.id]).length;
                     const total = acts.length;
@@ -913,7 +914,7 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
       </div>
 
       {/* Filtros ranking */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Ranking de alumnos</h3>
+      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Ranking de participación de alumnos</h3>
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         <Select value={tipoDetalle || ""} onChange={e => setTipoDetalle(e.target.value || null)} style={{ flex: "1 1 180px" }}>
           <option value="">General (todas las actividades)</option>
