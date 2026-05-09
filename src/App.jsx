@@ -553,12 +553,27 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   const [filterEstado, setFilterEstado] = useState("");
   const [filterAct, setFilterAct] = useState("");
   const [sortAp, setSortAp] = useState(false);
+  const [sortActId, setSortActId] = useState(null); // sort by participation in this activity
 
   const actsFiltradas = actividades
     .filter(a => !filterTipo || a.tipos.includes(filterTipo))
     .filter(a => !filterEstado || a.estado === filterEstado);
   const actsVisibles = actsFiltradas.filter(a => !filterAct || a.id === filterAct);
-  const alumnosOrdenados = [...alumnos].sort((a, b) => sortAp ? a.apoderado.localeCompare(b.apoderado) : a.nombre.localeCompare(b.nombre));
+
+  const alumnosOrdenados = [...alumnos].sort((a, b) => {
+    if (sortActId) {
+      const pa = participacion[sortActId]?.[a.id] ? 1 : 0;
+      const pb = participacion[sortActId]?.[b.id] ? 1 : 0;
+      if (pb !== pa) return pb - pa; // participantes primero
+    }
+    if (sortAp) return (a.apoderado || "").localeCompare(b.apoderado || "");
+    return a.nombre.localeCompare(b.nombre);
+  });
+
+  const handleSortAct = (actId) => {
+    setSortActId(prev => prev === actId ? null : actId);
+    setSortAp(false);
+  };
 
   const toggle = (actId, alumId) => {
     if (!isAdmin) return;
@@ -586,16 +601,17 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
           <option value="">Todas las actividades</option>
           {actsFiltradas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
         </Select>
-        <Btn variant={sortAp ? "primary" : "ghost"} onClick={() => setSortAp(s => !s)} small>
+        <Btn variant={sortAp ? "primary" : "ghost"} onClick={() => { setSortAp(s => !s); setSortActId(null); }} small>
           {sortAp ? "Por apoderado ✓" : "Ordenar por apoderado"}
         </Btn>
       </div>
-      {/* Resumen de filtros activos */}
-      {(filterTipo || filterEstado) && (
+      {/* Resumen de filtros / orden activo */}
+      {(filterTipo || filterEstado || sortActId) && (
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
           <span style={{ color: PALETTE.muted, fontSize: 12 }}>{actsVisibles.length} actividad(es) visible(s)</span>
           {filterTipo && <Badge text={tipos.find(t => t.id === filterTipo)?.nombre || ""} color={tipos.find(t => t.id === filterTipo)?.color || PALETTE.muted} />}
           {filterEstado && <Badge text={filterEstado} color={estadoColor[filterEstado] || PALETTE.muted} />}
+          {sortActId && <Badge text={"↕ " + (actsVisibles.find(a => a.id === sortActId)?.nombre || "")} color={PALETTE.accent} />}
         </div>
       )}
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
@@ -604,21 +620,35 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, position: "sticky", left: 0, background: PALETTE.card }}>Alumno</th>
-                {actsVisibles.map(a => (
-                  <th key={a.id} style={{ textAlign: "center", padding: "12px 10px", color: PALETTE.muted, fontSize: 11 }}>
-                    <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80 }}>{a.nombre}</div>
-                  </th>
-                ))}
+                {actsVisibles.map(a => {
+                  const isActSort = sortActId === a.id;
+                  const partCount = alumnos.filter(al => participacion[a.id]?.[al.id]).length;
+                  return (
+                    <th key={a.id} style={{ textAlign: "center", padding: "12px 10px", color: isActSort ? PALETTE.accent : PALETTE.muted, fontSize: 11 }}>
+                      <div
+                        onClick={() => handleSortAct(a.id)}
+                        title="Clic para ordenar por participación"
+                        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
+                      >
+                        <span style={{ fontWeight: isActSort ? 700 : 400 }}>{a.nombre}</span>
+                        <span style={{ fontSize: 10, color: isActSort ? PALETTE.accent : PALETTE.muted, marginTop: 2 }}>
+                          {isActSort ? "↕" : ""} {partCount}/{alumnos.length}
+                        </span>
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {alumnosOrdenados.map(al => (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombre}</td>
+                  <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
                   {actsVisibles.map(act => {
                     const partio = participacion[act.id]?.[al.id];
+                    const isActSort = sortActId === act.id;
                     return (
-                      <td key={act.id} style={{ textAlign: "center", padding: "12px 10px" }}>
+                      <td key={act.id} style={{ textAlign: "center", padding: "12px 10px", background: isActSort ? PALETTE.accent + "08" : "transparent" }}>
                         <button onClick={() => toggle(act.id, al.id)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: isAdmin ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                           <Icon name={partio ? "check" : "x"} size={14} color={partio ? PALETTE.green : PALETTE.red} />
                         </button>
