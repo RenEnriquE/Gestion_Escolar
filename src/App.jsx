@@ -217,10 +217,14 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
     })
     .sort((a, b) => {
       if (sortMode === "nombre") {
-        const getFirstName = n => n.split(" ").slice(-1)[0];
-        return getFirstName(a.nombre).localeCompare(getFirstName(b.nombre), "es");
+        const na = (a.nombres || a.nombre || "").split(" ")[0];
+        const nb = (b.nombres || b.nombre || "").split(" ")[0];
+        return na.localeCompare(nb, "es");
       }
-      return a.nombre.localeCompare(b.nombre, "es");
+      // por apellido
+      const aa = a.apellidos || a.nombre || "";
+      const ab = b.apellidos || b.nombre || "";
+      return aa.localeCompare(ab, "es");
     });
 
   const actsForTipo = (tipoId) => actividades.filter(a => a.tipos.includes(tipoId));
@@ -279,7 +283,11 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <tbody>
               {filtered.map(al => (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <td style={{ padding: "14px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600 }}>{al.nombre}</td>
+                  <td style={{ padding: "14px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600 }}>
+                    {al.nombres && al.apellidos
+                      ? al.nombres + " " + al.apellidos
+                      : al.nombre}
+                  </td>
                   {tipos.slice(0, 4).map(t => {
                     const acts = actsForTipo(t.id);
                     const done = acts.filter(a => participacion[a.id]?.[al.id]).length;
