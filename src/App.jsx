@@ -976,7 +976,7 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
 
 // ── Login ────────────────────────────────────────────────────────────────────
 const USERS_BASE = [
-  { usuario: "RenEnriquE", clave: "rene2026",    nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
+  { usuario: "RenEnriquE", clave: "rene26",      nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
   { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
   { usuario: "apoderados", clave: "gestion2026", nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
 ];
