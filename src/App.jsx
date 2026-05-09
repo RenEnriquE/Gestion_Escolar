@@ -156,7 +156,8 @@ const Badge = ({ text, color }) => (
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos }) => {
-  const totalPart = Object.values(participacion).reduce((s, v) => s + Object.values(v).filter(Boolean).length, 0);
+  const actsContablesIds = new Set(actividades.filter(a => ["Activa","Finalizada"].includes(a.estado)).map(a => a.id));
+  const totalPart = Object.entries(participacion).reduce((s, [actId, alums]) => actsContablesIds.has(actId) ? s + Object.values(alums).filter(Boolean).length : s, 0);
   const recentAct = [...actividades].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 4);
   return (
     <div>
@@ -314,8 +315,9 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
         </div>
       </div>
       {viewAlumno && (() => {
-        const totalActs = actividades.length;
-        const partCount = actividades.filter(act => participacion[act.id]?.[viewAlumno.id]).length;
+        const actsContables = actividades.filter(a => ["Activa", "Finalizada"].includes(a.estado));
+        const totalActs = actsContables.length;
+        const partCount = actsContables.filter(act => participacion[act.id]?.[viewAlumno.id]).length;
         // Group activities by tipo
         const actsByTipo = tipos.map(t => ({
           ...t,
@@ -507,7 +509,7 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
                   <td style={{ padding: "14px" }}><div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{tipos.filter(t => act.tipos.includes(t.id)).map(t => <Badge key={t.id} text={t.nombre} color={t.color} />)}</div></td>
                   <td style={{ padding: "14px", color: PALETTE.muted, fontSize: 13 }}>{act.costo}</td>
                   <td style={{ padding: "14px" }}><Badge text={act.recurrencia} color={act.recurrencia === "Anual" ? PALETTE.accent : PALETTE.purple} /></td>
-                  <td style={{ padding: "14px" }}><Badge text={act.estado} color={act.estado === "Activa" ? PALETTE.green : PALETTE.muted} /></td>
+                  <td style={{ padding: "14px" }}><Badge text={act.estado} color={act.estado === "Activa" ? PALETTE.green : act.estado === "Finalizada" ? PALETTE.accent : act.estado === "Suspendida" ? PALETTE.red : PALETTE.muted} /></td>
                   <td style={{ padding: "14px" }}>
                     {isAdmin && <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => openEdit(act)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="edit" size={15} /></button>
@@ -534,7 +536,7 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <Field label="Costo"><Select value={form.costo} onChange={e => setForm(f => ({ ...f, costo: e.target.value }))}><option>Gratuita</option><option>Con costo</option></Select></Field>
             <Field label="Recurrencia"><Select value={form.recurrencia} onChange={e => setForm(f => ({ ...f, recurrencia: e.target.value }))}><option>Anual</option><option>Mensual</option></Select></Field>
-            <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option></Select></Field>
+            <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option><option>Suspendida</option></Select></Field>
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
@@ -808,15 +810,17 @@ const TiposActividad = ({ tipos, setTipos, isAdmin }) => {
 };
 
 // ── Estadísticas ──────────────────────────────────────────────────────────────
+const ESTADOS_CONTABLES = ["Activa", "Finalizada"];
 const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
-  const totalActs = actividades.length;
+  const actsContables = actividades.filter(a => ESTADOS_CONTABLES.includes(a.estado));
+  const totalActs = actsContables.length;
   const byTipo = tipos.map(t => {
-    const acts = actividades.filter(a => a.tipos.includes(t.id));
+    const acts = actsContables.filter(a => a.tipos.includes(t.id));
     const totalPart = acts.reduce((s, act) => s + alumnos.filter(al => participacion[act.id]?.[al.id]).length, 0);
     return { ...t, acts: acts.length, pct: pct(totalPart, acts.length * alumnos.length) };
   });
   const topAlumnos = alumnos.map(al => {
-    const done = actividades.filter(act => participacion[act.id]?.[al.id]).length;
+    const done = actsContables.filter(act => participacion[act.id]?.[al.id]).length;
     return { ...al, done, pct: pct(done, totalActs) };
   }).sort((a, b) => b.done - a.done).slice(0, 5);
 
