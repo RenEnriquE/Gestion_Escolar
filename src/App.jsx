@@ -831,31 +831,77 @@ const TiposActividad = ({ tipos, setTipos, isAdmin }) => {
 
 // ── Estadísticas ──────────────────────────────────────────────────────────────
 const ESTADOS_CONTABLES = ["Activa", "Finalizada"];
+
+const RankingTable = ({ lista, totalActs, label, color, bottom }) => (
+  <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 24 }}>
+    <div style={{ padding: "14px 20px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ fontSize: 16 }}>{bottom ? "📉" : "📈"}</span>
+      <span style={{ color: PALETTE.text, fontWeight: 700, fontSize: 14 }}>{label}</span>
+    </div>
+    {lista.map((al, i) => (
+      <div key={al.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 20px", borderBottom: i < lista.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ color: PALETTE.muted, fontWeight: 800, fontSize: 15, width: 24 }}>#{i + 1}</span>
+          <span style={{ color: PALETTE.text, fontSize: 13 }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: color || pctColor(al.pct), fontWeight: 700, fontSize: 13 }}>{al.done}/{totalActs}</span>
+          <span style={{ color: color || pctColor(al.pct), fontSize: 12 }}>({al.pct}%)</span>
+          <div style={{ background: PALETTE.border, borderRadius: 4, height: 6, width: 70 }}>
+            <div style={{ background: color || pctColor(al.pct), width: al.pct + "%", height: "100%", borderRadius: 4 }} />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
+  const [tipoDetalle, setTipoDetalle] = useState(null); // null = general, tipoId = por tipo
+  const [topN, setTopN] = useState(5);
+
   const actsContables = actividades.filter(a => ESTADOS_CONTABLES.includes(a.estado));
-  const totalActs = actsContables.length;
+
+  // General ranking
+  const rankingGeneral = alumnos.map(al => {
+    const done = actsContables.filter(act => participacion[act.id]?.[al.id]).length;
+    return { ...al, done, pct: pct(done, actsContables.length) };
+  }).sort((a, b) => b.done - a.done);
+
+  // By tipo
   const byTipo = tipos.map(t => {
     const acts = actsContables.filter(a => a.tipos.includes(t.id));
     const totalPart = acts.reduce((s, act) => s + alumnos.filter(al => participacion[act.id]?.[al.id]).length, 0);
     return { ...t, acts: acts.length, pct: pct(totalPart, acts.length * alumnos.length) };
   });
-  const topAlumnos = alumnos.map(al => {
-    const done = actsContables.filter(act => participacion[act.id]?.[al.id]).length;
-    return { ...al, done, pct: pct(done, totalActs) };
-  }).sort((a, b) => b.done - a.done).slice(0, 5);
+
+  // Ranking by selected tipo
+  const tipoActual = tipos.find(t => t.id === tipoDetalle);
+  const actsDelTipo = tipoActual ? actsContables.filter(a => a.tipos.includes(tipoDetalle)) : actsContables;
+  const totalActsTipo = actsDelTipo.length;
+  const rankingTipo = alumnos.map(al => {
+    const done = actsDelTipo.filter(act => participacion[act.id]?.[al.id]).length;
+    return { ...al, done, pct: pct(done, totalActsTipo) };
+  }).sort((a, b) => b.done - a.done);
+
+  const topLista = rankingTipo.slice(0, topN);
+  const bottomLista = [...rankingTipo].reverse().slice(0, topN);
+  const totalActsActual = totalActsTipo;
 
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>Estadísticas</h1>
-      <h3 style={{ color: PALETTE.muted, fontSize: 13, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación por tipo</h3>
+
+      {/* Participación global por tipo */}
+      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación por tipo de actividad</h3>
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20, marginBottom: 24 }}>
-        {byTipo.map(t => (
+        {byTipo.filter(t => t.acts > 0).map(t => (
           <div key={t.id} style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.color }} />
                 <span style={{ color: PALETTE.text, fontSize: 13 }}>{t.nombre}</span>
-                <span style={{ color: PALETTE.muted, fontSize: 11 }}>({t.acts} acts)</span>
+                <span style={{ color: PALETTE.muted, fontSize: 11 }}>({t.acts} actividades)</span>
               </div>
               <span style={{ color: pctColor(t.pct), fontWeight: 700, fontSize: 13 }}>{t.pct}%</span>
             </div>
@@ -865,23 +911,36 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
           </div>
         ))}
       </div>
-      <h3 style={{ color: PALETTE.muted, fontSize: 13, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Top 5 alumnos más participativos</h3>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-        {topAlumnos.map((al, i) => (
-          <div key={al.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: i < 4 ? `1px solid ${PALETTE.border}` : "none" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ color: PALETTE.muted, fontWeight: 800, fontSize: 16, width: 24 }}>#{i + 1}</span>
-              <span style={{ color: PALETTE.text, fontSize: 13 }}>{al.nombre}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ color: pctColor(al.pct), fontWeight: 700 }}>{al.done}/{totalActs}</span>
-              <div style={{ background: PALETTE.border, borderRadius: 4, height: 6, width: 80 }}>
-                <div style={{ background: pctColor(al.pct), width: al.pct + "%", height: "100%", borderRadius: 4 }} />
-              </div>
-            </div>
-          </div>
-        ))}
+
+      {/* Filtros ranking */}
+      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Ranking de alumnos</h3>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        <Select value={tipoDetalle || ""} onChange={e => setTipoDetalle(e.target.value || null)} style={{ flex: "1 1 180px" }}>
+          <option value="">General (todas las actividades)</option>
+          {tipos.filter(t => actsContables.some(a => a.tipos.includes(t.id))).map(t => (
+            <option key={t.id} value={t.id}>{t.nombre}</option>
+          ))}
+        </Select>
+        <Select value={topN} onChange={e => setTopN(Number(e.target.value))} style={{ flex: "0 0 120px" }}>
+          <option value={5}>Top 5</option>
+          <option value={10}>Top 10</option>
+          <option value={alumnos.length}>Todos</option>
+        </Select>
       </div>
+
+      {/* Indicador filtro activo */}
+      {tipoActual && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Badge text={tipoActual.nombre} color={tipoActual.color} />
+          <span style={{ color: PALETTE.muted, fontSize: 12 }}>{totalActsTipo} actividad(es) contabilizada(s)</span>
+        </div>
+      )}
+
+      {/* Más participativos */}
+      <RankingTable lista={topLista} totalActs={totalActsActual} label={`Más participativos${tipoActual ? " — " + tipoActual.nombre : ""}`} bottom={false} />
+
+      {/* Menos participativos */}
+      <RankingTable lista={bottomLista} totalActs={totalActsActual} label={`Menos participativos${tipoActual ? " — " + tipoActual.nombre : ""}`} color={PALETTE.red} bottom={true} />
     </div>
   );
 };
