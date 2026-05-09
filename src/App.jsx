@@ -812,10 +812,15 @@ const USERS_BASE = [
   { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
   { usuario: "apoderados", clave: "gestion2026", nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
 ];
-// Merge base users with any saved password overrides
+// Merge base users with any saved username/password overrides
 const getUsers = () => {
   const saved = S.get("ge_claves") || {};
-  return USERS_BASE.map(u => ({ ...u, clave: saved[u.usuario] || u.clave }));
+  return USERS_BASE.map(u => ({
+    ...u,
+    usuario: saved[u.usuario + "_alias"] || u.usuario,
+    clave: saved[u.usuario] || u.clave,
+    _baseUsuario: u.usuario, // keep original key for lookups
+  }));
 };
 
 const NAV_ITEMS = [
@@ -873,16 +878,24 @@ const Usuarios = ({ visibility, setVisibility }) => {
   const [claveError, setClaveError] = useState("");
   const [claveOk, setClaveOk] = useState("");
 
-  const openEditClave = (u) => { setEditingUser(u); setClaveForm({ nueva: "", confirmar: "" }); setClaveError(""); setClaveOk(""); };
+  const openEditClave = (u) => { setEditingUser(u); setClaveForm({ usuario: u.usuario, nueva: "", confirmar: "" }); setClaveError(""); setClaveOk(""); };
 
   const guardarClave = () => {
-    if (claveForm.nueva.length < 6) { setClaveError("La clave debe tener al menos 6 caracteres"); return; }
+    if (!claveForm.usuario.trim()) { setClaveError("El usuario no puede estar vacío"); return; }
+    if (claveForm.nueva && claveForm.nueva.length < 6) { setClaveError("La clave debe tener al menos 6 caracteres"); return; }
     if (claveForm.nueva !== claveForm.confirmar) { setClaveError("Las claves no coinciden"); return; }
     const saved = S.get("ge_claves") || {};
-    saved[editingUser.usuario] = claveForm.nueva;
+    // Save new username if changed
+    if (claveForm.usuario.trim() !== editingUser.usuario) {
+      saved[editingUser.usuario + "_alias"] = claveForm.usuario.trim();
+    }
+    // Save new password if provided
+    if (claveForm.nueva) {
+      saved[editingUser.usuario] = claveForm.nueva;
+    }
     S.set("ge_claves", saved);
     setUsers(getUsers());
-    setClaveOk("¡Clave actualizada!");
+    setClaveOk("¡Guardado!");
     setClaveError("");
     setTimeout(() => { setEditingUser(null); setClaveOk(""); }, 1500);
   };
@@ -893,18 +906,24 @@ const Usuarios = ({ visibility, setVisibility }) => {
 
       {/* Modal cambio de clave */}
       {editingUser && (
-        <Modal title={`Cambiar clave — @${editingUser.usuario}`} onClose={() => setEditingUser(null)}>
-          <Field label="Nueva clave">
+        <Modal title={`Editar cuenta — ${editingUser.nombre}`} onClose={() => setEditingUser(null)}>
+          <Field label="Nombre de usuario">
+            <Input value={claveForm.usuario} onChange={e => setClaveForm(f => ({ ...f, usuario: e.target.value }))} placeholder="usuario" />
+          </Field>
+          <div style={{ borderTop: `1px solid ${PALETTE.border}`, margin: "16px 0 16px", paddingTop: 4 }}>
+            <div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 12 }}>CAMBIAR CONTRASEÑA (dejar en blanco para no cambiar)</div>
+          </div>
+          <Field label="Nueva contraseña">
             <Input type="password" value={claveForm.nueva} onChange={e => setClaveForm(f => ({ ...f, nueva: e.target.value }))} placeholder="Mínimo 6 caracteres" />
           </Field>
-          <Field label="Confirmar clave">
-            <Input type="password" value={claveForm.confirmar} onChange={e => setClaveForm(f => ({ ...f, confirmar: e.target.value }))} placeholder="Repite la clave" onKeyDown={e => e.key === "Enter" && guardarClave()} />
+          <Field label="Confirmar contraseña">
+            <Input type="password" value={claveForm.confirmar} onChange={e => setClaveForm(f => ({ ...f, confirmar: e.target.value }))} placeholder="Repite la contraseña" onKeyDown={e => e.key === "Enter" && guardarClave()} />
           </Field>
           {claveError && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{claveError}</div>}
           {claveOk && <div style={{ color: PALETTE.green, fontSize: 13, marginBottom: 12 }}>{claveOk}</div>}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setEditingUser(null)}>Cancelar</Btn>
-            <Btn onClick={guardarClave}>Guardar clave</Btn>
+            <Btn onClick={guardarClave}>Guardar</Btn>
           </div>
         </Modal>
       )}
