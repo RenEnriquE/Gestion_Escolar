@@ -13,8 +13,8 @@ const S = {
 // ── Initial seed data ────────────────────────────────────────────────────────
 // helper: build alumno record
 const al = (id, nombres, apellidos, fechaNac, sexo, apoderado, apoderado2="", telefono="", email="", observaciones="", socioAprendilandia=false) => ({
-  id, nombres, apellidos, fechaNac, sexo, apoderado, apoderado2, telefono, email, observaciones, socioAprendilandia,
-  get nombre() { return (apellidos + " " + nombres).toUpperCase(); }
+  id, nombres, apellidos, nombre: (apellidos + " " + nombres).toUpperCase(),
+  fechaNac, sexo, apoderado, apoderado2, telefono, email, observaciones, socioAprendilandia,
 });
 
 const SEED_ALUMNOS = [
@@ -227,13 +227,21 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
   const emptyForm = { nombres: "", apellidos: "", fechaNac: "", sexo: "M", apoderado: "", apoderado2: "", telefono: "", email: "", observaciones: "", socioAprendilandia: false };
   const openNew = () => { setForm(emptyForm); setEditAlumno(null); setModalOpen(true); };
   const openEdit = (al) => {
-    setForm({ nombres: al.nombres || "", apellidos: al.apellidos || "", fechaNac: al.fechaNac || "", sexo: al.sexo || "M", apoderado: al.apoderado || "", apoderado2: al.apoderado2 || "", telefono: al.telefono || "", email: al.email || "", observaciones: al.observaciones || "", socioAprendilandia: al.socioAprendilandia || false });
+    // If nombres/apellidos missing (old localStorage data), split from nombre
+    let nombres = al.nombres || "";
+    let apellidos = al.apellidos || "";
+    if (!nombres && al.nombre) {
+      const parts = al.nombre.trim().split(" ");
+      nombres = parts.slice(-1)[0];
+      apellidos = parts.slice(0, -1).join(" ");
+    }
+    setForm({ nombres, apellidos, fechaNac: al.fechaNac || "", sexo: al.sexo || "M", apoderado: al.apoderado || "", apoderado2: al.apoderado2 || "", telefono: al.telefono || "", email: al.email || "", observaciones: al.observaciones || "", socioAprendilandia: al.socioAprendilandia || false });
     setEditAlumno(al); setModalOpen(true);
   };
   const save = () => {
     if (!form.nombres.trim() || !form.apellidos.trim()) return;
     const nombreCompleto = (form.apellidos.trim() + " " + form.nombres.trim()).toUpperCase();
-    const data = { ...form, nombre: nombreCompleto };
+    const data = { ...form, nombre: nombreCompleto, nombres: form.nombres.trim().toUpperCase(), apellidos: form.apellidos.trim().toUpperCase() };
     if (editAlumno) setAlumnos(prev => prev.map(a => a.id === editAlumno.id ? { ...a, ...data } : a));
     else setAlumnos(prev => [...prev, { ...data, id: "a" + Date.now() }]);
     setModalOpen(false);
