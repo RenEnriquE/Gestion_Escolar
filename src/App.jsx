@@ -470,10 +470,10 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
 const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editAct, setEditAct] = useState(null);
-  const [form, setForm] = useState({ nombre: "", fecha: "", tipos: [], costo: "Gratuita", recurrencia: "Anual", estado: "Activa" });
+  const [form, setForm] = useState({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa" });
 
-  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], costo: "Gratuita", recurrencia: "Anual", estado: "Activa" }); setEditAct(null); setModalOpen(true); };
-  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, costo: a.costo, recurrencia: a.recurrencia, estado: a.estado }); setEditAct(a); setModalOpen(true); };
+  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa" }); setEditAct(null); setModalOpen(true); };
+  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado }); setEditAct(a); setModalOpen(true); };
   const del = (id) => { if (window.confirm("¿Eliminar actividad?")) setActividades(prev => prev.filter(a => a.id !== id)); };
   const toggleTipo = (tid) => setForm(f => ({ ...f, tipos: f.tipos.includes(tid) ? f.tipos.filter(x => x !== tid) : [...f.tipos, tid] }));
   const save = () => {
@@ -497,7 +497,7 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                {["Nombre", "Fecha", "Tipo(s)", "Costo", "Recurrencia", "Estado", ""].map(h => (
+                {["Nombre", "Fecha", "Tipo(s)", "Recurrencia", "Estado", ""].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "12px 14px", color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
@@ -508,7 +508,6 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
                   <td style={{ padding: "14px", color: PALETTE.text, fontWeight: 600, fontSize: 13 }}>{act.nombre}</td>
                   <td style={{ padding: "14px", color: PALETTE.muted, fontSize: 13, whiteSpace: "nowrap" }}>{act.fecha}</td>
                   <td style={{ padding: "14px" }}><div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{tipos.filter(t => act.tipos.includes(t.id)).map(t => <Badge key={t.id} text={t.nombre} color={t.color} />)}</div></td>
-                  <td style={{ padding: "14px", color: PALETTE.muted, fontSize: 13 }}>{act.costo}</td>
                   <td style={{ padding: "14px" }}><Badge text={act.recurrencia} color={act.recurrencia === "Anual" ? PALETTE.accent : PALETTE.purple} /></td>
                   <td style={{ padding: "14px" }}><Badge text={act.estado} color={act.estado === "Activa" ? PALETTE.green : act.estado === "Finalizada" ? PALETTE.accent : act.estado === "Suspendida" ? PALETTE.red : PALETTE.muted} /></td>
                   <td style={{ padding: "14px" }}>
@@ -535,7 +534,6 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
             </div>
           </Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <Field label="Costo"><Select value={form.costo} onChange={e => setForm(f => ({ ...f, costo: e.target.value }))}><option>Gratuita</option><option>Con costo</option></Select></Field>
             <Field label="Recurrencia"><Select value={form.recurrencia} onChange={e => setForm(f => ({ ...f, recurrencia: e.target.value }))}><option>Anual</option><option>Mensual</option></Select></Field>
             <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option><option>Suspendida</option></Select></Field>
           </div>
