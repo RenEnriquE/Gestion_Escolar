@@ -313,44 +313,100 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           </table>
         </div>
       </div>
-      {viewAlumno && (
-        <Modal title={(viewAlumno.apellidos || "") + " " + (viewAlumno.nombres || viewAlumno.nombre || "")} onClose={() => setViewAlumno(null)} wide>
-          {/* Info personal */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-            <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>FECHA NAC.</div><div style={{ color: PALETTE.text }}>{viewAlumno.fechaNac || "—"}</div></div>
-            <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>SEXO</div><div style={{ color: PALETTE.text }}>{viewAlumno.sexo === "M" ? "Masculino" : "Femenino"}</div></div>
-            <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>APODERADO PRINCIPAL</div><div style={{ color: PALETTE.text }}>{viewAlumno.apoderado || "—"}</div></div>
-            <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>SEGUNDO APODERADO</div><div style={{ color: PALETTE.text }}>{viewAlumno.apoderado2 || "—"}</div></div>
-            {viewAlumno.telefono && <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>TELÉFONO</div><div style={{ color: PALETTE.text }}>{viewAlumno.telefono}</div></div>}
-            {viewAlumno.email && <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>EMAIL</div><div style={{ color: PALETTE.text }}>{viewAlumno.email}</div></div>}
-            <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: viewAlumno.socioAprendilandia ? PALETTE.green : PALETTE.border }} />
-              <span style={{ color: viewAlumno.socioAprendilandia ? PALETTE.green : PALETTE.muted, fontSize: 13 }}>
-                {viewAlumno.socioAprendilandia ? "Socio Aprendilandia" : "No es socio Aprendilandia"}
-              </span>
+      {viewAlumno && (() => {
+        const totalActs = actividades.length;
+        const partCount = actividades.filter(act => participacion[act.id]?.[viewAlumno.id]).length;
+        // Group activities by tipo
+        const actsByTipo = tipos.map(t => ({
+          ...t,
+          acts: actividades.filter(act => act.tipos.includes(t.id))
+        })).filter(t => t.acts.length > 0);
+        // Activities with no tipo
+        const sinTipo = actividades.filter(act => act.tipos.length === 0);
+
+        return (
+        <Modal title="Ficha del Alumno" onClose={() => setViewAlumno(null)} wide>
+          {/* Nombre */}
+          <div style={{ marginBottom: 4 }}>
+            <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>
+              {viewAlumno.apellidos && viewAlumno.nombres
+                ? viewAlumno.apellidos + " " + viewAlumno.nombres
+                : viewAlumno.nombre}
             </div>
-            {viewAlumno.observaciones && (
-              <div style={{ gridColumn: "1/-1" }}>
-                <div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>OBSERVACIONES</div>
-                <div style={{ color: PALETTE.text, fontSize: 13, background: PALETTE.bg, borderRadius: 8, padding: "8px 12px" }}>{viewAlumno.observaciones}</div>
-              </div>
-            )}
           </div>
-          <h4 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación en actividades</h4>
-          {actividades.map(act => {
-            const partio = participacion[act.id]?.[viewAlumno.id];
-            return (
-              <div key={act.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${PALETTE.border}` }}>
-                <div>
-                  <div style={{ color: PALETTE.text, fontSize: 13 }}>{act.nombre}</div>
-                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>{tipos.filter(t => act.tipos.includes(t.id)).map(t => <Badge key={t.id} text={t.nombre} color={t.color} />)}</div>
-                </div>
-                <Icon name={partio ? "check" : "x"} size={20} color={partio ? PALETTE.green : PALETTE.red} />
+          <div style={{ marginBottom: 16 }}>
+            <Badge text={viewAlumno.sexo === "M" ? "Masculino" : "Femenino"} color={viewAlumno.sexo === "M" ? PALETTE.accent : PALETTE.purple} />
+            {viewAlumno.socioAprendilandia && <span style={{ marginLeft: 8 }}><Badge text="Socio Aprendilandia" color={PALETTE.green} /></span>}
+          </div>
+
+          {/* Info grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px", marginBottom: 20, fontSize: 13 }}>
+            <div><span style={{ color: PALETTE.muted }}>Nacimiento: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.fechaNac || "—"}</span></div>
+            <div><span style={{ color: PALETTE.muted }}>Curso: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>3ro C</span></div>
+            <div><span style={{ color: PALETTE.muted }}>Apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado || "—"}</span></div>
+            <div><span style={{ color: PALETTE.muted }}>Teléfono: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.telefono || "—"}</span></div>
+            {viewAlumno.apoderado2 && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>2do apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado2}</span></div>}
+            {viewAlumno.email && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Email: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.email}</span></div>}
+            {viewAlumno.observaciones && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Obs: </span><span style={{ color: PALETTE.text }}>{viewAlumno.observaciones}</span></div>}
+          </div>
+
+          {/* Stats bar */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+            {[
+              { label: "Participación", value: `${partCount}/${totalActs}`, color: PALETTE.accent },
+              { label: "% Asistencia", value: totalActs > 0 ? Math.round(partCount/totalActs*100) + "%" : "0%", color: PALETTE.green },
+              { label: "Encuestas resp.", value: Object.values(viewAlumno.id ? {} : {}).length + "—", color: PALETTE.purple },
+            ].map(s => (
+              <div key={s.label} style={{ background: PALETTE.bg, borderRadius: 12, padding: "14px 12px", textAlign: "center", border: `1px solid ${PALETTE.border}` }}>
+                <div style={{ color: s.color, fontWeight: 800, fontSize: 22 }}>{s.value}</div>
+                <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>{s.label}</div>
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Activities by tipo */}
+          <div style={{ color: PALETTE.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Actividades</div>
+          {actsByTipo.map(t => (
+            <div key={t.id} style={{ marginBottom: 20 }}>
+              <div style={{ color: t.color, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                {t.nombre} ({t.acts.length})
+              </div>
+              {t.acts.map(act => {
+                const partio = participacion[act.id]?.[viewAlumno.id];
+                return (
+                  <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, marginBottom: 4, background: partio ? PALETTE.green + "11" : PALETTE.red + "0a" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: partio ? PALETTE.green + "33" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon name={partio ? "check" : "x"} size={11} color={partio ? PALETTE.green : PALETTE.red} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ color: PALETTE.text, fontSize: 13 }}>{act.nombre}</span>
+                    </div>
+                    <span style={{ color: PALETTE.muted, fontSize: 11 }}>{act.fecha}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {sinTipo.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ color: PALETTE.muted, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Sin tipo ({sinTipo.length})</div>
+              {sinTipo.map(act => {
+                const partio = participacion[act.id]?.[viewAlumno.id];
+                return (
+                  <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, marginBottom: 4, background: partio ? PALETTE.green + "11" : PALETTE.red + "0a" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: partio ? PALETTE.green + "33" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Icon name={partio ? "check" : "x"} size={11} color={partio ? PALETTE.green : PALETTE.red} />
+                    </div>
+                    <span style={{ color: PALETTE.text, fontSize: 13, flex: 1 }}>{act.nombre}</span>
+                    <span style={{ color: PALETTE.muted, fontSize: 11 }}>{act.fecha}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Modal>
-      )}
+        );
+      })()}
       {modalOpen && (
         <Modal title={editAlumno ? "Editar Alumno" : "Nuevo Alumno"} onClose={() => setModalOpen(false)} wide>
           {/* Nombres y Apellidos */}
