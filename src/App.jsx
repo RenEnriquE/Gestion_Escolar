@@ -551,10 +551,13 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
 // ── Participación ─────────────────────────────────────────────────────────────
 const Participacion = ({ alumnos, actividades, participacion, setParticipacion, tipos, isAdmin }) => {
   const [filterTipo, setFilterTipo] = useState("");
+  const [filterEstado, setFilterEstado] = useState("");
   const [filterAct, setFilterAct] = useState("");
   const [sortAp, setSortAp] = useState(false);
 
-  const actsFiltradas = actividades.filter(a => !filterTipo || a.tipos.includes(filterTipo));
+  const actsFiltradas = actividades
+    .filter(a => !filterTipo || a.tipos.includes(filterTipo))
+    .filter(a => !filterEstado || a.estado === filterEstado);
   const actsVisibles = actsFiltradas.filter(a => !filterAct || a.id === filterAct);
   const alumnosOrdenados = [...alumnos].sort((a, b) => sortAp ? a.apoderado.localeCompare(b.apoderado) : a.nombre.localeCompare(b.nombre));
 
@@ -563,13 +566,22 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     setParticipacion(prev => ({ ...prev, [actId]: { ...prev[actId], [alumId]: !prev[actId]?.[alumId] } }));
   };
 
+  const estadoColor = { "Activa": PALETTE.green, "Finalizada": PALETTE.accent, "Suspendida": PALETTE.red, "No activada": PALETTE.muted };
+
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Participación</h1>
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <Select value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setFilterAct(""); }} style={{ flex: "1 1 160px" }}>
+        <Select value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setFilterAct(""); }} style={{ flex: "1 1 150px" }}>
           <option value="">Todos los tipos</option>
           {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+        </Select>
+        <Select value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setFilterAct(""); }} style={{ flex: "1 1 150px" }}>
+          <option value="">Todos los estados</option>
+          <option value="Activa">Activa</option>
+          <option value="Finalizada">Finalizada</option>
+          <option value="Suspendida">Suspendida</option>
+          <option value="No activada">No activada</option>
         </Select>
         <Select value={filterAct} onChange={e => setFilterAct(e.target.value)} style={{ flex: "1 1 200px" }}>
           <option value="">Todas las actividades</option>
@@ -579,6 +591,14 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
           {sortAp ? "Por apoderado ✓" : "Ordenar por apoderado"}
         </Btn>
       </div>
+      {/* Resumen de filtros activos */}
+      {(filterTipo || filterEstado) && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ color: PALETTE.muted, fontSize: 12 }}>{actsVisibles.length} actividad(es) visible(s)</span>
+          {filterTipo && <Badge text={tipos.find(t => t.id === filterTipo)?.nombre || ""} color={tipos.find(t => t.id === filterTipo)?.color || PALETTE.muted} />}
+          {filterEstado && <Badge text={filterEstado} color={estadoColor[filterEstado] || PALETTE.muted} />}
+        </div>
+      )}
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
