@@ -978,7 +978,7 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
 const USERS_BASE = [
   { usuario: "RenEnriquE", clave: "rene26",      nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
   { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
-  { usuario: "apoderados", clave: "gestion2026", nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
+  { usuario: "Tercero",    clave: "gestion26",   nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
 ];
 // Merge base users with any saved username/password overrides
 const getUsers = () => {
@@ -1029,8 +1029,8 @@ const Login = ({ onLogin }) => {
             <div style={{ color: PALETTE.muted, fontSize: 12 }}>3ro Básico C · L. M. R. Prado</div>
           </div>
         </div>
-        <Field label="Usuario"><Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="tu usuario" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
-        <Field label="Contraseña"><Input type="password" value={clave} onChange={e => setClave(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
+        <Field label="Usuario"><Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="tu usuario" autoCapitalize="none" autoCorrect="off" autoComplete="username" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
+        <Field label="Contraseña"><Input type="password" value={clave} onChange={e => setClave(e.target.value)} placeholder="••••••••" autoCapitalize="none" autoCorrect="off" autoComplete="current-password" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
         {error && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
         <Btn onClick={intentar} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>Ingresar</Btn>
       </div>
