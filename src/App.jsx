@@ -807,11 +807,16 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
 };
 
 // ── Login ────────────────────────────────────────────────────────────────────
-const USERS = [
-  { usuario: "RenEnriquE", clave: "rene2026",    nombre: "René Lillo",           rol: "admin",      color: "#3b82f6" },
-  { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",       rol: "admin",      color: "#8b5cf6" },
-  { usuario: "apoderados", clave: "gestion2026", nombre: "Apoderados 3ro C",     rol: "viewer",     color: "#10b981" },
+const USERS_BASE = [
+  { usuario: "RenEnriquE", clave: "rene2026",    nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
+  { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
+  { usuario: "apoderados", clave: "gestion2026", nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
 ];
+// Merge base users with any saved password overrides
+const getUsers = () => {
+  const saved = S.get("ge_claves") || {};
+  return USERS_BASE.map(u => ({ ...u, clave: saved[u.usuario] || u.clave }));
+};
 
 const NAV_ITEMS = [
   { id: "dashboard",    label: "Dashboard",          icon: "dashboard"     },
@@ -836,7 +841,7 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState("");
 
   const intentar = () => {
-    const u = USERS.find(u => u.usuario === usuario.trim() && u.clave === clave);
+    const u = getUsers().find(u => u.usuario === usuario.trim() && u.clave === clave);
     if (u) { setError(""); onLogin(u); }
     else setError("Usuario o clave incorrectos");
   };
@@ -862,15 +867,53 @@ const Login = ({ onLogin }) => {
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
 const Usuarios = ({ visibility, setVisibility }) => {
+  const [users, setUsers] = useState(getUsers());
+  const [editingUser, setEditingUser] = useState(null);
+  const [claveForm, setClaveForm] = useState({ nueva: "", confirmar: "" });
+  const [claveError, setClaveError] = useState("");
+  const [claveOk, setClaveOk] = useState("");
+
+  const openEditClave = (u) => { setEditingUser(u); setClaveForm({ nueva: "", confirmar: "" }); setClaveError(""); setClaveOk(""); };
+
+  const guardarClave = () => {
+    if (claveForm.nueva.length < 6) { setClaveError("La clave debe tener al menos 6 caracteres"); return; }
+    if (claveForm.nueva !== claveForm.confirmar) { setClaveError("Las claves no coinciden"); return; }
+    const saved = S.get("ge_claves") || {};
+    saved[editingUser.usuario] = claveForm.nueva;
+    S.set("ge_claves", saved);
+    setUsers(getUsers());
+    setClaveOk("¡Clave actualizada!");
+    setClaveError("");
+    setTimeout(() => { setEditingUser(null); setClaveOk(""); }, 1500);
+  };
+
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Usuarios</h1>
 
+      {/* Modal cambio de clave */}
+      {editingUser && (
+        <Modal title={`Cambiar clave — @${editingUser.usuario}`} onClose={() => setEditingUser(null)}>
+          <Field label="Nueva clave">
+            <Input type="password" value={claveForm.nueva} onChange={e => setClaveForm(f => ({ ...f, nueva: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+          </Field>
+          <Field label="Confirmar clave">
+            <Input type="password" value={claveForm.confirmar} onChange={e => setClaveForm(f => ({ ...f, confirmar: e.target.value }))} placeholder="Repite la clave" onKeyDown={e => e.key === "Enter" && guardarClave()} />
+          </Field>
+          {claveError && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{claveError}</div>}
+          {claveOk && <div style={{ color: PALETTE.green, fontSize: 13, marginBottom: 12 }}>{claveOk}</div>}
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <Btn variant="ghost" onClick={() => setEditingUser(null)}>Cancelar</Btn>
+            <Btn onClick={guardarClave}>Guardar clave</Btn>
+          </div>
+        </Modal>
+      )}
+
       {/* Cuentas */}
       <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Cuentas</h3>
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 28 }}>
-        {USERS.map((u, i) => (
-          <div key={u.usuario} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i < USERS.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
+        {users.map((u, i) => (
+          <div key={u.usuario} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i < users.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.color + "33", border: `2px solid ${u.color}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ color: u.color, fontWeight: 800, fontSize: 16 }}>{u.usuario[0].toUpperCase()}</span>
@@ -880,7 +923,12 @@ const Usuarios = ({ visibility, setVisibility }) => {
                 <div style={{ color: PALETTE.muted, fontSize: 12 }}>@{u.usuario}</div>
               </div>
             </div>
-            <Badge text={u.rol === "admin" ? "Administrador" : "Solo vista"} color={u.rol === "admin" ? PALETTE.accent : PALETTE.green} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Badge text={u.rol === "admin" ? "Administrador" : "Solo vista"} color={u.rol === "admin" ? PALETTE.accent : PALETTE.green} />
+              <button onClick={() => openEditClave(u)} title="Cambiar clave" style={{ background: PALETTE.accent + "22", border: `1px solid ${PALETTE.accent}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.accent, padding: "5px 10px", fontSize: 11, fontWeight: 600 }}>
+                🔑 Clave
+              </button>
+            </div>
           </div>
         ))}
       </div>
