@@ -160,7 +160,7 @@ const Badge = ({ text, color }) => (
 const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNavigate }) => {
   const actsContablesIds = new Set(actividades.filter(a => ["Activa","Finalizada"].includes(a.estado)).map(a => a.id));
   const totalPart = Object.entries(participacion).reduce((s, [actId, alums]) => actsContablesIds.has(actId) ? s + Object.values(alums).filter(Boolean).length : s, 0);
-  const recentAct = [...actividades].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 4);
+  const recentAct = [...actividades].filter(a => ["Activa","Finalizada"].includes(a.estado)).sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 4);
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>Dashboard</h1>
