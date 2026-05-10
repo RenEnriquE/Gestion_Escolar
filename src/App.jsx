@@ -155,7 +155,7 @@ const Badge = ({ text, color }) => (
 );
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos }) => {
+const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNavigate }) => {
   const actsContablesIds = new Set(actividades.filter(a => ["Activa","Finalizada"].includes(a.estado)).map(a => a.id));
   const totalPart = Object.entries(participacion).reduce((s, [actId, alums]) => actsContablesIds.has(actId) ? s + Object.values(alums).filter(Boolean).length : s, 0);
   const recentAct = [...actividades].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 4);
@@ -164,15 +164,16 @@ const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos }) =>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>Dashboard</h1>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 28 }}>
         {[
-          { label: "Alumnos", value: alumnos.length, icon: "users", color: PALETTE.accent },
-          { label: "Actividades", value: actividades.length, icon: "activity", color: PALETTE.purple },
-          { label: "Encuestas", value: encuestas.length, icon: "survey", color: PALETTE.green },
-          { label: "Participaciones", value: totalPart, icon: "participation", color: PALETTE.orange },
+          { label: "Alumnos", value: alumnos.length, icon: "users", color: PALETTE.accent, page: "alumnos" },
+          { label: "Actividades", value: actividades.length, icon: "activity", color: PALETTE.purple, page: "actividades" },
+          { label: "Encuestas", value: encuestas.length, icon: "survey", color: PALETTE.green, page: "encuestas" },
+          { label: "Participaciones", value: totalPart, icon: "participation", color: PALETTE.orange, page: "participacion" },
         ].map(c => (
-          <div key={c.label} style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20 }}>
+          <div key={c.label} onClick={() => c.page && onNavigate(c.page)}
+            style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20, cursor: c.page ? "pointer" : "default" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               <div style={{ background: c.color + "22", borderRadius: 8, padding: 8 }}><Icon name={c.icon} size={18} color={c.color} /></div>
-              <span style={{ color: PALETTE.muted, fontSize: 12 }}>{c.label}</span>
+              <span style={{ color: PALETTE.muted, fontSize: 12 }}>{c.label}{c.page ? " →" : ""}</span>
             </div>
             <div style={{ color: PALETTE.text, fontSize: 28, fontWeight: 800 }}>{c.value}</div>
           </div>
@@ -285,10 +286,10 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <tbody>
               {filtered.map(al => (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <td style={{ padding: "14px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600 }}>
-                    {al.nombres && al.apellidos
-                      ? al.nombres + " " + al.apellidos
-                      : al.nombre}
+                  <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 600 }}>
+                    <span onClick={() => setViewAlumno(al)} style={{ color: PALETTE.accent, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                      {al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}
+                    </span>
                   </td>
                   {tiposConActividades.map(t => {
                     const acts = actsForTipo(t.id);
@@ -1192,7 +1193,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (validPage) {
-      case "dashboard":     return <Dashboard {...props} />;
+      case "dashboard":     return <Dashboard {...props} onNavigate={goTo} />;
       case "alumnos":       return <Alumnos {...props} />;
       case "actividades":   return <Actividades {...props} />;
       case "participacion": return <Participacion {...props} />;
