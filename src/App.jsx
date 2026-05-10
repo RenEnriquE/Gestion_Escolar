@@ -967,11 +967,15 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
     return { ...al, done, pct: pct(done, actsContables.length) };
   }).sort((a, b) => b.done - a.done);
 
-  // By tipo
+  // By tipo — with detail per activity
   const byTipo = tipos.map(t => {
-    const acts = actsContables.filter(a => a.tipos.includes(t.id));
+    const acts = actsContables.filter(a => a.tipos.includes(t.id)).sort((a, b) => a.fecha.localeCompare(b.fecha));
     const totalPart = acts.reduce((s, act) => s + alumnos.filter(al => participacion[act.id]?.[al.id]).length, 0);
-    return { ...t, acts: acts.length, pct: pct(totalPart, acts.length * alumnos.length) };
+    const actsDetalle = acts.map(act => {
+      const n = alumnos.filter(al => participacion[act.id]?.[al.id]).length;
+      return { ...act, n, pct: pct(n, alumnos.length) };
+    });
+    return { ...t, acts: acts.length, pct: pct(totalPart, acts.length * alumnos.length), actsDetalle };
   });
 
   // Ranking by selected tipo
@@ -991,22 +995,41 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>Estadísticas</h1>
 
-      {/* Participación global por tipo */}
+      {/* Participación global por tipo + detalle por actividad */}
       <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación por tipo de actividad</h3>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20, marginBottom: 24 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
         {byTipo.filter(t => t.acts > 0).map(t => (
-          <div key={t.id} style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.color }} />
-                <span style={{ color: PALETTE.text, fontSize: 13 }}>{t.nombre}</span>
-                <span style={{ color: PALETTE.muted, fontSize: 11 }}>({t.acts} actividades)</span>
+          <div key={t.id} style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
+            {/* Tipo header */}
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${PALETTE.border}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.color }} />
+                  <span style={{ color: PALETTE.text, fontWeight: 700, fontSize: 14 }}>{t.nombre}</span>
+                  <span style={{ color: PALETTE.muted, fontSize: 11 }}>({t.acts} actividad{t.acts !== 1 ? "es" : ""})</span>
+                </div>
+                <span style={{ color: pctColor(t.pct), fontWeight: 800, fontSize: 14 }}>{t.pct}%</span>
               </div>
-              <span style={{ color: pctColor(t.pct), fontWeight: 700, fontSize: 13 }}>{t.pct}%</span>
+              <div style={{ background: PALETTE.border, borderRadius: 6, height: 8 }}>
+                <div style={{ background: t.color, width: t.pct + "%", height: "100%", borderRadius: 6, transition: "width 0.6s" }} />
+              </div>
             </div>
-            <div style={{ background: PALETTE.border, borderRadius: 6, height: 8 }}>
-              <div style={{ background: t.color, width: t.pct + "%", height: "100%", borderRadius: 6, transition: "width 0.6s" }} />
-            </div>
+            {/* Detalle por actividad */}
+            {t.actsDetalle.map((act, i) => (
+              <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 20px", borderBottom: i < t.actsDetalle.length - 1 ? `1px solid ${PALETTE.border}` : "none", background: i % 2 === 0 ? "transparent" : PALETTE.bg + "66" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: PALETTE.text, fontSize: 13 }}>{act.nombre}</div>
+                  <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 1 }}>{act.fecha}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <div style={{ background: PALETTE.border, borderRadius: 4, height: 5, width: 80 }}>
+                    <div style={{ background: pctColor(act.pct), width: act.pct + "%", height: "100%", borderRadius: 4 }} />
+                  </div>
+                  <span style={{ color: pctColor(act.pct), fontWeight: 700, fontSize: 12, minWidth: 36, textAlign: "right" }}>{act.n}/{alumnos.length}</span>
+                  <span style={{ color: pctColor(act.pct), fontSize: 11, minWidth: 38, textAlign: "right" }}>({act.pct}%)</span>
+                </div>
+              </div>
+            ))}
           </div>
         ))}
       </div>
