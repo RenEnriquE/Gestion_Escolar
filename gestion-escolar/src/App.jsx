@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 // ── Storage helpers (localStorage) ───────────────────────────────────────────
 const S = {
@@ -13,58 +11,52 @@ const S = {
 };
 
 // ── Initial seed data ────────────────────────────────────────────────────────
-// helper: build alumno record
-const al = (id, nombres, apellidos, fechaNac, sexo, apoderado, apoderado2="", telefono="", email="", observaciones="", socioAprendilandia=false) => ({
-  id, nombres, apellidos, nombre: (apellidos + " " + nombres).toUpperCase(),
-  fechaNac, sexo, apoderado, apoderado2, telefono, email, observaciones, socioAprendilandia,
-});
-
 const SEED_ALUMNOS = [
-  al("a1",  "JEICOT",       "ACOSTA MARTÍNEZ",     "2018-02-05", "M", "Luz Denia"),
-  al("a2",  "LILIANA",      "AGUADO SALAZAR",       "2018-03-11", "F", "Jessica Salazar"),
-  al("a3",  "SIMÓN",        "BAHAMONDES LIZANA",    "2017-06-14", "M", "Constansa Lizana"),
-  al("a4",  "MIA",          "CARABALLO QUINTERO",   "2017-09-15", "F", "Nislen Quintero"),
-  al("a5",  "TOMÁS",        "CARMONA BURGOS",       "2017-04-07", "M", "Maria Jose Burgos"),
-  al("a6",  "LUCIANA",      "CORDOVEZ CORTÉZ",      "",           "F", "Lorena Cortez"),
-  al("a7",  "AMANDA",       "COVARRUBIAS AYALA",    "2017-06-11", "F", "Belén Rocío Ayala"),
-  al("a8",  "MATHIAS",      "DÍAZ VEGAS",           "2017-05-31", "M", "Alixbel Carolina Vegas"),
-  al("a9",  "MAITE",        "ECHAVARRIA ARAYA",     "2017-11-09", "F", "Maria Luisa Araya"),
-  al("a10", "BASTIÁN",      "FERRADA MARQUEZ",      "",           "M", "Camila Marquez"),
-  al("a11", "KORINA",       "GALLARDO RAMOS",       "",           "F", "Candy Ramos Icochea"),
-  al("a12", "JEAN PIERRE",  "GASTON SANCHEZ",       "2017-04-05", "M", "Susana Sánchez"),
-  al("a13", "DIEGO",        "GONZALEZ GONZALEZ",    "2017-03-15", "M", "Nilianys Gonzalez"),
-  al("a14", "ÓPAL",         "GUZMÁN LEAL",          "2017-09-26", "F", "Scarlett Leal"),
-  al("a15", "ROBERTO",      "LILLO PARRA",          "2017-06-23", "M", "Carolina Parra Jorquera"),
-  al("a16", "FREDY",        "LINO AROS",            "2017-01-14", "M", "Elicet Aros Rosales"),
-  al("a17", "VICENTE",      "LOYOLA BUCAREY",       "2017-09-15", "M", "Ana Maria Bucarey"),
-  al("a18", "AMPARO",       "MARCHANT MENDOZA",     "",           "F", ""),
-  al("a19", "AMANDA",       "MARTÍNEZ FIGUEROA",    "2017-08-24", "F", "Alejandra Figueroa"),
-  al("a20", "BENJAMIN",     "MEDINA MOLINA",        "2017-05-29", "M", "Claudia Molina"),
-  al("a21", "ASHLEY",       "MELENDEZ ARANGUREN",   "",           "F", "Eukaris"),
-  al("a22", "DEREK",        "MINA RIVAS",           "2017-11-14", "M", "Marlin"),
-  al("a23", "ARANZA",       "MOLINA BOLAÑO",        "2017-12-14", "F", "Keyla Bolaño"),
-  al("a24", "MARÍA",        "MONTANCHEZ RIVAS",     "2017-08-17", "F", "Emy"),
-  al("a25", "IGNACIO",      "MORA VIZCAYA",         "2017-10-03", "M", "Estefanía Vizcaya"),
-  al("a26", "VICENTE",      "MUÑOZ GUALA",          "2017-06-28", "M", "Andrea"),
-  al("a27", "THIAGO",       "MUÑOZ PIMENTEL",       "2017-07-16", "M", "Maryuri Pimentel"),
-  al("a28", "MATTEO",       "NOTARI TORRES",        "2017-12-07", "M", "Natalia Notari"),
-  al("a29", "FACUNDO",      "OLIVA VALENZUELA",     "2017-11-07", "M", "Paulina"),
-  al("a30", "JOSEFA",       "ORELLANA CABEZAS",     "2017-07-03", "F", "Elizabeth Cabezas"),
-  al("a31", "SAMANTHA",     "OSORIO DUQUE",         "2017-10-08", "F", "Olisbely Duque"),
-  al("a32", "ISABELLA",     "PÉREZ GARRIDO",        "2017-06-19", "F", "Valentina Paola Garrido"),
-  al("a33", "GEMMA",        "PESANTEZ RAGA",        "2017-02-20", "F", ""),
-  al("a34", "GAHEL",        "PINTO ESPINOZA",       "",           "M", ""),
-  al("a35", "AGUSTINA",     "RIVERA CÁRDENAS",      "2017-05-15", "F", "Katherine Cárdenas"),
-  al("a36", "TRINIDAD",     "ROJAS SALINAS",        "2018-01-27", "F", "Martina Salinas Urzua"),
-  al("a37", "EMILIANO",     "SOTO PERINI",          "2017-12-06", "M", "Giovanna Perini"),
-  al("a38", "SAMARA",       "TABARES RAMOS",        "2017-11-27", "F", "Rosa"),
-  al("a39", "ISABELLA",     "TERÁN FIERRO",         "2017-08-11", "F", "Giani"),
-  al("a40", "BRUNO",        "TRUJILLO ASTUDILLO",   "",           "M", ""),
-  al("a41", "MATÍAS",       "VÁSQUEZ RUBILAR",      "",           "M", "Carolina Rubilar"),
-  al("a42", "MATTEO",       "VIACAVA BARRENECHEA",  "2017-08-08", "M", "Nicole Barrenechea"),
-  al("a43", "MILLAN",       "VICUÑA RODRIGUEZ",     "",           "M", "Yeimily Rodriguez"),
-  al("a44", "LAURA",        "VILLEGAS CÁRDENAS",    "2017-11-08", "F", "Evelyn Cárdenas"),
-  al("a45", "AMIR",         "ZACARIAS GOMEZ",       "2017-02-28", "M", "Any Gabriella Gómez"),
+  { id: "a1",  nombre: "ACOSTA MARTÍNEZ JEICOT",       fechaNac: "2018-02-05", sexo: "M", apoderado: "Luz Denia" },
+  { id: "a2",  nombre: "AGUADO SALAZAR LILIANA",        fechaNac: "2018-03-11", sexo: "F", apoderado: "Jessica Salazar" },
+  { id: "a3",  nombre: "BAHAMONDES LIZANA SIMÓN",       fechaNac: "2017-06-14", sexo: "M", apoderado: "Constansa Lizana" },
+  { id: "a4",  nombre: "CARABALLO QUINTERO MIA",        fechaNac: "2017-09-15", sexo: "F", apoderado: "Nislen Quintero" },
+  { id: "a5",  nombre: "CARMONA BURGOS TOMÁS",          fechaNac: "2017-04-07", sexo: "M", apoderado: "Maria Jose Burgos" },
+  { id: "a6",  nombre: "CORDOVEZ CORTÉZ LUCIANA",       fechaNac: "",           sexo: "F", apoderado: "Lorena Cortez" },
+  { id: "a7",  nombre: "COVARRUBIAS AYALA AMANDA",      fechaNac: "2017-06-11", sexo: "F", apoderado: "Belén Rocío Ayala" },
+  { id: "a8",  nombre: "DÍAZ VEGAS MATHIAS",            fechaNac: "2017-05-31", sexo: "M", apoderado: "Alixbel Carolina Vegas" },
+  { id: "a9",  nombre: "ECHAVARRIA ARAYA MAITE",        fechaNac: "2017-11-09", sexo: "F", apoderado: "Maria Luisa Araya" },
+  { id: "a10", nombre: "FERRADA MARQUEZ BASTIÁN",       fechaNac: "",           sexo: "M", apoderado: "Camila Marquez" },
+  { id: "a11", nombre: "GALLARDO RAMOS KORINA",         fechaNac: "",           sexo: "F", apoderado: "Candy Ramos Icochea" },
+  { id: "a12", nombre: "GASTON SANCHEZ JEAN PIERRE",    fechaNac: "2017-04-05", sexo: "M", apoderado: "Susana Sánchez" },
+  { id: "a13", nombre: "GONZALEZ GONZALEZ DIEGO",       fechaNac: "2017-03-15", sexo: "M", apoderado: "Nilianys Gonzalez" },
+  { id: "a14", nombre: "GUZMÁN LEAL ÓPAL",              fechaNac: "2017-09-26", sexo: "F", apoderado: "Scarlett Leal" },
+  { id: "a15", nombre: "LILLO PARRA ROBERTO",           fechaNac: "2017-06-23", sexo: "M", apoderado: "Carolina Parra" },
+  { id: "a16", nombre: "LINO AROS FREDY",               fechaNac: "2017-01-14", sexo: "M", apoderado: "Elicet Aros Rosales" },
+  { id: "a17", nombre: "LOYOLA BUCAREY VICENTE",        fechaNac: "2017-09-15", sexo: "M", apoderado: "Ana Maria Bucarey" },
+  { id: "a18", nombre: "MARCHANT MENDOZA AMPARO",       fechaNac: "",           sexo: "F", apoderado: "" },
+  { id: "a19", nombre: "MARTÍNEZ FIGUEROA AMANDA",      fechaNac: "2017-08-24", sexo: "F", apoderado: "Alejandra Figueroa" },
+  { id: "a20", nombre: "MEDINA MOLINA BENJAMIN",        fechaNac: "2017-05-29", sexo: "M", apoderado: "Claudia Molina" },
+  { id: "a21", nombre: "MELENDEZ ARANGUREN ASHLEY",     fechaNac: "",           sexo: "F", apoderado: "Eukaris" },
+  { id: "a22", nombre: "MINA RIVAS DEREK",              fechaNac: "2017-11-14", sexo: "M", apoderado: "Marlin" },
+  { id: "a23", nombre: "MOLINA BOLAÑO ARANZA",          fechaNac: "2017-12-14", sexo: "F", apoderado: "Keyla Bolaño" },
+  { id: "a24", nombre: "MONTANCHEZ RIVAS MARÍA",        fechaNac: "2017-08-17", sexo: "F", apoderado: "Emy" },
+  { id: "a25", nombre: "MORA VIZCAYA IGNACIO",          fechaNac: "2017-10-03", sexo: "M", apoderado: "Estefanía Vizcaya" },
+  { id: "a26", nombre: "MUÑOZ GUALA VICENTE",           fechaNac: "2017-06-28", sexo: "M", apoderado: "Andrea" },
+  { id: "a27", nombre: "MUÑOZ PIMENTEL THIAGO",         fechaNac: "2017-07-16", sexo: "M", apoderado: "Maryuri Pimentel" },
+  { id: "a28", nombre: "NOTARI TORRES MATTEO",          fechaNac: "2017-12-07", sexo: "M", apoderado: "Natalia Notari" },
+  { id: "a29", nombre: "OLIVA VALENZUELA FACUNDO",      fechaNac: "2017-11-07", sexo: "M", apoderado: "Paulina" },
+  { id: "a30", nombre: "ORELLANA CABEZAS JOSEFA",       fechaNac: "2017-07-03", sexo: "F", apoderado: "Elizabeth Cabezas" },
+  { id: "a31", nombre: "OSORIO DUQUE SAMANTHA",         fechaNac: "2017-10-08", sexo: "F", apoderado: "Olisbely Duque" },
+  { id: "a32", nombre: "PÉREZ GARRIDO ISABELLA",        fechaNac: "2017-06-19", sexo: "F", apoderado: "Valentina Paola Garrido" },
+  { id: "a33", nombre: "PESANTEZ RAGA GEMMA",           fechaNac: "2017-02-20", sexo: "F", apoderado: "" },
+  { id: "a34", nombre: "PINTO ESPINOZA GAHEL",          fechaNac: "",           sexo: "M", apoderado: "" },
+  { id: "a35", nombre: "RIVERA CÁRDENAS AGUSTINA",      fechaNac: "2017-05-15", sexo: "F", apoderado: "Katherine Cárdenas" },
+  { id: "a36", nombre: "ROJAS SALINAS TRINIDAD",        fechaNac: "2018-01-27", sexo: "F", apoderado: "Martina Salinas Urzua" },
+  { id: "a37", nombre: "SOTO PERINI EMILIANO",          fechaNac: "2017-12-06", sexo: "M", apoderado: "Giovanna Perini" },
+  { id: "a38", nombre: "TABARES RAMOS SAMARA",          fechaNac: "2017-11-27", sexo: "F", apoderado: "Rosa" },
+  { id: "a39", nombre: "TERÁN FIERRO ISABELLA",         fechaNac: "2017-08-11", sexo: "F", apoderado: "Giani" },
+  { id: "a40", nombre: "TRUJILLO ASTUDILLO BRUNO",      fechaNac: "",           sexo: "M", apoderado: "" },
+  { id: "a41", nombre: "VÁSQUEZ RUBILAR MATÍAS",        fechaNac: "",           sexo: "M", apoderado: "Carolina Rubilar" },
+  { id: "a42", nombre: "VIACAVA BARRENECHEA MATTEO",    fechaNac: "2017-08-08", sexo: "M", apoderado: "Nicole Barrenechea" },
+  { id: "a43", nombre: "VICUÑA RODRIGUEZ MILLAN",       fechaNac: "",           sexo: "M", apoderado: "Yeimily Rodriguez" },
+  { id: "a44", nombre: "VILLEGAS CÁRDENAS LAURA",       fechaNac: "2017-11-08", sexo: "F", apoderado: "Evelyn Cárdenas" },
+  { id: "a45", nombre: "ZACARIAS GOMEZ AMIR",           fechaNac: "2017-02-28", sexo: "M", apoderado: "Any Gabriella Gómez" },
 ];
 
 const SEED_TIPOS = [{"id":"69feb9c34b383d80660995ac","nombre":"Salida","color":"#3b82f6"},{"id":"69feb9c34b383d80660995ad","nombre":"Campeonato","color":"#8b5cf6"},{"id":"69feb9c34b383d80660995b0","nombre":"Campaña","color":"#f59e0b"},{"id":"69feb9c34b383d80660995b2","nombre":"Encuesta","color":"#10b981"},{"id":"69feb9e04b97644adcc4bade","nombre":"Actividad CEPA","color":"#ef4444"},{"id":"69feb9c34b383d80660995b3","nombre":"Otro","color":"#6b7280"}];
@@ -157,25 +149,23 @@ const Badge = ({ text, color }) => (
 );
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNavigate }) => {
-  const actsContablesIds = new Set(actividades.filter(a => ["Activa","Finalizada"].includes(a.estado)).map(a => a.id));
-  const totalPart = Object.entries(participacion).reduce((s, [actId, alums]) => actsContablesIds.has(actId) ? s + Object.values(alums).filter(Boolean).length : s, 0);
+const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos }) => {
+  const totalPart = Object.values(participacion).reduce((s, v) => s + Object.values(v).filter(Boolean).length, 0);
   const recentAct = [...actividades].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 4);
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>Dashboard</h1>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 28 }}>
         {[
-          { label: "Alumnos", value: alumnos.length, icon: "users", color: PALETTE.accent, page: "alumnos" },
-          { label: "Actividades", value: actividades.length, icon: "activity", color: PALETTE.purple, page: "actividades" },
-          { label: "Encuestas", value: encuestas.length, icon: "survey", color: PALETTE.green, page: "encuestas" },
-          { label: "Participaciones", value: totalPart, icon: "participation", color: PALETTE.orange, page: "participacion" },
+          { label: "Alumnos", value: alumnos.length, icon: "users", color: PALETTE.accent },
+          { label: "Actividades", value: actividades.length, icon: "activity", color: PALETTE.purple },
+          { label: "Encuestas", value: encuestas.length, icon: "survey", color: PALETTE.green },
+          { label: "Participaciones", value: totalPart, icon: "participation", color: PALETTE.orange },
         ].map(c => (
-          <div key={c.label} onClick={() => c.page && onNavigate(c.page)}
-            style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20, cursor: c.page ? "pointer" : "default" }}>
+          <div key={c.label} style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               <div style={{ background: c.color + "22", borderRadius: 8, padding: 8 }}><Icon name={c.icon} size={18} color={c.color} /></div>
-              <span style={{ color: PALETTE.muted, fontSize: 12 }}>{c.label}{c.page ? " →" : ""}</span>
+              <span style={{ color: PALETTE.muted, fontSize: 12 }}>{c.label}</span>
             </div>
             <div style={{ color: PALETTE.text, fontSize: 28, fontWeight: 800 }}>{c.value}</div>
           </div>
@@ -206,53 +196,25 @@ const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNa
 const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdmin }) => {
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
-  const [sortMode, setSortMode] = useState("apellido");
   const [modalOpen, setModalOpen] = useState(false);
   const [viewAlumno, setViewAlumno] = useState(null);
   const [editAlumno, setEditAlumno] = useState(null);
   const [form, setForm] = useState({ nombre: "", fechaNac: "", sexo: "M", apoderado: "" });
 
-  const filtered = alumnos
-    .filter(a => {
-      if (!a.nombre.toLowerCase().includes(search.toLowerCase())) return false;
-      if (!filterTipo) return true;
-      const actsOfType = actividades.filter(act => act.tipos.includes(filterTipo));
-      return actsOfType.some(act => participacion[act.id]?.[a.id]);
-    })
-    .sort((a, b) => {
-      if (sortMode === "nombre") {
-        const na = (a.nombres || a.nombre || "").split(" ")[0];
-        const nb = (b.nombres || b.nombre || "").split(" ")[0];
-        return na.localeCompare(nb, "es");
-      }
-      // por apellido
-      const aa = a.apellidos || a.nombre || "";
-      const ab = b.apellidos || b.nombre || "";
-      return aa.localeCompare(ab, "es");
-    });
+  const filtered = alumnos.filter(a => {
+    if (!a.nombre.toLowerCase().includes(search.toLowerCase())) return false;
+    if (!filterTipo) return true;
+    const actsOfType = actividades.filter(act => act.tipos.includes(filterTipo));
+    return actsOfType.some(act => participacion[act.id]?.[a.id]);
+  });
 
-  const actsForTipo = (tipoId) => actividades.filter(a => a.tipos.includes(tipoId) && ["Activa","Finalizada"].includes(a.estado));
-  const tiposConActividades = tipos.filter(t => actsForTipo(t.id).length > 0);
-  const emptyForm = { nombres: "", apellidos: "", fechaNac: "", sexo: "M", apoderado: "", apoderado2: "", telefono: "", email: "", observaciones: "", socioAprendilandia: false };
-  const openNew = () => { setForm(emptyForm); setEditAlumno(null); setModalOpen(true); };
-  const openEdit = (al) => {
-    // If nombres/apellidos missing (old localStorage data), split from nombre
-    let nombres = al.nombres || "";
-    let apellidos = al.apellidos || "";
-    if (!nombres && al.nombre) {
-      const parts = al.nombre.trim().split(" ");
-      nombres = parts.slice(-1)[0];
-      apellidos = parts.slice(0, -1).join(" ");
-    }
-    setForm({ nombres, apellidos, fechaNac: al.fechaNac || "", sexo: al.sexo || "M", apoderado: al.apoderado || "", apoderado2: al.apoderado2 || "", telefono: al.telefono || "", email: al.email || "", observaciones: al.observaciones || "", socioAprendilandia: al.socioAprendilandia || false });
-    setEditAlumno(al); setModalOpen(true);
-  };
+  const actsForTipo = (tipoId) => actividades.filter(a => a.tipos.includes(tipoId));
+  const openNew = () => { setForm({ nombre: "", fechaNac: "", sexo: "M", apoderado: "" }); setEditAlumno(null); setModalOpen(true); };
+  const openEdit = (al) => { setForm({ nombre: al.nombre, fechaNac: al.fechaNac, sexo: al.sexo, apoderado: al.apoderado }); setEditAlumno(al); setModalOpen(true); };
   const save = () => {
-    if (!form.nombres.trim() || !form.apellidos.trim()) return;
-    const nombreCompleto = (form.apellidos.trim() + " " + form.nombres.trim()).toUpperCase();
-    const data = { ...form, nombre: nombreCompleto, nombres: form.nombres.trim().toUpperCase(), apellidos: form.apellidos.trim().toUpperCase() };
-    if (editAlumno) setAlumnos(prev => prev.map(a => a.id === editAlumno.id ? { ...a, ...data } : a));
-    else setAlumnos(prev => [...prev, { ...data, id: "a" + Date.now() }]);
+    if (!form.nombre.trim()) return;
+    if (editAlumno) setAlumnos(prev => prev.map(a => a.id === editAlumno.id ? { ...a, ...form } : a));
+    else setAlumnos(prev => [...prev, { ...form, id: "a" + Date.now() }]);
     setModalOpen(false);
   };
   const del = (id) => { if (window.confirm("¿Eliminar alumno?")) setAlumnos(prev => prev.filter(a => a.id !== id)); };
@@ -270,30 +232,22 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
         </Select>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {isAdmin && <Btn onClick={openNew}><Icon name="plus" size={15} />Nuevo Alumno</Btn>}
-        <Btn variant={sortMode === "apellido" ? "primary" : "ghost"} small onClick={() => setSortMode("apellido")}>Por apellido</Btn>
-        <Btn variant={sortMode === "nombre" ? "primary" : "ghost"} small onClick={() => setSortMode("nombre")}>Por nombre</Btn>
-      </div>
+      {isAdmin && <Btn onClick={openNew} style={{ marginBottom: 16 }}><Icon name="plus" size={15} />Nuevo Alumno</Btn>}
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, fontWeight: 700 }}>Nombre</th>
-                {tiposConActividades.map(t => <th key={t.id} style={{ textAlign: "center", padding: "12px 10px", color: t.color, fontSize: 11, fontWeight: 700 }}>{t.nombre}</th>)}
+                {tipos.slice(0, 4).map(t => <th key={t.id} style={{ textAlign: "center", padding: "12px 10px", color: t.color, fontSize: 11, fontWeight: 700 }}>{t.nombre}</th>)}
                 <th style={{ textAlign: "center", padding: "12px 10px", color: PALETTE.muted, fontSize: 12 }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(al => (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 600 }}>
-                    <span onClick={() => setViewAlumno(al)} style={{ color: PALETTE.accent, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
-                      {al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}
-                    </span>
-                  </td>
-                  {tiposConActividades.map(t => {
+                  <td style={{ padding: "14px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600 }}>{al.nombre}</td>
+                  {tipos.slice(0, 4).map(t => {
                     const acts = actsForTipo(t.id);
                     const done = acts.filter(a => participacion[a.id]?.[al.id]).length;
                     const total = acts.length;
@@ -318,147 +272,34 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           </table>
         </div>
       </div>
-      {viewAlumno && (() => {
-        const actsContables = actividades.filter(a => ["Activa", "Finalizada"].includes(a.estado));
-        const totalActs = actsContables.length;
-        const partCount = actsContables.filter(act => participacion[act.id]?.[viewAlumno.id]).length;
-        // Group activities by tipo
-        const actsByTipo = tipos.map(t => ({
-          ...t,
-          acts: actividades.filter(act => act.tipos.includes(t.id))
-        })).filter(t => t.acts.length > 0);
-        // Activities with no tipo
-        const sinTipo = actividades.filter(act => act.tipos.length === 0);
-
-        return (
-        <Modal title="Ficha del Alumno" onClose={() => setViewAlumno(null)} wide>
-          {/* Nombre */}
-          <div style={{ marginBottom: 4 }}>
-            <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>
-              {viewAlumno.apellidos && viewAlumno.nombres
-                ? viewAlumno.apellidos + " " + viewAlumno.nombres
-                : viewAlumno.nombre}
-            </div>
+      {viewAlumno && (
+        <Modal title={viewAlumno.nombre} onClose={() => setViewAlumno(null)} wide>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+            <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>FECHA NAC.</div><div style={{ color: PALETTE.text }}>{viewAlumno.fechaNac}</div></div>
+            <div><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>SEXO</div><div style={{ color: PALETTE.text }}>{viewAlumno.sexo === "M" ? "Masculino" : "Femenino"}</div></div>
+            <div style={{ gridColumn: "1/-1" }}><div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 4 }}>APODERADO</div><div style={{ color: PALETTE.text }}>{viewAlumno.apoderado}</div></div>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <Badge text={viewAlumno.sexo === "M" ? "Masculino" : "Femenino"} color={viewAlumno.sexo === "M" ? PALETTE.accent : PALETTE.purple} />
-            {viewAlumno.socioAprendilandia && <span style={{ marginLeft: 8 }}><Badge text="Socio Aprendilandia" color={PALETTE.green} /></span>}
-          </div>
-
-          {/* Info grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px", marginBottom: 20, fontSize: 13 }}>
-            <div><span style={{ color: PALETTE.muted }}>Nacimiento: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.fechaNac || "—"}</span></div>
-            <div><span style={{ color: PALETTE.muted }}>Curso: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>3ro C</span></div>
-            <div><span style={{ color: PALETTE.muted }}>Apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado || "—"}</span></div>
-            <div><span style={{ color: PALETTE.muted }}>Teléfono: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.telefono || "—"}</span></div>
-            {viewAlumno.apoderado2 && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>2do apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado2}</span></div>}
-            {viewAlumno.email && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Email: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.email}</span></div>}
-            {viewAlumno.observaciones && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Obs: </span><span style={{ color: PALETTE.text }}>{viewAlumno.observaciones}</span></div>}
-          </div>
-
-          {/* Stats bar */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
-            {[
-              { label: "Participación", value: `${partCount}/${totalActs}`, color: PALETTE.accent },
-              { label: "% Asistencia", value: totalActs > 0 ? Math.round(partCount/totalActs*100) + "%" : "0%", color: PALETTE.green },
-              { label: "Encuestas resp.", value: Object.values(viewAlumno.id ? {} : {}).length + "—", color: PALETTE.purple },
-            ].map(s => (
-              <div key={s.label} style={{ background: PALETTE.bg, borderRadius: 12, padding: "14px 12px", textAlign: "center", border: `1px solid ${PALETTE.border}` }}>
-                <div style={{ color: s.color, fontWeight: 800, fontSize: 22 }}>{s.value}</div>
-                <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>{s.label}</div>
+          <h4 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación</h4>
+          {actividades.map(act => {
+            const partio = participacion[act.id]?.[viewAlumno.id];
+            return (
+              <div key={act.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${PALETTE.border}` }}>
+                <div>
+                  <div style={{ color: PALETTE.text, fontSize: 13 }}>{act.nombre}</div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>{tipos.filter(t => act.tipos.includes(t.id)).map(t => <Badge key={t.id} text={t.nombre} color={t.color} />)}</div>
+                </div>
+                <Icon name={partio ? "check" : "x"} size={20} color={partio ? PALETTE.green : PALETTE.red} />
               </div>
-            ))}
-          </div>
-
-          {/* Activities by tipo */}
-          <div style={{ color: PALETTE.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Actividades</div>
-          {actsByTipo.map(t => (
-            <div key={t.id} style={{ marginBottom: 20 }}>
-              <div style={{ color: t.color, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-                {t.nombre} ({t.acts.length})
-              </div>
-              {t.acts.map(act => {
-                const partio = participacion[act.id]?.[viewAlumno.id];
-                return (
-                  <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, marginBottom: 4, background: partio ? PALETTE.green + "11" : PALETTE.red + "0a" }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: partio ? PALETTE.green + "33" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon name={partio ? "check" : "x"} size={11} color={partio ? PALETTE.green : PALETTE.red} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ color: PALETTE.text, fontSize: 13 }}>{act.nombre}</span>
-                    </div>
-                    <span style={{ color: PALETTE.muted, fontSize: 11 }}>{act.fecha}</span>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-          {sinTipo.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ color: PALETTE.muted, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Sin tipo ({sinTipo.length})</div>
-              {sinTipo.map(act => {
-                const partio = participacion[act.id]?.[viewAlumno.id];
-                return (
-                  <div key={act.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, marginBottom: 4, background: partio ? PALETTE.green + "11" : PALETTE.red + "0a" }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: partio ? PALETTE.green + "33" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon name={partio ? "check" : "x"} size={11} color={partio ? PALETTE.green : PALETTE.red} />
-                    </div>
-                    <span style={{ color: PALETTE.text, fontSize: 13, flex: 1 }}>{act.nombre}</span>
-                    <span style={{ color: PALETTE.muted, fontSize: 11 }}>{act.fecha}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            );
+          })}
         </Modal>
-        );
-      })()}
+      )}
       {modalOpen && (
-        <Modal title={editAlumno ? "Editar Alumno" : "Nuevo Alumno"} onClose={() => setModalOpen(false)} wide>
-          {/* Nombres y Apellidos */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Nombre(s) *"><Input value={form.nombres} onChange={e => setForm(f => ({ ...f, nombres: e.target.value.toUpperCase() }))} placeholder="JEAN PIERRE" /></Field>
-            <Field label="Apellidos *"><Input value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value.toUpperCase() }))} placeholder="GARCÍA LÓPEZ" /></Field>
-          </div>
-          {/* Fecha y Sexo */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Fecha de nacimiento">
-              <Input type="date" value={form.fechaNac} onChange={e => setForm(f => ({ ...f, fechaNac: e.target.value }))} />
-            </Field>
-            <Field label="Sexo">
-              <Select value={form.sexo} onChange={e => setForm(f => ({ ...f, sexo: e.target.value }))}>
-                <option value="M">Masculino</option><option value="F">Femenino</option>
-              </Select>
-            </Field>
-          </div>
-          {/* Curso (fijo) */}
-          <Field label="Curso">
-            <div style={{ background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 8, padding: "10px 12px", color: PALETTE.muted, fontSize: 14 }}>3ro C — L. Miguel Rafael Prado</div>
-          </Field>
-          {/* Apoderados */}
-          <Field label="Apoderado principal"><Input value={form.apoderado} onChange={e => setForm(f => ({ ...f, apoderado: e.target.value }))} placeholder="Nombre del apoderado" /></Field>
-          <Field label="Segundo apoderado"><Input value={form.apoderado2} onChange={e => setForm(f => ({ ...f, apoderado2: e.target.value }))} placeholder="Opcional" /></Field>
-          {/* Teléfono y Email */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Teléfono"><Input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
-            <Field label="Email apoderado"><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@email.com" /></Field>
-          </div>
-          {/* Socio Aprendilandia toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            <button onClick={() => setForm(f => ({ ...f, socioAprendilandia: !f.socioAprendilandia }))} style={{
-              width: 44, height: 24, borderRadius: 12, background: form.socioAprendilandia ? PALETTE.accent : PALETTE.border,
-              border: "none", cursor: "pointer", position: "relative", flexShrink: 0
-            }}>
-              <span style={{ position: "absolute", top: 3, left: form.socioAprendilandia ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
-            </button>
-            <span style={{ color: PALETTE.text, fontSize: 14 }}>Socio Aprendilandia</span>
-          </div>
-          {/* Observaciones */}
-          <Field label="Observaciones">
-            <textarea value={form.observaciones} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))}
-              placeholder="Notas adicionales..."
-              style={{ width: "100%", background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 8, padding: "10px 12px", color: PALETTE.text, fontSize: 14, outline: "none", boxSizing: "border-box", minHeight: 80, resize: "vertical", fontFamily: "inherit" }} />
-          </Field>
+        <Modal title={editAlumno ? "Editar Alumno" : "Nuevo Alumno"} onClose={() => setModalOpen(false)}>
+          <Field label="Nombre completo"><Input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value.toUpperCase() }))} placeholder="APELLIDO NOMBRE" /></Field>
+          <Field label="Fecha de nacimiento"><Input type="date" value={form.fechaNac} onChange={e => setForm(f => ({ ...f, fechaNac: e.target.value }))} /></Field>
+          <Field label="Sexo"><Select value={form.sexo} onChange={e => setForm(f => ({ ...f, sexo: e.target.value }))}><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
+          <Field label="Apoderado"><Input value={form.apoderado} onChange={e => setForm(f => ({ ...f, apoderado: e.target.value }))} /></Field>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
             <Btn onClick={save}>Guardar</Btn>
@@ -473,10 +314,10 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
 const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editAct, setEditAct] = useState(null);
-  const [form, setForm] = useState({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa" });
+  const [form, setForm] = useState({ nombre: "", fecha: "", tipos: [], costo: "Gratuita", recurrencia: "Anual", estado: "Activa" });
 
-  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa" }); setEditAct(null); setModalOpen(true); };
-  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado }); setEditAct(a); setModalOpen(true); };
+  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], costo: "Gratuita", recurrencia: "Anual", estado: "Activa" }); setEditAct(null); setModalOpen(true); };
+  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, costo: a.costo, recurrencia: a.recurrencia, estado: a.estado }); setEditAct(a); setModalOpen(true); };
   const del = (id) => { if (window.confirm("¿Eliminar actividad?")) setActividades(prev => prev.filter(a => a.id !== id)); };
   const toggleTipo = (tid) => setForm(f => ({ ...f, tipos: f.tipos.includes(tid) ? f.tipos.filter(x => x !== tid) : [...f.tipos, tid] }));
   const save = () => {
@@ -500,7 +341,7 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                {["Nombre", "Fecha", "Tipo(s)", "Recurrencia", "Estado", ""].map(h => (
+                {["Nombre", "Fecha", "Tipo(s)", "Costo", "Recurrencia", "Estado", ""].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "12px 14px", color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
@@ -511,8 +352,9 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
                   <td style={{ padding: "14px", color: PALETTE.text, fontWeight: 600, fontSize: 13 }}>{act.nombre}</td>
                   <td style={{ padding: "14px", color: PALETTE.muted, fontSize: 13, whiteSpace: "nowrap" }}>{act.fecha}</td>
                   <td style={{ padding: "14px" }}><div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{tipos.filter(t => act.tipos.includes(t.id)).map(t => <Badge key={t.id} text={t.nombre} color={t.color} />)}</div></td>
+                  <td style={{ padding: "14px", color: PALETTE.muted, fontSize: 13 }}>{act.costo}</td>
                   <td style={{ padding: "14px" }}><Badge text={act.recurrencia} color={act.recurrencia === "Anual" ? PALETTE.accent : PALETTE.purple} /></td>
-                  <td style={{ padding: "14px" }}><Badge text={act.estado} color={act.estado === "Activa" ? PALETTE.green : act.estado === "Finalizada" ? PALETTE.accent : act.estado === "Suspendida" ? PALETTE.red : PALETTE.muted} /></td>
+                  <td style={{ padding: "14px" }}><Badge text={act.estado} color={act.estado === "Activa" ? PALETTE.green : PALETTE.muted} /></td>
                   <td style={{ padding: "14px" }}>
                     {isAdmin && <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => openEdit(act)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="edit" size={15} /></button>
@@ -537,8 +379,9 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
             </div>
           </Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label="Costo"><Select value={form.costo} onChange={e => setForm(f => ({ ...f, costo: e.target.value }))}><option>Gratuita</option><option>Con costo</option></Select></Field>
             <Field label="Recurrencia"><Select value={form.recurrencia} onChange={e => setForm(f => ({ ...f, recurrencia: e.target.value }))}><option>Anual</option><option>Mensual</option></Select></Field>
-            <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option><option>Suspendida</option></Select></Field>
+            <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option></Select></Field>
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
@@ -553,172 +396,55 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
 // ── Participación ─────────────────────────────────────────────────────────────
 const Participacion = ({ alumnos, actividades, participacion, setParticipacion, tipos, isAdmin }) => {
   const [filterTipo, setFilterTipo] = useState("");
-  const [filterEstado, setFilterEstado] = useState("");
   const [filterAct, setFilterAct] = useState("");
   const [sortAp, setSortAp] = useState(false);
-  const [sortActId, setSortActId] = useState(null); // sort by participation in this activity
 
-  const actsFiltradas = actividades
-    .filter(a => !filterTipo || a.tipos.includes(filterTipo))
-    .filter(a => !filterEstado || a.estado === filterEstado);
-  const actsVisibles = actsFiltradas
-    .filter(a => !filterAct || a.id === filterAct)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-  const alumnosOrdenados = [...alumnos].sort((a, b) => {
-    if (sortActId) {
-      const pa = participacion[sortActId]?.[a.id] ? 1 : 0;
-      const pb = participacion[sortActId]?.[b.id] ? 1 : 0;
-      if (pb !== pa) return pb - pa; // participantes primero
-    }
-    if (sortAp) return (a.apoderado || "").localeCompare(b.apoderado || "");
-    return a.nombre.localeCompare(b.nombre);
-  });
-
-  const handleSortAct = (actId) => {
-    setSortActId(prev => prev === actId ? null : actId);
-    setSortAp(false);
-  };
+  const actsFiltradas = actividades.filter(a => !filterTipo || a.tipos.includes(filterTipo));
+  const actsVisibles = actsFiltradas.filter(a => !filterAct || a.id === filterAct);
+  const alumnosOrdenados = [...alumnos].sort((a, b) => sortAp ? a.apoderado.localeCompare(b.apoderado) : a.nombre.localeCompare(b.nombre));
 
   const toggle = (actId, alumId) => {
     if (!isAdmin) return;
     setParticipacion(prev => ({ ...prev, [actId]: { ...prev[actId], [alumId]: !prev[actId]?.[alumId] } }));
   };
 
-  const estadoColor = { "Activa": PALETTE.green, "Finalizada": PALETTE.accent, "Suspendida": PALETTE.red, "No activada": PALETTE.muted };
-
-  const exportarPDF = () => {
-    const doc = new jsPDF({ orientation: actsVisibles.length > 6 ? "landscape" : "portrait" });
-    const fecha = new Date().toLocaleDateString("es-CL");
-
-    // Title
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("GestiónEscolar — Participación", 14, 16);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(120);
-
-    // Active filters info
-    const filtros = [];
-    if (filterTipo) filtros.push("Tipo: " + (tipos.find(t => t.id === filterTipo)?.nombre || ""));
-    if (filterEstado) filtros.push("Estado: " + filterEstado);
-    if (filterAct) filtros.push("Actividad: " + (actsVisibles.find(a => a.id === filterAct)?.nombre || ""));
-    doc.text((filtros.length ? filtros.join("  |  ") : "Todas las actividades") + "   —   " + fecha, 14, 23);
-    doc.setTextColor(0);
-
-    // Build table
-    const head = [["Alumno", ...actsVisibles.map(a => a.nombre.length > 18 ? a.nombre.substring(0, 17) + "…" : a.nombre)]];
-    const body = alumnosOrdenados.map(al => [
-      al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre,
-      ...actsVisibles.map(act => participacion[act.id]?.[al.id] ? "✓" : "✗")
-    ]);
-
-    // Summary row
-    const summary = ["TOTAL",
-      ...actsVisibles.map(act => {
-        const n = alumnosOrdenados.filter(al => participacion[act.id]?.[al.id]).length;
-        return `${n}/${alumnosOrdenados.length}`;
-      })
-    ];
-    body.push(summary);
-
-    autoTable(doc, {
-      head,
-      body,
-      startY: 28,
-      styles: { fontSize: 7.5, cellPadding: 2.5, halign: "center" },
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { halign: "left", cellWidth: 42 } },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.row.index === body.length - 1) {
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [241, 245, 249];
-        }
-        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "✓") {
-          data.cell.styles.textColor = [34, 197, 94];
-          data.cell.styles.fontStyle = "bold";
-        }
-        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "✗") {
-          data.cell.styles.textColor = [239, 68, 68];
-        }
-      },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-    });
-
-    doc.save(`participacion_${fecha.replace(/\//g, "-")}.pdf`);
-  };
-
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Participación</h1>
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <Select value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setFilterAct(""); }} style={{ flex: "1 1 150px" }}>
+        <Select value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setFilterAct(""); }} style={{ flex: "1 1 160px" }}>
           <option value="">Todos los tipos</option>
           {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-        </Select>
-        <Select value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setFilterAct(""); }} style={{ flex: "1 1 150px" }}>
-          <option value="">Todos los estados</option>
-          <option value="Activa">Activa</option>
-          <option value="Finalizada">Finalizada</option>
-          <option value="Suspendida">Suspendida</option>
-          <option value="No activada">No activada</option>
         </Select>
         <Select value={filterAct} onChange={e => setFilterAct(e.target.value)} style={{ flex: "1 1 200px" }}>
           <option value="">Todas las actividades</option>
           {actsFiltradas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
         </Select>
-        <Btn variant={sortAp ? "primary" : "ghost"} onClick={() => { setSortAp(s => !s); setSortActId(null); }} small>
+        <Btn variant={sortAp ? "primary" : "ghost"} onClick={() => setSortAp(s => !s)} small>
           {sortAp ? "Por apoderado ✓" : "Ordenar por apoderado"}
         </Btn>
-        <Btn variant="ghost" onClick={exportarPDF} small style={{ marginLeft: "auto" }}>
-          🖨️ Exportar PDF
-        </Btn>
       </div>
-      {/* Resumen de filtros / orden activo */}
-      {(filterTipo || filterEstado || sortActId) && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ color: PALETTE.muted, fontSize: 12 }}>{actsVisibles.length} actividad(es) visible(s)</span>
-          {filterTipo && <Badge text={tipos.find(t => t.id === filterTipo)?.nombre || ""} color={tipos.find(t => t.id === filterTipo)?.color || PALETTE.muted} />}
-          {filterEstado && <Badge text={filterEstado} color={estadoColor[filterEstado] || PALETTE.muted} />}
-          {sortActId && <Badge text={"↕ " + (actsVisibles.find(a => a.id === sortActId)?.nombre || "")} color={PALETTE.accent} />}
-        </div>
-      )}
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, position: "sticky", left: 0, background: PALETTE.card }}>Alumno</th>
-                {actsVisibles.map(a => {
-                  const isActSort = sortActId === a.id;
-                  const partCount = alumnos.filter(al => participacion[a.id]?.[al.id]).length;
-                  return (
-                    <th key={a.id} style={{ textAlign: "center", padding: "12px 10px", color: isActSort ? PALETTE.accent : PALETTE.muted, fontSize: 11 }}>
-                      <div
-                        onClick={() => handleSortAct(a.id)}
-                        title="Clic para ordenar por participación"
-                        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
-                      >
-                        <span style={{ fontWeight: isActSort ? 700 : 400 }}>{a.nombre}</span>
-                        <span style={{ fontSize: 10, color: isActSort ? PALETTE.accent : PALETTE.muted, marginTop: 2 }}>
-                          {isActSort ? "↕" : ""} {partCount}/{alumnos.length}
-                        </span>
-                      </div>
-                    </th>
-                  );
-                })}
+                {actsVisibles.map(a => (
+                  <th key={a.id} style={{ textAlign: "center", padding: "12px 10px", color: PALETTE.muted, fontSize: 11 }}>
+                    <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80 }}>{a.nombre}</div>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {alumnosOrdenados.map(al => (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
+                  <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombre}</td>
                   {actsVisibles.map(act => {
                     const partio = participacion[act.id]?.[al.id];
-                    const isActSort = sortActId === act.id;
                     return (
-                      <td key={act.id} style={{ textAlign: "center", padding: "12px 10px", background: isActSort ? PALETTE.accent + "08" : "transparent" }}>
+                      <td key={act.id} style={{ textAlign: "center", padding: "12px 10px" }}>
                         <button onClick={() => toggle(act.id, al.id)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: isAdmin ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                           <Icon name={partio ? "check" : "x"} size={14} color={partio ? PALETTE.green : PALETTE.red} />
                         </button>
@@ -929,78 +655,30 @@ const TiposActividad = ({ tipos, setTipos, isAdmin }) => {
 };
 
 // ── Estadísticas ──────────────────────────────────────────────────────────────
-const ESTADOS_CONTABLES = ["Activa", "Finalizada"];
-
-const RankingTable = ({ lista, totalActs, label, color, bottom }) => (
-  <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 24 }}>
-    <div style={{ padding: "14px 20px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={{ fontSize: 16 }}>{bottom ? "📉" : "📈"}</span>
-      <span style={{ color: PALETTE.text, fontWeight: 700, fontSize: 14 }}>{label}</span>
-    </div>
-    {lista.map((al, i) => (
-      <div key={al.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 20px", borderBottom: i < lista.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ color: PALETTE.muted, fontWeight: 800, fontSize: 15, width: 24 }}>#{i + 1}</span>
-          <span style={{ color: PALETTE.text, fontSize: 13 }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ color: color || pctColor(al.pct), fontWeight: 700, fontSize: 13 }}>{al.done}/{totalActs}</span>
-          <span style={{ color: color || pctColor(al.pct), fontSize: 12 }}>({al.pct}%)</span>
-          <div style={{ background: PALETTE.border, borderRadius: 4, height: 6, width: 70 }}>
-            <div style={{ background: color || pctColor(al.pct), width: al.pct + "%", height: "100%", borderRadius: 4 }} />
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
 const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
-  const [tipoDetalle, setTipoDetalle] = useState(null); // null = general, tipoId = por tipo
-  const [topN, setTopN] = useState(5);
-
-  const actsContables = actividades.filter(a => ESTADOS_CONTABLES.includes(a.estado));
-
-  // General ranking
-  const rankingGeneral = alumnos.map(al => {
-    const done = actsContables.filter(act => participacion[act.id]?.[al.id]).length;
-    return { ...al, done, pct: pct(done, actsContables.length) };
-  }).sort((a, b) => b.done - a.done);
-
-  // By tipo
+  const totalActs = actividades.length;
   const byTipo = tipos.map(t => {
-    const acts = actsContables.filter(a => a.tipos.includes(t.id));
+    const acts = actividades.filter(a => a.tipos.includes(t.id));
     const totalPart = acts.reduce((s, act) => s + alumnos.filter(al => participacion[act.id]?.[al.id]).length, 0);
     return { ...t, acts: acts.length, pct: pct(totalPart, acts.length * alumnos.length) };
   });
-
-  // Ranking by selected tipo
-  const tipoActual = tipos.find(t => t.id === tipoDetalle);
-  const actsDelTipo = tipoActual ? actsContables.filter(a => a.tipos.includes(tipoDetalle)) : actsContables;
-  const totalActsTipo = actsDelTipo.length;
-  const rankingTipo = alumnos.map(al => {
-    const done = actsDelTipo.filter(act => participacion[act.id]?.[al.id]).length;
-    return { ...al, done, pct: pct(done, totalActsTipo) };
-  }).sort((a, b) => b.done - a.done);
-
-  const topLista = rankingTipo.slice(0, topN);
-  const bottomLista = [...rankingTipo].reverse().slice(0, topN);
-  const totalActsActual = totalActsTipo;
+  const topAlumnos = alumnos.map(al => {
+    const done = actividades.filter(act => participacion[act.id]?.[al.id]).length;
+    return { ...al, done, pct: pct(done, totalActs) };
+  }).sort((a, b) => b.done - a.done).slice(0, 5);
 
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 24 }}>Estadísticas</h1>
-
-      {/* Participación global por tipo */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación por tipo de actividad</h3>
+      <h3 style={{ color: PALETTE.muted, fontSize: 13, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Participación por tipo</h3>
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20, marginBottom: 24 }}>
-        {byTipo.filter(t => t.acts > 0).map(t => (
+        {byTipo.map(t => (
           <div key={t.id} style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.color }} />
                 <span style={{ color: PALETTE.text, fontSize: 13 }}>{t.nombre}</span>
-                <span style={{ color: PALETTE.muted, fontSize: 11 }}>({t.acts} actividades)</span>
+                <span style={{ color: PALETTE.muted, fontSize: 11 }}>({t.acts} acts)</span>
               </div>
               <span style={{ color: pctColor(t.pct), fontWeight: 700, fontSize: 13 }}>{t.pct}%</span>
             </div>
@@ -1010,210 +688,54 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
           </div>
         ))}
       </div>
-
-      {/* Filtros ranking */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Ranking de participación de alumnos</h3>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <Select value={tipoDetalle || ""} onChange={e => setTipoDetalle(e.target.value || null)} style={{ flex: "1 1 180px" }}>
-          <option value="">General (todas las actividades)</option>
-          {tipos.filter(t => actsContables.some(a => a.tipos.includes(t.id))).map(t => (
-            <option key={t.id} value={t.id}>{t.nombre}</option>
-          ))}
-        </Select>
-        <Select value={topN} onChange={e => setTopN(Number(e.target.value))} style={{ flex: "0 0 120px" }}>
-          <option value={5}>Top 5</option>
-          <option value={10}>Top 10</option>
-          <option value={alumnos.length}>Todos</option>
-        </Select>
-      </div>
-
-      {/* Indicador filtro activo */}
-      {tipoActual && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <Badge text={tipoActual.nombre} color={tipoActual.color} />
-          <span style={{ color: PALETTE.muted, fontSize: 12 }}>{totalActsTipo} actividad(es) contabilizada(s)</span>
-        </div>
-      )}
-
-      {/* Más participativos */}
-      <RankingTable lista={topLista} totalActs={totalActsActual} label={`Más participativos${tipoActual ? " — " + tipoActual.nombre : ""}`} bottom={false} />
-
-      {/* Menos participativos */}
-      <RankingTable lista={bottomLista} totalActs={totalActsActual} label={`Menos participativos${tipoActual ? " — " + tipoActual.nombre : ""}`} color={PALETTE.red} bottom={true} />
-    </div>
-  );
-};
-
-// ── Login ────────────────────────────────────────────────────────────────────
-const USERS_BASE = [
-  { usuario: "RenEnriquE", clave: "rene26",      nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
-  { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
-  { usuario: "Tercero",    clave: "gestion26",   nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
-];
-// Merge base users with any saved username/password overrides
-const getUsers = () => {
-  const saved = S.get("ge_claves") || {};
-  return USERS_BASE.map(u => ({
-    ...u,
-    usuario: saved[u.usuario + "_alias"] || u.usuario,
-    clave: saved[u.usuario] || u.clave,
-    _baseUsuario: u.usuario, // keep original key for lookups
-  }));
-};
-
-const NAV_ITEMS = [
-  { id: "dashboard",    label: "Dashboard",          icon: "dashboard"     },
-  { id: "alumnos",      label: "Alumnos",            icon: "users"         },
-  { id: "actividades",  label: "Actividades",        icon: "activity"      },
-  { id: "participacion",label: "Participación",      icon: "participation" },
-  { id: "encuestas",    label: "Encuestas",          icon: "survey"        },
-  { id: "estadisticas", label: "Estadísticas",       icon: "stats"         },
-  { id: "tipos",        label: "Tipos de Actividad", icon: "tag"           },
-  { id: "usuarios",     label: "Usuarios",           icon: "shield"        },
-];
-
-const SEED_VISIBILITY = {
-  dashboard: true, alumnos: true, actividades: true,
-  participacion: true, encuestas: true, estadisticas: true,
-  tipos: false, usuarios: false,
-};
-
-const Login = ({ onLogin }) => {
-  const [usuario, setUsuario] = useState("");
-  const [clave, setClave] = useState("");
-  const [error, setError] = useState("");
-
-  const intentar = () => {
-    const u = getUsers().find(u => u.usuario === usuario.trim() && u.clave === clave);
-    if (u) { setError(""); onLogin(u); }
-    else setError("Usuario o clave incorrectos");
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 20, padding: 40, width: "100%", maxWidth: 380 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-          <div style={{ background: PALETTE.accent, borderRadius: 12, padding: 10 }}><Icon name="dashboard" size={22} color="white" /></div>
-          <div>
-            <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>GestiónEscolar</div>
-            <div style={{ color: PALETTE.muted, fontSize: 12 }}>3ro Básico C · L. M. R. Prado</div>
+      <h3 style={{ color: PALETTE.muted, fontSize: 13, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Top 5 alumnos más participativos</h3>
+      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
+        {topAlumnos.map((al, i) => (
+          <div key={al.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: i < 4 ? `1px solid ${PALETTE.border}` : "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ color: PALETTE.muted, fontWeight: 800, fontSize: 16, width: 24 }}>#{i + 1}</span>
+              <span style={{ color: PALETTE.text, fontSize: 13 }}>{al.nombre}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ color: pctColor(al.pct), fontWeight: 700 }}>{al.done}/{totalActs}</span>
+              <div style={{ background: PALETTE.border, borderRadius: 4, height: 6, width: 80 }}>
+                <div style={{ background: pctColor(al.pct), width: al.pct + "%", height: "100%", borderRadius: 4 }} />
+              </div>
+            </div>
           </div>
-        </div>
-        <Field label="Usuario"><Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="tu usuario" autoCapitalize="none" autoCorrect="off" autoComplete="username" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
-        <Field label="Contraseña"><Input type="password" value={clave} onChange={e => setClave(e.target.value)} placeholder="••••••••" autoCapitalize="none" autoCorrect="off" autoComplete="current-password" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
-        {error && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
-        <Btn onClick={intentar} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>Ingresar</Btn>
+        ))}
       </div>
     </div>
   );
 };
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
-const Usuarios = ({ visibility, setVisibility }) => {
-  const [users, setUsers] = useState(getUsers());
-  const [editingUser, setEditingUser] = useState(null);
-  const [claveForm, setClaveForm] = useState({ nueva: "", confirmar: "" });
-  const [claveError, setClaveError] = useState("");
-  const [claveOk, setClaveOk] = useState("");
-
-  const openEditClave = (u) => { setEditingUser(u); setClaveForm({ usuario: u.usuario, nueva: "", confirmar: "" }); setClaveError(""); setClaveOk(""); };
-
-  const guardarClave = () => {
-    if (!claveForm.usuario.trim()) { setClaveError("El usuario no puede estar vacío"); return; }
-    if (claveForm.nueva && claveForm.nueva.length < 6) { setClaveError("La clave debe tener al menos 6 caracteres"); return; }
-    if (claveForm.nueva !== claveForm.confirmar) { setClaveError("Las claves no coinciden"); return; }
-    const saved = S.get("ge_claves") || {};
-    // Save new username if changed
-    if (claveForm.usuario.trim() !== editingUser.usuario) {
-      saved[editingUser.usuario + "_alias"] = claveForm.usuario.trim();
-    }
-    // Save new password if provided
-    if (claveForm.nueva) {
-      saved[editingUser.usuario] = claveForm.nueva;
-    }
-    S.set("ge_claves", saved);
-    setUsers(getUsers());
-    setClaveOk("¡Guardado!");
-    setClaveError("");
-    setTimeout(() => { setEditingUser(null); setClaveOk(""); }, 1500);
-  };
-
+const Usuarios = () => {
+  const users = [
+    { nombre: "René Enrique Lillo Vallés", alias: "RenEnriquE", rol: "Administrador", color: PALETTE.accent },
+    { nombre: "Carolina Parra Jorquera", alias: "carolina", rol: "Administrador", color: PALETTE.purple },
+  ];
   return (
     <div>
       <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Usuarios</h1>
-
-      {/* Modal cambio de clave */}
-      {editingUser && (
-        <Modal title={`Editar cuenta — ${editingUser.nombre}`} onClose={() => setEditingUser(null)}>
-          <Field label="Nombre de usuario">
-            <Input value={claveForm.usuario} onChange={e => setClaveForm(f => ({ ...f, usuario: e.target.value }))} placeholder="usuario" />
-          </Field>
-          <div style={{ borderTop: `1px solid ${PALETTE.border}`, margin: "16px 0 16px", paddingTop: 4 }}>
-            <div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 12 }}>CAMBIAR CONTRASEÑA (dejar en blanco para no cambiar)</div>
-          </div>
-          <Field label="Nueva contraseña">
-            <Input type="password" value={claveForm.nueva} onChange={e => setClaveForm(f => ({ ...f, nueva: e.target.value }))} placeholder="Mínimo 6 caracteres" />
-          </Field>
-          <Field label="Confirmar contraseña">
-            <Input type="password" value={claveForm.confirmar} onChange={e => setClaveForm(f => ({ ...f, confirmar: e.target.value }))} placeholder="Repite la contraseña" onKeyDown={e => e.key === "Enter" && guardarClave()} />
-          </Field>
-          {claveError && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{claveError}</div>}
-          {claveOk && <div style={{ color: PALETTE.green, fontSize: 13, marginBottom: 12 }}>{claveOk}</div>}
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <Btn variant="ghost" onClick={() => setEditingUser(null)}>Cancelar</Btn>
-            <Btn onClick={guardarClave}>Guardar</Btn>
-          </div>
-        </Modal>
-      )}
-
-      {/* Cuentas */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Cuentas</h3>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 28 }}>
+      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
         {users.map((u, i) => (
-          <div key={u.usuario} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i < users.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
+          <div key={u.alias} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i === 0 ? `1px solid ${PALETTE.border}` : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.color + "33", border: `2px solid ${u.color}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: u.color, fontWeight: 800, fontSize: 16 }}>{u.usuario[0].toUpperCase()}</span>
+                <span style={{ color: u.color, fontWeight: 800, fontSize: 16 }}>{u.alias[0].toUpperCase()}</span>
               </div>
               <div>
                 <div style={{ color: PALETTE.text, fontWeight: 700 }}>{u.nombre}</div>
-                <div style={{ color: PALETTE.muted, fontSize: 12 }}>@{u.usuario}</div>
+                <div style={{ color: PALETTE.muted, fontSize: 12 }}>@{u.alias}</div>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Badge text={u.rol === "admin" ? "Administrador" : "Solo vista"} color={u.rol === "admin" ? PALETTE.accent : PALETTE.green} />
-              <button onClick={() => openEditClave(u)} title="Cambiar clave" style={{ background: PALETTE.accent + "22", border: `1px solid ${PALETTE.accent}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.accent, padding: "5px 10px", fontSize: 11, fontWeight: 600 }}>
-                🔑 Clave
-              </button>
-            </div>
+            <Badge text={u.rol} color={u.color} />
           </div>
         ))}
-      </div>
-
-      {/* Visibilidad para apoderados */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Secciones visibles para Apoderados</h3>
-      <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Controla qué secciones del menú pueden ver los apoderados al iniciar sesión.</p>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-        {NAV_ITEMS.filter(n => n.id !== "usuarios").map((item, i) => {
-          const visible = visibility[item.id] ?? true;
-          return (
-            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < NAV_ITEMS.length - 2 ? `1px solid ${PALETTE.border}` : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <Icon name={item.icon} size={16} color={PALETTE.muted} />
-                <span style={{ color: PALETTE.text, fontSize: 14 }}>{item.label}</span>
-              </div>
-              <button onClick={() => setVisibility(v => ({ ...v, [item.id]: !visible }))} style={{
-                width: 44, height: 24, borderRadius: 12, background: visible ? PALETTE.accent : PALETTE.border,
-                border: "none", cursor: "pointer", position: "relative", transition: "background 0.2s"
-              }}>
-                <span style={{
-                  position: "absolute", top: 3, left: visible ? 23 : 3, width: 18, height: 18,
-                  borderRadius: "50%", background: "white", transition: "left 0.2s"
-                }} />
-              </button>
-            </div>
-          );
-        })}
+        <div style={{ padding: "12px 20px", background: PALETTE.bg + "88" }}>
+          <span style={{ color: PALETTE.muted, fontSize: 12 }}>El resto de los usuarios tienen acceso de solo lectura.</span>
+        </div>
       </div>
     </div>
   );
@@ -1221,10 +743,9 @@ const Usuarios = ({ visibility, setVisibility }) => {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user, setUser] = useState(() => S.get("ge_session") || null);
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [visibility, setVisibility] = useState(() => S.get("ge_visibility") || SEED_VISIBILITY);
+  const [isAdmin] = useState(true);
 
   const [alumnos, setAlumnos] = useState(() => S.get("ge_alumnos") || SEED_ALUMNOS);
   const [actividades, setActividades] = useState(() => S.get("ge_actividades") || SEED_ACTIVIDADES);
@@ -1238,38 +759,31 @@ export default function App() {
   useEffect(() => { S.set("ge_tipos", tipos); }, [tipos]);
   useEffect(() => { S.set("ge_encuestas", encuestas); }, [encuestas]);
   useEffect(() => { S.set("ge_participacion", participacion); }, [participacion]);
-  useEffect(() => { S.set("ge_visibility", visibility); }, [visibility]);
 
-  const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage("dashboard"); };
-  const handleLogout = () => { S.set("ge_session", null); setUser(null); setPage("dashboard"); };
-
-  if (!user) return <Login onLogin={handleLogin} />;
-
-  const isAdmin = user.rol === "admin";
-
-  // Nav visible según rol
-  const nav = NAV_ITEMS.filter(item => {
-    if (isAdmin) return true; // admins ven todo
-    if (item.id === "usuarios" || item.id === "tipos") return false; // siempre oculto para viewers
-    return visibility[item.id] !== false;
-  });
-
-  // Si la página actual ya no es visible, ir al dashboard
-  const validPage = nav.find(n => n.id === page) ? page : "dashboard";
+  const nav = [
+    { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+    { id: "alumnos", label: "Alumnos", icon: "users" },
+    { id: "actividades", label: "Actividades", icon: "activity" },
+    { id: "participacion", label: "Participación", icon: "participation" },
+    { id: "encuestas", label: "Encuestas", icon: "survey" },
+    { id: "estadisticas", label: "Estadísticas", icon: "stats" },
+    { id: "tipos", label: "Tipos de Actividad", icon: "tag" },
+    { id: "usuarios", label: "Usuarios", icon: "shield" },
+  ];
 
   const goTo = (id) => { setPage(id); setSidebarOpen(false); };
   const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin };
 
   const renderPage = () => {
-    switch (validPage) {
-      case "dashboard":     return <Dashboard {...props} onNavigate={goTo} />;
-      case "alumnos":       return <Alumnos {...props} />;
-      case "actividades":   return <Actividades {...props} />;
+    switch (page) {
+      case "dashboard": return <Dashboard {...props} />;
+      case "alumnos": return <Alumnos {...props} />;
+      case "actividades": return <Actividades {...props} />;
       case "participacion": return <Participacion {...props} />;
-      case "encuestas":     return <Encuestas {...props} />;
-      case "estadisticas":  return <Estadisticas {...props} />;
-      case "tipos":         return <TiposActividad {...props} />;
-      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
+      case "encuestas": return <Encuestas {...props} />;
+      case "estadisticas": return <Estadisticas {...props} />;
+      case "tipos": return <TiposActividad {...props} />;
+      case "usuarios": return <Usuarios {...props} />;
       default: return null;
     }
   };
@@ -1277,25 +791,13 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: PALETTE.bg, fontFamily: "'Segoe UI', system-ui, sans-serif", color: PALETTE.text }}>
       {/* Header */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, background: PALETTE.card, borderBottom: `1px solid ${PALETTE.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => setSidebarOpen(s => !s)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.text, padding: 4 }}>
-            <Icon name="menu" size={22} />
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ background: PALETTE.accent, borderRadius: 10, padding: 6 }}><Icon name="dashboard" size={16} color="white" /></div>
-            <span style={{ fontWeight: 800, fontSize: 17 }}>GestiónEscolar</span>
-          </div>
-        </div>
-        {/* User info + logout */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, background: PALETTE.card, borderBottom: `1px solid ${PALETTE.border}`, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, zIndex: 100 }}>
+        <button onClick={() => setSidebarOpen(s => !s)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.text, padding: 4 }}>
+          <Icon name="menu" size={22} />
+        </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: PALETTE.text, fontSize: 12, fontWeight: 700 }}>{user.nombre}</div>
-            <div style={{ color: isAdmin ? PALETTE.accent : PALETTE.green, fontSize: 10 }}>{isAdmin ? "Administrador" : "Solo vista"}</div>
-          </div>
-          <button onClick={handleLogout} title="Cerrar sesión" style={{ background: PALETTE.red + "22", border: `1px solid ${PALETTE.red}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.red, padding: "6px 10px", fontSize: 12, fontWeight: 600 }}>
-            Salir
-          </button>
+          <div style={{ background: PALETTE.accent, borderRadius: 10, padding: 6 }}><Icon name="dashboard" size={16} color="white" /></div>
+          <span style={{ fontWeight: 800, fontSize: 17 }}>GestiónEscolar</span>
         </div>
       </div>
 
@@ -1313,19 +815,12 @@ export default function App() {
             </div>
             <nav style={{ padding: "12px 0" }}>
               {nav.map(item => (
-                <button key={item.id} onClick={() => goTo(item.id)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 20px", background: validPage === item.id ? PALETTE.accent : "transparent", border: "none", cursor: "pointer", color: validPage === item.id ? "white" : PALETTE.muted, fontSize: 14, fontWeight: validPage === item.id ? 700 : 500, textAlign: "left" }}>
-                  <Icon name={item.icon} size={18} color={validPage === item.id ? "white" : PALETTE.muted} />
+                <button key={item.id} onClick={() => goTo(item.id)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 20px", background: page === item.id ? PALETTE.accent : "transparent", border: "none", cursor: "pointer", color: page === item.id ? "white" : PALETTE.muted, fontSize: 14, fontWeight: page === item.id ? 700 : 500, textAlign: "left" }}>
+                  <Icon name={item.icon} size={18} color={page === item.id ? "white" : PALETTE.muted} />
                   {item.label}
                 </button>
               ))}
             </nav>
-            {/* Logout en sidebar */}
-            <div style={{ padding: "12px 20px", borderTop: `1px solid ${PALETTE.border}` }}>
-              <div style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 4 }}>Sesión: <strong style={{ color: PALETTE.text }}>{user.nombre}</strong></div>
-              <button onClick={handleLogout} style={{ background: PALETTE.red + "22", border: `1px solid ${PALETTE.red}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.red, padding: "6px 14px", fontSize: 12, fontWeight: 600, width: "100%" }}>
-                Cerrar sesión
-              </button>
-            </div>
           </div>
         </div>
       )}
