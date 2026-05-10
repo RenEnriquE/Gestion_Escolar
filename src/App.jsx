@@ -611,7 +611,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     const head = [["Alumno", ...actsVisibles.map(a => a.nombre.length > 18 ? a.nombre.substring(0, 17) + "…" : a.nombre)]];
     const body = alumnosOrdenados.map(al => [
       al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre,
-      ...actsVisibles.map(act => participacion[act.id]?.[al.id] ? "✓" : "✗")
+      ...actsVisibles.map(act => participacion[act.id]?.[al.id] ? "SI" : "-")
     ]);
 
     // Summary row
@@ -635,12 +635,12 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.fillColor = [241, 245, 249];
         }
-        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "✓") {
+        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "SI") {
           data.cell.styles.textColor = [34, 197, 94];
           data.cell.styles.fontStyle = "bold";
         }
-        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "✗") {
-          data.cell.styles.textColor = [239, 68, 68];
+        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "-") {
+          data.cell.styles.textColor = [180, 180, 180];
         }
       },
       alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -672,7 +672,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
           {sortAp ? "Por apoderado ✓" : "Ordenar por apoderado"}
         </Btn>
         <Btn variant="ghost" onClick={exportarPDF} small style={{ marginLeft: "auto" }}>
-          🖨️ Exportar PDF
+          Exportar PDF
         </Btn>
       </div>
       {/* Resumen de filtros / orden activo */}
