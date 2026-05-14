@@ -687,7 +687,9 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     // Summary row
     const summary = ["TOTAL", ...actsVisibles.map(act => {
       const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
-      return `${n}/${alumnosOrdenados.length}`;
+      const p = alumnosOrdenados.length > 0 ? (n/alumnosOrdenados.length*100).toFixed(1) : "0.0";
+      return `${n}/${alumnosOrdenados.length}
+${p}%`;
     })];
     body.push(summary);
 
@@ -777,6 +779,9 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                         <span style={{ fontWeight: isActSort ? 700 : 400 }}>{a.nombre}</span>
                         <span style={{ fontSize: 10, color: isActSort ? PALETTE.accent : PALETTE.muted, marginTop: 2 }}>
                           {isActSort ? "↕" : ""} {partCount}/{alumnos.length}
+                        </span>
+                        <span style={{ fontSize: 9, color: pctColor(Math.round(partCount/alumnos.length*100)), marginTop: 1 }}>
+                          {alumnos.length > 0 ? (partCount/alumnos.length*100).toFixed(1) + "%" : ""}
                         </span>
                       </div>
                     </th>
