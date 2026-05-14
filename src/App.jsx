@@ -736,20 +736,50 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
 };
 
 // ── Encuestas ─────────────────────────────────────────────────────────────────
-const Encuestas = ({ alumnos, encuestas, setEncuestas, isAdmin }) => {
+const TIPO_ENCUESTA_ID = "69feb9c34b383d80660995b2";
+
+const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividades, isAdmin }) => {
   const [expandId, setExpandId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editEnc, setEditEnc] = useState(null);
-  const [form, setForm] = useState({ nombre: "", descripcion: "", estado: "Abierta", opciones: [{ id: "o1", texto: "" }, { id: "o2", texto: "" }] });
+  const [form, setForm] = useState({ nombre: "", fecha: "", descripcion: "", estado: "Abierta", opciones: [{ id: "o1", texto: "" }, { id: "o2", texto: "" }] });
 
-  const openNew = () => { setForm({ nombre: "", descripcion: "", estado: "Abierta", opciones: [{ id: "op1", texto: "" }, { id: "op2", texto: "" }] }); setEditEnc(null); setModalOpen(true); };
-  const openEdit = (e) => { setForm({ nombre: e.nombre, descripcion: e.descripcion, estado: e.estado, opciones: [...e.opciones] }); setEditEnc(e); setModalOpen(true); };
-  const del = (id) => { if (window.confirm("¿Eliminar encuesta?")) setEncuestas(prev => prev.filter(e => e.id !== id)); };
+  const openNew = () => { setForm({ nombre: "", fecha: "", descripcion: "", estado: "Abierta", opciones: [{ id: "op1", texto: "" }, { id: "op2", texto: "" }] }); setEditEnc(null); setModalOpen(true); };
+  const openEdit = (e) => { setForm({ nombre: e.nombre, fecha: e.fecha || "", descripcion: e.descripcion, estado: e.estado, opciones: [...e.opciones] }); setEditEnc(e); setModalOpen(true); };
+  const del = (id) => {
+    if (window.confirm("¿Eliminar encuesta?")) {
+      setEncuestas(prev => prev.filter(e => e.id !== id));
+      setActividades(prev => prev.filter(a => a._encuestaId !== id));
+    }
+  };
   const save = () => {
     if (!form.nombre.trim()) return;
     const ops = form.opciones.filter(o => o.texto.trim());
-    if (editEnc) setEncuestas(prev => prev.map(e => e.id === editEnc.id ? { ...e, ...form, opciones: ops } : e));
-    else setEncuestas(prev => [...prev, { ...form, id: "enc" + Date.now(), opciones: ops, respuestas: {} }]);
+    // Map encuesta estado -> actividad estado
+    const estadoAct = form.estado === "Abierta" ? "Activa" : form.estado === "Cerrada" ? "Finalizada" : "No activada";
+    if (editEnc) {
+      setEncuestas(prev => prev.map(e => e.id === editEnc.id ? { ...e, ...form, opciones: ops } : e));
+      // Update linked activity if exists
+      setActividades(prev => prev.map(a => a._encuestaId === editEnc.id
+        ? { ...a, nombre: form.nombre, fecha: form.fecha || a.fecha, estado: estadoAct, descripcion: form.descripcion }
+        : a
+      ));
+    } else {
+      const newId = "enc" + Date.now();
+      const actId = "act" + Date.now();
+      setEncuestas(prev => [...prev, { ...form, id: newId, opciones: ops, respuestas: {} }]);
+      // Auto-create linked activity
+      setActividades(prev => [...prev, {
+        id: actId,
+        nombre: form.nombre,
+        fecha: form.fecha || "",
+        tipos: [TIPO_ENCUESTA_ID],
+        recurrencia: "Mensual",
+        estado: estadoAct,
+        descripcion: form.descripcion || "",
+        _encuestaId: newId,
+      }]);
+    }
     setModalOpen(false);
   };
 
@@ -782,8 +812,9 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, isAdmin }) => {
                   <Icon name="chevron" size={16} color={PALETTE.muted} />
                   <div>
                     <div style={{ color: PALETTE.text, fontWeight: 700, fontSize: 15 }}>{enc.nombre}</div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
                       <Badge text={enc.estado} color={enc.estado === "Abierta" ? PALETTE.green : PALETTE.muted} />
+                      {enc.fecha && <span style={{ color: PALETTE.muted, fontSize: 12 }}>{enc.fecha}</span>}
                       <span style={{ color: PALETTE.muted, fontSize: 12 }}>{enc.descripcion}</span>
                     </div>
                   </div>
@@ -854,8 +885,11 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, isAdmin }) => {
       {modalOpen && (
         <Modal title={editEnc ? "Editar Encuesta" : "Nueva Encuesta"} onClose={() => setModalOpen(false)}>
           <Field label="Nombre"><Input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Fecha"><Input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} /></Field>
+            <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Abierta</option><option>Cerrada</option></Select></Field>
+          </div>
           <Field label="Descripción / Pregunta"><Input value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} /></Field>
-          <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Abierta</option><option>Cerrada</option></Select></Field>
           <Field label="Opciones de respuesta">
             {form.opciones.map((op, i) => (
               <div key={op.id} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -1289,7 +1323,7 @@ export default function App() {
       case "alumnos":       return <Alumnos {...props} />;
       case "actividades":   return <Actividades {...props} />;
       case "participacion": return <Participacion {...props} />;
-      case "encuestas":     return <Encuestas {...props} />;
+      case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
