@@ -1,14 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { supabase } from "./supabase.js";
 
-// ── Storage helpers (localStorage) ───────────────────────────────────────────
+// ── localStorage fallback (session only) ─────────────────────────────────────
 const S = {
   get(k) {
     try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; }
   },
   set(k, v) {
     try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+  },
+};
+
+// ── Supabase DB helpers ───────────────────────────────────────────────────────
+const DB = {
+  async getAll(table) {
+    try {
+      const { data, error } = await supabase.from(table).select('*');
+      if (error) throw error;
+      return data || [];
+    } catch { return null; }
+  },
+  async upsert(table, rows) {
+    try {
+      const { error } = await supabase.from(table).upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+      return true;
+    } catch { return false; }
+  },
+  async upsertPK(table, rows, pk) {
+    try {
+      const { error } = await supabase.from(table).upsert(rows, { onConflict: pk });
+      if (error) throw error;
+      return true;
+    } catch { return false; }
+  },
+  async deleteRow(table, match) {
+    try {
+      let q = supabase.from(table).delete();
+      for (const [k, v] of Object.entries(match)) q = q.eq(k, v);
+      const { error } = await q;
+      if (error) throw error;
+      return true;
+    } catch { return false; }
+  },
+  async getConfig(key) {
+    try {
+      const { data } = await supabase.from('configuracion').select('valor').eq('clave', key).single();
+      return data?.valor ?? null;
+    } catch { return null; }
+  },
+  async setConfig(key, value) {
+    try {
+      await supabase.from('configuracion').upsert({ clave: key, valor: value }, { onConflict: 'clave' });
+    } catch {}
   },
 };
 
@@ -1245,6 +1291,7 @@ const Usuarios = ({ visibility, setVisibility }) => {
       saved[editingUser.usuario] = claveForm.nueva;
     }
     S.set("ge_claves", saved);
+    DB.setConfig('claves', saved);
     setUsers(getUsers());
     setClaveOk("¡Guardado!");
     setClaveError("");
@@ -1333,28 +1380,117 @@ const Usuarios = ({ visibility, setVisibility }) => {
 };
 
 // ── Main App ──────────────────────────────────────────────────────────────────
+// ── Map DB rows to app format ────────────────────────────────────────────────
+const dbToAlumno = r => ({ id: r.id, nombres: r.nombres || "", apellidos: r.apellidos || "", nombre: r.nombre || ((r.apellidos || "") + " " + (r.nombres || "")).toUpperCase().trim(), fechaNac: r.fecha_nac || "", sexo: r.sexo || "M", apoderado: r.apoderado || "", apoderado2: r.apoderado2 || "", telefono: r.telefono || "", email: r.email || "", observaciones: r.observaciones || "", socioAprendilandia: r.socio_aprendilandia || false });
+const alumnoToDB = a => ({ id: a.id, nombres: a.nombres, apellidos: a.apellidos, nombre: a.nombre, fecha_nac: a.fechaNac, sexo: a.sexo, apoderado: a.apoderado, apoderado2: a.apoderado2, telefono: a.telefono, email: a.email, observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia });
+const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null });
+const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null });
+const dbToEnc = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", descripcion: r.descripcion || "", estado: r.estado, actividadId: r.actividad_id || null, opciones: r.opciones || [], respuestas: r.respuestas || {}, _encuestaId: r.encuesta_id });
+const encToDB = e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha || "", descripcion: e.descripcion || "", estado: e.estado, actividad_id: e.actividadId || null, opciones: e.opciones, respuestas: e.respuestas });
+
 export default function App() {
   const [user, setUser] = useState(() => S.get("ge_session") || null);
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [visibility, setVisibility] = useState(() => S.get("ge_visibility") || SEED_VISIBILITY);
+  const [loading, setLoading] = useState(true);
+  const [visibility, setVisibility] = useState(SEED_VISIBILITY);
 
-  const [alumnos, setAlumnos] = useState(() => S.get("ge_alumnos") || SEED_ALUMNOS);
-  const [actividades, setActividades] = useState(() => S.get("ge_actividades") || SEED_ACTIVIDADES);
-  const [tipos, setTipos] = useState(() => S.get("ge_tipos") || SEED_TIPOS);
-  const [encuestas, setEncuestas] = useState(() => S.get("ge_encuestas") || SEED_ENCUESTAS);
-  const [participacion, setParticipacion] = useState(() => S.get("ge_participacion") || SEED_PARTICIPACION);
+  const [alumnos, setAlumnos] = useState(SEED_ALUMNOS);
+  const [actividades, setActividades] = useState(SEED_ACTIVIDADES);
+  const [tipos, setTipos] = useState(SEED_TIPOS);
+  const [encuestas, setEncuestas] = useState(SEED_ENCUESTAS);
+  const [participacion, setParticipacion] = useState(SEED_PARTICIPACION);
 
-  // Auto-save
-  useEffect(() => { S.set("ge_alumnos", alumnos); }, [alumnos]);
-  useEffect(() => { S.set("ge_actividades", actividades); }, [actividades]);
-  useEffect(() => { S.set("ge_tipos", tipos); }, [tipos]);
-  useEffect(() => { S.set("ge_encuestas", encuestas); }, [encuestas]);
-  useEffect(() => { S.set("ge_participacion", participacion); }, [participacion]);
-  useEffect(() => { S.set("ge_visibility", visibility); }, [visibility]);
+  const initialized = useRef(false);
+
+  // ── Load all data from Supabase on mount ──────────────────────────────────
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis, dbClaves] = await Promise.all([
+          DB.getAll('alumnos'), DB.getAll('tipos'), DB.getAll('actividades'),
+          DB.getAll('encuestas'), DB.getAll('participacion'),
+          DB.getConfig('visibility'), DB.getConfig('claves'),
+        ]);
+
+        if (dbAlumnos?.length) setAlumnos(dbAlumnos.map(dbToAlumno));
+        else await DB.upsert('alumnos', SEED_ALUMNOS.map(alumnoToDB));
+
+        if (dbTipos?.length) setTipos(dbTipos);
+        else await DB.upsert('tipos', SEED_TIPOS);
+
+        if (dbActividades?.length) setActividades(dbActividades.map(dbToAct));
+        else await DB.upsert('actividades', SEED_ACTIVIDADES.map(actToDB));
+
+        if (dbEnc?.length) setEncuestas(dbEnc.map(dbToEnc));
+        else await DB.upsert('encuestas', SEED_ENCUESTAS.map(encToDB));
+
+        if (dbPart?.length) {
+          const partObj = {};
+          dbPart.forEach(r => {
+            if (!partObj[r.act_id]) partObj[r.act_id] = {};
+            partObj[r.act_id][r.alum_id] = r.participo;
+          });
+          setParticipacion(partObj);
+        } else {
+          const rows = [];
+          Object.entries(SEED_PARTICIPACION).forEach(([actId, alums]) =>
+            Object.entries(alums).forEach(([alumId, v]) => rows.push({ act_id: actId, alum_id: alumId, participo: v }))
+          );
+          await DB.upsertPK('participacion', rows, 'act_id,alum_id');
+        }
+
+        if (dbVis) setVisibility(dbVis);
+        if (dbClaves) S.set("ge_claves", dbClaves);
+      } catch (e) { console.error("Load error", e); }
+      setLoading(false);
+    })();
+  }, []);
+
+  // ── Auto-save to Supabase ─────────────────────────────────────────────────
+  const saveTimeout = useRef({});
+  const debounceSave = (key, fn, delay = 1200) => {
+    clearTimeout(saveTimeout.current[key]);
+    saveTimeout.current[key] = setTimeout(fn, delay);
+  };
+
+  useEffect(() => { if (!loading) debounceSave('alumnos', () => DB.upsert('alumnos', alumnos.map(alumnoToDB))); }, [alumnos, loading]);
+  useEffect(() => { if (!loading) debounceSave('tipos', () => DB.upsert('tipos', tipos)); }, [tipos, loading]);
+  useEffect(() => { if (!loading) debounceSave('actividades', () => DB.upsert('actividades', actividades.map(actToDB))); }, [actividades, loading]);
+  useEffect(() => { if (!loading) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
+  useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
+
+  // Participacion saves individually per change (more granular)
+  const prevPart = useRef(null);
+  useEffect(() => {
+    if (loading) return;
+    const prev = prevPart.current;
+    prevPart.current = participacion;
+    if (!prev) return;
+    const rows = [];
+    Object.entries(participacion).forEach(([actId, alums]) =>
+      Object.entries(alums).forEach(([alumId, v]) => {
+        if (!prev[actId] || prev[actId][alumId] !== v)
+          rows.push({ act_id: actId, alum_id: alumId, participo: v });
+      })
+    );
+    if (rows.length) DB.upsertPK('participacion', rows, 'act_id,alum_id');
+  }, [participacion, loading]);
 
   const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage("dashboard"); };
   const handleLogout = () => { S.set("ge_session", null); setUser(null); setPage("dashboard"); };
+
+  if (!user) return <Login onLogin={handleLogin} />;
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
+      <div style={{ width: 40, height: 40, border: `4px solid ${PALETTE.border}`, borderTop: `4px solid ${PALETTE.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <span style={{ color: PALETTE.muted, fontSize: 14 }}>Cargando datos...</span>
+    </div>
+  );
 
   if (!user) return <Login onLogin={handleLogin} />;
 
