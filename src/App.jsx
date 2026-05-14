@@ -599,17 +599,16 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     const fecha = new Date().toLocaleDateString("es-CL");
     const nActs = actsVisibles.length;
 
-    // Always landscape to fit more columns; use A4 or wider
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth(); // 297mm landscape
+    // Portrait A4: 210mm wide, fit all 45 rows in one page
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth(); // 210mm
 
-    // Calculate column widths to fit in one page
-    const margin = 10;
-    const nameColW = 44;
+    const margin = 8;
+    const nameColW = 40;
     const available = pageW - margin * 2 - nameColW;
-    const actColW = nActs > 0 ? Math.min(18, Math.max(8, available / nActs)) : 18;
-    // Font size: shrink if many columns
-    const fs = nActs > 20 ? 5.5 : nActs > 14 ? 6.5 : nActs > 8 ? 7 : 8;
+    const actColW = nActs > 0 ? Math.max(7, Math.min(20, available / nActs)) : 20;
+    // Shrink font to fit 45 rows + header in ~270mm page height
+    const fs = nActs > 10 ? 5 : 5.5;
 
     // Title
     doc.setFontSize(13);
@@ -655,8 +654,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
       body,
       startY: 22,
       margin: { left: margin, right: margin },
-      styles: { fontSize: fs, cellPadding: 1.5, halign: "center", overflow: "ellipsize" },
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 2 },
+      styles: { fontSize: fs, cellPadding: 0.8, halign: "center", overflow: "ellipsize" },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 1.2 },
       columnStyles: colStyles,
       tableWidth: pageW - margin * 2,
       didParseCell: (data) => {
@@ -879,9 +878,6 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <span style={{ color: PALETTE.muted, fontSize: 13 }}>{totalResp}/{alumnos.length} resp.</span>
                   {isAdmin && <>
-                    <button onClick={() => vincularComoActividad(enc)} title={actividades.some(a => a._encuestaId === enc.id) ? "Actualizar actividad vinculada" : "Agregar como actividad"} style={{ background: PALETTE.green + "22", border: `1px solid ${PALETTE.green}44`, borderRadius: 6, cursor: "pointer", color: PALETTE.green, padding: "4px 8px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {actividades.some(a => a._encuestaId === enc.id) ? "↺ Actividad" : "+ Actividad"}
-                    </button>
                     <button onClick={() => openEdit(enc)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="edit" size={15} /></button>
                     <button onClick={() => del(enc.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={15} /></button>
                   </>}
