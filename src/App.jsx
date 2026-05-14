@@ -551,12 +551,19 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
 };
 
 // ── Participación ─────────────────────────────────────────────────────────────
-const Participacion = ({ alumnos, actividades, participacion, setParticipacion, tipos, isAdmin }) => {
+const Participacion = ({ alumnos, actividades, participacion, setParticipacion, tipos, encuestas, isAdmin }) => {
   const [filterTipo, setFilterTipo] = useState("");
   const [filterEstado, setFilterEstado] = useState("");
   const [filterAct, setFilterAct] = useState("");
   const [sortAp, setSortAp] = useState(false);
-  const [sortActId, setSortActId] = useState(null); // sort by participation in this activity
+  const [sortActId, setSortActId] = useState(null);
+
+  // Helper: participó si está en participacion O si respondió la encuesta vinculada
+  const partioEn = (act, alumId) => {
+    if (participacion[act.id]?.[alumId]) return true;
+    const enc = (encuestas || []).find(e => e.id === act._encuestaId || e.nombre === act.nombre);
+    return !!(enc?.respuestas?.[alumId]);
+  };
 
   const actsFiltradas = actividades
     .filter(a => !filterTipo || a.tipos.includes(filterTipo))
@@ -567,9 +574,10 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
 
   const alumnosOrdenados = [...alumnos].sort((a, b) => {
     if (sortActId) {
-      const pa = participacion[sortActId]?.[a.id] ? 1 : 0;
-      const pb = participacion[sortActId]?.[b.id] ? 1 : 0;
-      if (pb !== pa) return pb - pa; // participantes primero
+      const actSort = actsVisibles.find(x => x.id === sortActId);
+      const pa = actSort ? (partioEn(actSort, a.id) ? 1 : 0) : 0;
+      const pb = actSort ? (partioEn(actSort, b.id) ? 1 : 0) : 0;
+      if (pb !== pa) return pb - pa;
     }
     if (sortAp) return (a.apoderado || "").localeCompare(b.apoderado || "");
     return a.nombre.localeCompare(b.nombre);
