@@ -611,13 +611,13 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     const head = [["Alumno", ...actsVisibles.map(a => a.nombre.length > 18 ? a.nombre.substring(0, 17) + "…" : a.nombre)]];
     const body = alumnosOrdenados.map(al => [
       al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre,
-      ...actsVisibles.map(act => participacion[act.id]?.[al.id] ? "SI" : "-")
+      ...actsVisibles.map(act => partioEn(act, al.id) ? "SI" : "-")
     ]);
 
     // Summary row
     const summary = ["TOTAL",
       ...actsVisibles.map(act => {
-        const n = alumnosOrdenados.filter(al => participacion[act.id]?.[al.id]).length;
+        const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
         return `${n}/${alumnosOrdenados.length}`;
       })
     ];
@@ -692,7 +692,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                 <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, position: "sticky", left: 0, background: PALETTE.card }}>Alumno</th>
                 {actsVisibles.map(a => {
                   const isActSort = sortActId === a.id;
-                  const partCount = alumnos.filter(al => participacion[a.id]?.[al.id]).length;
+                  const partCount = alumnos.filter(al => partioEn(a, al.id)).length;
                   return (
                     <th key={a.id} style={{ textAlign: "center", padding: "12px 10px", color: isActSort ? PALETTE.accent : PALETTE.muted, fontSize: 11 }}>
                       <div
@@ -715,11 +715,12 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                   <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
                   {actsVisibles.map(act => {
-                    const partio = participacion[act.id]?.[al.id];
+                    const partio = partioEn(act, al.id);
+                    const esEncuesta = !!act._encuestaId || encuestas.some(e => e.nombre === act.nombre);
                     const isActSort = sortActId === act.id;
                     return (
                       <td key={act.id} style={{ textAlign: "center", padding: "12px 10px", background: isActSort ? PALETTE.accent + "08" : "transparent" }}>
-                        <button onClick={() => toggle(act.id, al.id)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: isAdmin ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        <button onClick={() => !esEncuesta && toggle(act.id, al.id)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: (isAdmin && !esEncuesta) ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                           <Icon name={partio ? "check" : "x"} size={14} color={partio ? PALETTE.green : PALETTE.red} />
                         </button>
                       </td>
@@ -1352,7 +1353,7 @@ export default function App() {
       case "dashboard":     return <Dashboard {...props} onNavigate={goTo} />;
       case "alumnos":       return <Alumnos {...props} />;
       case "actividades":   return <Actividades {...props} />;
-      case "participacion": return <Participacion {...props} />;
+      case "participacion": return <Participacion {...props} encuestas={encuestas} />;
       case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
