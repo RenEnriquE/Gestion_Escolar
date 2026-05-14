@@ -596,55 +596,76 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   const estadoColor = { "Activa": PALETTE.green, "Finalizada": PALETTE.accent, "Suspendida": PALETTE.red, "No activada": PALETTE.muted };
 
   const exportarPDF = () => {
-    const doc = new jsPDF({ orientation: actsVisibles.length > 6 ? "landscape" : "portrait" });
     const fecha = new Date().toLocaleDateString("es-CL");
+    const nActs = actsVisibles.length;
+
+    // Always landscape to fit more columns; use A4 or wider
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth(); // 297mm landscape
+
+    // Calculate column widths to fit in one page
+    const margin = 10;
+    const nameColW = 44;
+    const available = pageW - margin * 2 - nameColW;
+    const actColW = nActs > 0 ? Math.min(18, Math.max(8, available / nActs)) : 18;
+    // Font size: shrink if many columns
+    const fs = nActs > 20 ? 5.5 : nActs > 14 ? 6.5 : nActs > 8 ? 7 : 8;
 
     // Title
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
-    doc.text("GestiónEscolar — Participación", 14, 16);
-    doc.setFontSize(9);
+    doc.text("GestionEscolar - Participacion", margin, 12);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(120);
-
-    // Active filters info
+    doc.setTextColor(100);
     const filtros = [];
     if (filterTipo) filtros.push("Tipo: " + (tipos.find(t => t.id === filterTipo)?.nombre || ""));
     if (filterEstado) filtros.push("Estado: " + filterEstado);
-    if (filterAct) filtros.push("Actividad: " + (actsVisibles.find(a => a.id === filterAct)?.nombre || ""));
-    doc.text((filtros.length ? filtros.join("  |  ") : "Todas las actividades") + "   —   " + fecha, 14, 23);
+    doc.text((filtros.length ? filtros.join("  |  ") : "Todas las actividades") + "  -  " + fecha, margin, 18);
     doc.setTextColor(0);
 
-    // Build table
-    const head = [["Alumno", ...actsVisibles.map(a => a.nombre.length > 18 ? a.nombre.substring(0, 17) + "…" : a.nombre)]];
-    const body = alumnosOrdenados.map(al => [
-      al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre,
-      ...actsVisibles.map(act => partioEn(act, al.id) ? "SI" : "-")
-    ]);
+    // Shorten activity names to fit column
+    const maxChars = actColW > 12 ? 14 : 8;
+    const head = [["Alumno", ...actsVisibles.map(a => {
+      const n = a.nombre;
+      return n.length > maxChars ? n.substring(0, maxChars - 1) + "." : n;
+    })]];
+
+    // Only first name + first surname for brevity
+    const body = alumnosOrdenados.map(al => {
+      const displayName = al.nombres && al.apellidos
+        ? al.nombres.split(" ")[0] + " " + al.apellidos.split(" ")[0]
+        : al.nombre;
+      return [displayName, ...actsVisibles.map(act => partioEn(act, al.id) ? "SI" : "-")];
+    });
 
     // Summary row
-    const summary = ["TOTAL",
-      ...actsVisibles.map(act => {
-        const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
-        return `${n}/${alumnosOrdenados.length}`;
-      })
-    ];
+    const summary = ["TOTAL", ...actsVisibles.map(act => {
+      const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
+      return `${n}/${alumnosOrdenados.length}`;
+    })];
     body.push(summary);
+
+    // Build columnStyles dynamically
+    const colStyles = { 0: { halign: "left", cellWidth: nameColW } };
+    for (let i = 1; i <= nActs; i++) colStyles[i] = { cellWidth: actColW, halign: "center" };
 
     autoTable(doc, {
       head,
       body,
-      startY: 28,
-      styles: { fontSize: 7.5, cellPadding: 2.5, halign: "center" },
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { halign: "left", cellWidth: 42 } },
+      startY: 22,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: fs, cellPadding: 1.5, halign: "center", overflow: "ellipsize" },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 2 },
+      columnStyles: colStyles,
+      tableWidth: pageW - margin * 2,
       didParseCell: (data) => {
         if (data.section === "body" && data.row.index === body.length - 1) {
           data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [241, 245, 249];
+          data.cell.styles.fillColor = [230, 236, 245];
         }
         if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "SI") {
-          data.cell.styles.textColor = [34, 197, 94];
+          data.cell.styles.textColor = [22, 163, 74];
           data.cell.styles.fontStyle = "bold";
         }
         if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "-") {
