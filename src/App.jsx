@@ -688,8 +688,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     const summary = ["TOTAL", ...actsVisibles.map(act => {
       const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
       const p = alumnosOrdenados.length > 0 ? (n/alumnosOrdenados.length*100).toFixed(1) : "0.0";
-      return `${n}/${alumnosOrdenados.length}
-${p}%`;
+      return `${n}/${alumnosOrdenados.length} (${p}%)`;
     })];
     body.push(summary);
 
@@ -771,16 +770,15 @@ ${p}%`;
                   const partCount = alumnos.filter(al => partioEn(a, al.id)).length;
                   return (
                     <th key={a.id} style={{ textAlign: "center", padding: "12px 10px", color: isActSort ? PALETTE.accent : PALETTE.muted, fontSize: 11 }}>
-                      <div
-                        onClick={() => handleSortAct(a.id)}
-                        title="Clic para ordenar por participación"
-                        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
-                      >
-                        <span style={{ fontWeight: isActSort ? 700 : 400 }}>{a.nombre}</span>
-                        <span style={{ fontSize: 10, color: isActSort ? PALETTE.accent : PALETTE.muted, marginTop: 2 }}>
-                          {isActSort ? "↕" : ""} {partCount}/{alumnos.length}
+                      <div onClick={() => handleSortAct(a.id)} title="Clic para ordenar por participación"
+                        style={{ cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                        <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80 }}>
+                          <span style={{ fontWeight: isActSort ? 700 : 400 }}>{isActSort ? "↕ " : ""}{a.nombre}</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: isActSort ? PALETTE.accent : PALETTE.muted }}>
+                          {partCount}/{alumnos.length}
                         </span>
-                        <span style={{ fontSize: 9, color: pctColor(Math.round(partCount/alumnos.length*100)), marginTop: 1 }}>
+                        <span style={{ fontSize: 10, color: pctColor(Math.round(partCount/alumnos.length*100)), fontWeight: 600 }}>
                           {alumnos.length > 0 ? (partCount/alumnos.length*100).toFixed(1) + "%" : ""}
                         </span>
                       </div>
