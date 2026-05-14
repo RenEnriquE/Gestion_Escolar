@@ -752,6 +752,33 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
       setActividades(prev => prev.filter(a => a._encuestaId !== id));
     }
   };
+
+  const vincularComoActividad = (enc) => {
+    // Check if already linked
+    const yaExiste = actividades.some(a => a._encuestaId === enc.id);
+    if (yaExiste) {
+      // Update existing
+      const estadoAct = enc.estado === "Abierta" ? "Activa" : enc.estado === "Cerrada" ? "Finalizada" : "No activada";
+      setActividades(prev => prev.map(a => a._encuestaId === enc.id
+        ? { ...a, nombre: enc.nombre, fecha: enc.fecha || a.fecha, estado: estadoAct, descripcion: enc.descripcion }
+        : a
+      ));
+      alert("Actividad actualizada correctamente.");
+    } else {
+      const estadoAct = enc.estado === "Abierta" ? "Activa" : enc.estado === "Cerrada" ? "Finalizada" : "No activada";
+      setActividades(prev => [...prev, {
+        id: "act" + Date.now(),
+        nombre: enc.nombre,
+        fecha: enc.fecha || "",
+        tipos: [TIPO_ENCUESTA_ID],
+        recurrencia: "Mensual",
+        estado: estadoAct,
+        descripcion: enc.descripcion || "",
+        _encuestaId: enc.id,
+      }]);
+      alert("Actividad creada y vinculada correctamente.");
+    }
+  };
   const save = () => {
     if (!form.nombre.trim()) return;
     const ops = form.opciones.filter(o => o.texto.trim());
@@ -822,6 +849,9 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <span style={{ color: PALETTE.muted, fontSize: 13 }}>{totalResp}/{alumnos.length} resp.</span>
                   {isAdmin && <>
+                    <button onClick={() => vincularComoActividad(enc)} title={actividades.some(a => a._encuestaId === enc.id) ? "Actualizar actividad vinculada" : "Agregar como actividad"} style={{ background: PALETTE.green + "22", border: `1px solid ${PALETTE.green}44`, borderRadius: 6, cursor: "pointer", color: PALETTE.green, padding: "4px 8px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {actividades.some(a => a._encuestaId === enc.id) ? "↺ Actividad" : "+ Actividad"}
+                    </button>
                     <button onClick={() => openEdit(enc)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="edit" size={15} /></button>
                     <button onClick={() => del(enc.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={15} /></button>
                   </>}
