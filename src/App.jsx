@@ -669,12 +669,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     doc.text((filtros.length ? filtros.join("  |  ") : "Todas las actividades") + "  -  " + fecha, margin, 18);
     doc.setTextColor(0);
 
-    // Shorten activity names to fit column
-    const maxChars = actColW > 12 ? 14 : 8;
-    const head = [["Alumno", ...actsVisibles.map(a => {
-      const n = a.nombre;
-      return n.length > maxChars ? n.substring(0, maxChars - 1) + "." : n;
-    })]];
+    // Activity names wrap across multiple lines in header
+    const head = [["Alumno", ...actsVisibles.map(a => a.nombre)]];
 
     // Only first name + first surname for brevity
     const body = alumnosOrdenados.map(al => {
@@ -701,8 +697,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
       body,
       startY: 22,
       margin: { left: margin, right: margin },
-      styles: { fontSize: fs, cellPadding: 0.8, halign: "center", overflow: "ellipsize" },
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 1.2 },
+      styles: { fontSize: fs, cellPadding: 0.8, halign: "center", overflow: "linebreak" },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 1.2, minCellHeight: 18 },
       columnStyles: colStyles,
       tableWidth: pageW - margin * 2,
       didParseCell: (data) => {
