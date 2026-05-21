@@ -1563,7 +1563,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               <div key={al.id} onClick={() => { setSelected(al); setEditMode(false); }}
                 style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}`, background: selected?.id === al.id ? PALETTE.accent + "22" : "transparent" }}>
                 <div style={{ color: selected?.id === al.id ? PALETTE.accent : PALETTE.text, fontSize: 13, fontWeight: 600 }}>
-                  {[al.apellidos, al.apellido2].filter(Boolean).join(" ")} {[al.nombres, al.nombre2].filter(Boolean).join(" ") || al.nombre}
+                  {[al.nombres, al.nombre2, al.apellidos, al.apellido2].filter(Boolean).join(" ") || al.nombre}
                 </div>
                 <div style={{ color: PALETTE.muted, fontSize: 11 }}>{al.rut || "Sin RUT"}</div>
               </div>
@@ -1577,7 +1577,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
                 <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 18 }}>
-                  {[selected.apellidos, selected.apellido2, selected.nombres, selected.nombre2].filter(Boolean).join(" ")}
+                  {[selected.nombres, selected.nombre2, selected.apellidos, selected.apellido2].filter(Boolean).join(" ")}
                 </div>
                 <div style={{ color: PALETTE.muted, fontSize: 13 }}>{selected.rut || "Sin RUT"} · {selected.id}</div>
               </div>
