@@ -1417,7 +1417,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
   const ALL_COLS = [
     { id: "id",           label: "ID Alumno",           get: a => a.id },
     { id: "rut",          label: "RUT Alumno",           get: a => a.rut||"" },
-    { id: "nombre_completo", label: "Nombre Completo",  get: a => [a.apellidos,a.apellido2,a.nombres,a.nombre2].filter(Boolean).join(" ") },
+    { id: "nombre_completo", label: "Nombre Completo",  get: a => [a.nombres,a.nombre2,a.apellidos,a.apellido2].filter(Boolean).join(" ") },
     { id: "apellidos",    label: "Apellido Paterno",     get: a => a.apellidos||"" },
     { id: "apellido2",    label: "Apellido Materno",     get: a => a.apellido2||"" },
     { id: "nombres",      label: "Primer Nombre",        get: a => a.nombres||"" },
