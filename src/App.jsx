@@ -1435,23 +1435,24 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
     { id: "apod2_email",  label: "Apod.2 Email",         get: a => a.apod2_email||"" },
     { id: "apod2_fnac",   label: "Apod.2 F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
   ];
-  const [selCols, setSelCols] = useState(new Set(["rut","nombre_completo","fechaNac","apod1_nombre","apod1_cel","apod1_email"]));
+  const [selCols, setSelCols] = useState(new Set(["rut","nombre_completo","apod1_rut","apod1_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
-  const [sortCol, setSortCol] = useState("apellidos");
+  const [sort1, setSort1] = useState("apellidos");
+  const [sort2, setSort2] = useState("nombres");
+  const [sort3, setSort3] = useState("");
 
   const toggleCol = (id) => setSelCols(prev => {
-    const n = new Set(prev);
-    n.has(id) ? n.delete(id) : n.add(id);
-    return n;
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
+  const getVal = (al, colId) => { if (!colId) return ""; const col = ALL_COLS.find(c => c.id === colId); return col ? col.get(al) : ""; };
 
   const alumnosOrdenados = [...alumnos]
     .filter(a => (a.apellidos||a.nombre||"").toLowerCase().includes(search.toLowerCase()) || (a.nombres||"").toLowerCase().includes(search.toLowerCase()))
     .sort((a,b) => {
-      const col = ALL_COLS.find(c => c.id === sortCol);
-      const va = col ? col.get(a) : a.apellidos||"";
-      const vb = col ? col.get(b) : b.apellidos||"";
-      return va.localeCompare(vb, "es");
+      const v1 = getVal(a,sort1).localeCompare(getVal(b,sort1),"es"); if (v1 !== 0) return v1;
+      const v2 = getVal(a,sort2).localeCompare(getVal(b,sort2),"es"); if (v2 !== 0) return v2;
+      if (!sort3) return 0;
+      return getVal(a,sort3).localeCompare(getVal(b,sort3),"es");
     });
 
   const openEdit = (al) => {
@@ -1544,13 +1545,17 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
         <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
           <div style={{ padding: "10px 14px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
             <Input placeholder="Buscar alumno..." value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: 12 }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: PALETTE.muted, fontSize: 11, whiteSpace: "nowrap" }}>Ordenar por:</span>
-              <select value={sortCol} onChange={e => setSortCol(e.target.value)} style={{ flex: 1, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "4px 8px", color: PALETTE.text, fontSize: 11, outline: "none" }}>
-                {ALL_COLS.filter(c => !["id"].includes(c.id)).map(c => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ color: PALETTE.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Ordenar por</span>
+              {[[sort1,setSort1,"1°"],[sort2,setSort2,"2°"],[sort3,setSort3,"3°"]].map(([val,setter,lbl]) => (
+                <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: PALETTE.muted, fontSize: 10, minWidth: 16 }}>{lbl}</span>
+                  <select value={val} onChange={e => setter(e.target.value)} style={{ flex: 1, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "3px 6px", color: PALETTE.text, fontSize: 11, outline: "none" }}>
+                    {lbl !== "1°" && <option value="">— ninguno —</option>}
+                    {ALL_COLS.filter(c => c.id !== "id").map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </select>
+                </div>
+              ))}
             </div>
           </div>
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
@@ -1579,26 +1584,28 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               {isAdmin && <Btn small onClick={() => openEdit(selected)}><Icon name="edit" size={13} />Editar</Btn>}
             </div>
 
-            {/* Columnas seleccionadas como tabla */}
-            <div style={{ background: PALETTE.bg, borderRadius: 10, overflow: "hidden", border: `1px solid ${PALETTE.border}` }}>
-              <div style={{ padding: "10px 16px", borderBottom: `1px solid ${PALETTE.border}`, color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
-                Campos seleccionados ({selCols.size})
+            {/* Todos los campos — clic para incluir/excluir de exportación */}
+            <div style={{ background: PALETTE.bg, borderRadius: 10, overflow: "hidden", border: `1px solid ${PALETTE.border}`, marginBottom: 8 }}>
+              <div style={{ padding: "8px 14px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: PALETTE.muted, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Datos del alumno</span>
+                <span style={{ color: PALETTE.accent, fontSize: 10 }}>Clic en campo = incluir/excluir de exportación</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-                {ALL_COLS.filter(c => selCols.has(c.id)).map((c, i) => {
+                {ALL_COLS.map((c, i) => {
                   const v = c.get(selected);
+                  const isSel = selCols.has(c.id);
                   return (
-                    <div key={c.id} style={{ padding: "8px 14px", borderBottom: `1px solid ${PALETTE.border}22`, borderRight: i % 2 === 0 ? `1px solid ${PALETTE.border}22` : "none" }}>
-                      <div style={{ color: PALETTE.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{c.label}</div>
+                    <div key={c.id} onClick={() => toggleCol(c.id)} style={{ padding: "8px 14px", borderBottom: `1px solid ${PALETTE.border}22`, borderRight: i % 2 === 0 ? `1px solid ${PALETTE.border}22` : "none", background: isSel ? PALETTE.accent + "18" : "transparent", cursor: "pointer" }}>
+                      <div style={{ color: isSel ? PALETTE.accent : PALETTE.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+                        {isSel ? "✓ " : ""}{c.label}
+                      </div>
                       <div style={{ color: v ? PALETTE.text : PALETTE.border, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v || "—"}</div>
                     </div>
                   );
                 })}
               </div>
             </div>
-
-            {/* Datos completos siempre visibles abajo */}
-            <SecTitle t="Todos los datos" />
+            <SecTitle t="Datos completos" />
             <InfoRow label="Apellido paterno" value={selected.apellidos} />
             <InfoRow label="Apellido materno" value={selected.apellido2} />
             <InfoRow label="Primer nombre" value={selected.nombres} />
