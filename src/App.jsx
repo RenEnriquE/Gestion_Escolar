@@ -1415,27 +1415,29 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
 
   // Columnas exportables
   const ALL_COLS = [
-    { id: "id",          label: "ID Alumno" },
-    { id: "rut",         label: "RUT Alumno" },
-    { id: "apellidos",   label: "Apellido Paterno" },
-    { id: "apellido2",   label: "Apellido Materno" },
-    { id: "nombres",     label: "Primer Nombre" },
-    { id: "nombre2",     label: "Segundo Nombre" },
-    { id: "fechaNac",    label: "Fecha Nacimiento" },
-    { id: "sexo",        label: "Sexo" },
-    { id: "apod1_nombre",label: "Apod.1 Nombre" },
-    { id: "apod1_rut",   label: "Apod.1 RUT" },
-    { id: "apod1_cel",   label: "Apod.1 Teléfono" },
-    { id: "apod1_email", label: "Apod.1 Email" },
-    { id: "apod1_fnac",  label: "Apod.1 F.Nacimiento" },
-    { id: "apod2_nombre",label: "Apod.2 Nombre" },
-    { id: "apod2_rut",   label: "Apod.2 RUT" },
-    { id: "apod2_cel",   label: "Apod.2 Teléfono" },
-    { id: "apod2_email", label: "Apod.2 Email" },
-    { id: "apod2_fnac",  label: "Apod.2 F.Nacimiento" },
+    { id: "id",           label: "ID Alumno",           get: a => a.id },
+    { id: "rut",          label: "RUT Alumno",           get: a => a.rut||"" },
+    { id: "nombre_completo", label: "Nombre Completo",  get: a => [a.apellidos,a.apellido2,a.nombres,a.nombre2].filter(Boolean).join(" ") },
+    { id: "apellidos",    label: "Apellido Paterno",     get: a => a.apellidos||"" },
+    { id: "apellido2",    label: "Apellido Materno",     get: a => a.apellido2||"" },
+    { id: "nombres",      label: "Primer Nombre",        get: a => a.nombres||"" },
+    { id: "nombre2",      label: "Segundo Nombre",       get: a => a.nombre2||"" },
+    { id: "fechaNac",     label: "Fecha Nacimiento",     get: a => toDisplay(a.fechaNac)||"" },
+    { id: "sexo",         label: "Sexo",                 get: a => a.sexo==="M"?"Masculino":"Femenino" },
+    { id: "apod1_nombre", label: "Apod.1 Nombre",        get: a => a.apod1_nombre||a.apoderado||"" },
+    { id: "apod1_rut",    label: "Apod.1 RUT",           get: a => a.apod1_rut||"" },
+    { id: "apod1_cel",    label: "Apod.1 Teléfono",      get: a => a.apod1_cel||a.telefono||"" },
+    { id: "apod1_email",  label: "Apod.1 Email",         get: a => a.apod1_email||a.email||"" },
+    { id: "apod1_fnac",   label: "Apod.1 F.Nacimiento",  get: a => toDisplay(a.apod1_fnac)||"" },
+    { id: "apod2_nombre", label: "Apod.2 Nombre",        get: a => a.apod2_nombre||a.apoderado2||"" },
+    { id: "apod2_rut",    label: "Apod.2 RUT",           get: a => a.apod2_rut||"" },
+    { id: "apod2_cel",    label: "Apod.2 Teléfono",      get: a => a.apod2_cel||"" },
+    { id: "apod2_email",  label: "Apod.2 Email",         get: a => a.apod2_email||"" },
+    { id: "apod2_fnac",   label: "Apod.2 F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
   ];
-  const [selCols, setSelCols] = useState(new Set(["id","rut","apellidos","apellido2","nombres","nombre2","fechaNac","apod1_nombre","apod1_cel","apod1_email"]));
+  const [selCols, setSelCols] = useState(new Set(["rut","nombre_completo","fechaNac","apod1_nombre","apod1_cel","apod1_email"]));
   const [showColPicker, setShowColPicker] = useState(false);
+  const [sortCol, setSortCol] = useState("apellidos");
 
   const toggleCol = (id) => setSelCols(prev => {
     const n = new Set(prev);
@@ -1445,7 +1447,12 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
 
   const alumnosOrdenados = [...alumnos]
     .filter(a => (a.apellidos||a.nombre||"").toLowerCase().includes(search.toLowerCase()) || (a.nombres||"").toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b) => (a.apellidos||"").localeCompare(b.apellidos||"","es"));
+    .sort((a,b) => {
+      const col = ALL_COLS.find(c => c.id === sortCol);
+      const va = col ? col.get(a) : a.apellidos||"";
+      const vb = col ? col.get(b) : b.apellidos||"";
+      return va.localeCompare(vb, "es");
+    });
 
   const openEdit = (al) => {
     setForm({
@@ -1484,13 +1491,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
   const exportExcel = () => {
     const cols = ALL_COLS.filter(c => selCols.has(c.id));
     const header = cols.map(c => c.label);
-    const rows = alumnosOrdenados.map(al =>
-      cols.map(c => {
-        let v = al[c.id] || "";
-        if (c.id === "sexo") v = v === "M" ? "Masculino" : "Femenino";
-        return v;
-      })
-    );
+    const rows = alumnosOrdenados.map(al => cols.map(c => c.get(al)));
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
     ws["!cols"] = header.map((h, i) => ({
       wch: Math.min(Math.max(h.length, ...rows.map(r => String(r[i]||"").length)) + 2, 40)
@@ -1541,8 +1542,16 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
       <div style={{ display: "grid", gridTemplateColumns: selected ? "230px 1fr" : "1fr", gap: 16 }}>
         {/* Lista */}
         <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-          <div style={{ padding: "10px 14px", borderBottom: `1px solid ${PALETTE.border}` }}>
+          <div style={{ padding: "10px 14px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
             <Input placeholder="Buscar alumno..." value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: 12 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: PALETTE.muted, fontSize: 11, whiteSpace: "nowrap" }}>Ordenar por:</span>
+              <select value={sortCol} onChange={e => setSortCol(e.target.value)} style={{ flex: 1, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "4px 8px", color: PALETTE.text, fontSize: 11, outline: "none" }}>
+                {ALL_COLS.filter(c => !["id"].includes(c.id)).map(c => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             {alumnosOrdenados.map(al => (
@@ -1577,12 +1586,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
                 {ALL_COLS.filter(c => selCols.has(c.id)).map((c, i) => {
-                  let v = selected[c.id] || "";
-                  if (c.id === "sexo") v = v === "M" ? "Masculino" : "Femenino";
-                  if (!v && c.id === "apod1_nombre") v = selected.apoderado || "";
-                  if (!v && c.id === "apod1_cel") v = selected.telefono || "";
-                  if (!v && c.id === "apod1_email") v = selected.email || "";
-                  if (!v && c.id === "apod2_nombre") v = selected.apoderado2 || "";
+                  const v = c.get(selected);
                   return (
                     <div key={c.id} style={{ padding: "8px 14px", borderBottom: `1px solid ${PALETTE.border}22`, borderRight: i % 2 === 0 ? `1px solid ${PALETTE.border}22` : "none" }}>
                       <div style={{ color: PALETTE.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{c.label}</div>
