@@ -1227,6 +1227,7 @@ const NAV_ITEMS = [
   { id: "encuestas",    label: "Encuestas",          icon: "survey"        },
   { id: "estadisticas", label: "Estadísticas",       icon: "stats"         },
   { id: "tipos",        label: "Tipos de Actividad", icon: "tag"           },
+  { id: "ficha",        label: "Fichas",             icon: "users"         },
   { id: "usuarios",     label: "Usuarios",           icon: "shield"        },
 ];
 
@@ -1379,6 +1380,160 @@ const Usuarios = ({ visibility, setVisibility }) => {
 };
 
 // ── Main App ──────────────────────────────────────────────────────────────────
+// ── Fichas de Alumnos ─────────────────────────────────────────────────────────
+const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
+  const [selected, setSelected] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState({});
+
+  const alumnosOrdenados = [...alumnos].sort((a,b) => (a.apellidos||"").localeCompare(b.apellidos||"","es"));
+
+  const openEdit = (al) => {
+    setForm({
+      nombre: al.nombres || "", nombre2: al.nombre2 || "",
+      apellidos: al.apellidos || "", apellido2: al.apellido2 || "",
+      rut: al.rut || "", fechaNac: al.fechaNac || "", sexo: al.sexo || "M",
+      apod1_nombre: al.apod1_nombre || al.apoderado || "",
+      apod1_rut: al.apod1_rut || "", apod1_cel: al.apod1_cel || al.telefono || "",
+      apod1_email: al.apod1_email || al.email || "", apod1_fnac: al.apod1_fnac || "",
+      apod2_nombre: al.apod2_nombre || al.apoderado2 || "",
+      apod2_rut: al.apod2_rut || "", apod2_cel: al.apod2_cel || "",
+      apod2_email: al.apod2_email || "", apod2_fnac: al.apod2_fnac || "",
+    });
+    setEditMode(true);
+  };
+
+  const save = () => {
+    const nombreFull = [form.apellidos, form.apellido2, form.nombre, form.nombre2].filter(Boolean).join(" ").toUpperCase();
+    setAlumnos(prev => prev.map(a => a.id === selected.id ? {
+      ...a, nombres: form.nombre.toUpperCase(), nombre2: form.nombre2.toUpperCase(),
+      apellidos: form.apellidos.toUpperCase(), apellido2: form.apellido2.toUpperCase(),
+      nombre: nombreFull, rut: form.rut, fechaNac: form.fechaNac, sexo: form.sexo,
+      apod1_nombre: form.apod1_nombre, apod1_rut: form.apod1_rut,
+      apod1_cel: form.apod1_cel, apod1_email: form.apod1_email, apod1_fnac: form.apod1_fnac,
+      apod2_nombre: form.apod2_nombre, apod2_rut: form.apod2_rut,
+      apod2_cel: form.apod2_cel, apod2_email: form.apod2_email, apod2_fnac: form.apod2_fnac,
+      apoderado: form.apod1_nombre, apoderado2: form.apod2_nombre,
+      telefono: form.apod1_cel, email: form.apod1_email,
+    } : a));
+    setSelected(prev => ({ ...prev, ...form, nombre: nombreFull }));
+    setEditMode(false);
+  };
+
+  const InfoRow = ({ label, value }) => value ? (
+    <div style={{ display: "flex", gap: 8, padding: "6px 0", borderBottom: `1px solid ${PALETTE.border}22` }}>
+      <span style={{ color: PALETTE.muted, fontSize: 12, minWidth: 140 }}>{label}</span>
+      <span style={{ color: PALETTE.text, fontSize: 13 }}>{value}</span>
+    </div>
+  ) : null;
+
+  const SectionTitle = ({ title }) => (
+    <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 20, marginBottom: 8 }}>{title}</div>
+  );
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: selected ? "220px 1fr" : "1fr", gap: 16 }}>
+      {/* Lista alumnos */}
+      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", maxHeight: "80vh", overflowY: "auto" }}>
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${PALETTE.border}`, color: PALETTE.text, fontWeight: 700, fontSize: 14 }}>
+          {alumnos.length} alumnos
+        </div>
+        {alumnosOrdenados.map(al => (
+          <div key={al.id} onClick={() => { setSelected(al); setEditMode(false); }}
+            style={{ padding: "10px 16px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}`, background: selected?.id === al.id ? PALETTE.accent + "22" : "transparent" }}>
+            <div style={{ color: selected?.id === al.id ? PALETTE.accent : PALETTE.text, fontSize: 13, fontWeight: 600 }}>
+              {al.nombres || al.nombre.split(" ").slice(-1)[0]} {al.apellidos || al.nombre.split(" ")[0]}
+            </div>
+            <div style={{ color: PALETTE.muted, fontSize: 11 }}>{al.rut || "Sin RUT"}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Detalle */}
+      {selected && !editMode && (
+        <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 24, overflowY: "auto", maxHeight: "80vh" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+            <div>
+              <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>
+                {[selected.apellidos, selected.apellido2, selected.nombres, selected.nombre2].filter(Boolean).join(" ")}
+              </div>
+              <div style={{ color: PALETTE.muted, fontSize: 13, marginTop: 2 }}>{selected.rut || "Sin RUT"}</div>
+            </div>
+            {isAdmin && <Btn onClick={() => openEdit(selected)} small><Icon name="edit" size={13} />Editar</Btn>}
+          </div>
+
+          <SectionTitle title="Datos del alumno" />
+          <InfoRow label="Apellido paterno" value={selected.apellidos} />
+          <InfoRow label="Apellido materno" value={selected.apellido2} />
+          <InfoRow label="Primer nombre" value={selected.nombres} />
+          <InfoRow label="Segundo nombre" value={selected.nombre2} />
+          <InfoRow label="RUT" value={selected.rut} />
+          <InfoRow label="Fecha de nacimiento" value={selected.fechaNac} />
+          <InfoRow label="Sexo" value={selected.sexo === "M" ? "Masculino" : "Femenino"} />
+
+          <SectionTitle title="Apoderado principal" />
+          <InfoRow label="Nombre" value={selected.apod1_nombre || selected.apoderado} />
+          <InfoRow label="RUT" value={selected.apod1_rut} />
+          <InfoRow label="Teléfono" value={selected.apod1_cel || selected.telefono} />
+          <InfoRow label="Email" value={selected.apod1_email || selected.email} />
+          <InfoRow label="Fecha de nacimiento" value={selected.apod1_fnac} />
+
+          {(selected.apod2_nombre || selected.apoderado2) && <>
+            <SectionTitle title="Segundo apoderado" />
+            <InfoRow label="Nombre" value={selected.apod2_nombre || selected.apoderado2} />
+            <InfoRow label="RUT" value={selected.apod2_rut} />
+            <InfoRow label="Teléfono" value={selected.apod2_cel} />
+            <InfoRow label="Email" value={selected.apod2_email} />
+            <InfoRow label="Fecha de nacimiento" value={selected.apod2_fnac} />
+          </>}
+        </div>
+      )}
+
+      {/* Edit mode */}
+      {selected && editMode && (
+        <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 24, overflowY: "auto", maxHeight: "80vh" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <span style={{ color: PALETTE.text, fontWeight: 700, fontSize: 16 }}>Editar ficha</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn variant="ghost" small onClick={() => setEditMode(false)}>Cancelar</Btn>
+              <Btn small onClick={save}>Guardar</Btn>
+            </div>
+          </div>
+
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Datos del alumno</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            <Field label="Apellido paterno"><Input value={form.apellidos} onChange={e => setForm(f=>({...f, apellidos: e.target.value}))} /></Field>
+            <Field label="Apellido materno"><Input value={form.apellido2} onChange={e => setForm(f=>({...f, apellido2: e.target.value}))} /></Field>
+            <Field label="Primer nombre"><Input value={form.nombre} onChange={e => setForm(f=>({...f, nombre: e.target.value}))} /></Field>
+            <Field label="Segundo nombre"><Input value={form.nombre2} onChange={e => setForm(f=>({...f, nombre2: e.target.value}))} /></Field>
+            <Field label="RUT"><Input value={form.rut} onChange={e => setForm(f=>({...f, rut: e.target.value}))} placeholder="12345678-9" /></Field>
+            <Field label="Fecha de nacimiento"><Input type="date" value={form.fechaNac} onChange={e => setForm(f=>({...f, fechaNac: e.target.value}))} /></Field>
+            <Field label="Sexo"><Select value={form.sexo} onChange={e => setForm(f=>({...f, sexo: e.target.value}))}><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
+          </div>
+
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Apoderado principal</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            <Field label="Nombre completo"><Input value={form.apod1_nombre} onChange={e => setForm(f=>({...f, apod1_nombre: e.target.value}))} /></Field>
+            <Field label="RUT"><Input value={form.apod1_rut} onChange={e => setForm(f=>({...f, apod1_rut: e.target.value}))} placeholder="12345678-9" /></Field>
+            <Field label="Teléfono"><Input value={form.apod1_cel} onChange={e => setForm(f=>({...f, apod1_cel: e.target.value}))} /></Field>
+            <Field label="Email"><Input type="email" value={form.apod1_email} onChange={e => setForm(f=>({...f, apod1_email: e.target.value}))} /></Field>
+            <Field label="Fecha de nacimiento"><Input type="date" value={form.apod1_fnac} onChange={e => setForm(f=>({...f, apod1_fnac: e.target.value}))} /></Field>
+          </div>
+
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Segundo apoderado</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Field label="Nombre completo"><Input value={form.apod2_nombre} onChange={e => setForm(f=>({...f, apod2_nombre: e.target.value}))} /></Field>
+            <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f, apod2_rut: e.target.value}))} placeholder="12345678-9" /></Field>
+            <Field label="Teléfono"><Input value={form.apod2_cel} onChange={e => setForm(f=>({...f, apod2_cel: e.target.value}))} /></Field>
+            <Field label="Email"><Input type="email" value={form.apod2_email} onChange={e => setForm(f=>({...f, apod2_email: e.target.value}))} /></Field>
+            <Field label="Fecha de nacimiento"><Input type="date" value={form.apod2_fnac} onChange={e => setForm(f=>({...f, apod2_fnac: e.target.value}))} /></Field>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Map DB rows to app format ────────────────────────────────────────────────
 const dbToAlumno = r => ({ id: r.id, nombres: r.nombres || "", apellidos: r.apellidos || "", nombre: r.nombre || ((r.apellidos || "") + " " + (r.nombres || "")).toUpperCase().trim(), fechaNac: r.fecha_nac || "", sexo: r.sexo || "M", apoderado: r.apoderado || "", apoderado2: r.apoderado2 || "", telefono: r.telefono || "", email: r.email || "", observaciones: r.observaciones || "", socioAprendilandia: r.socio_aprendilandia || false });
 const alumnoToDB = a => ({ id: a.id, nombres: a.nombres, apellidos: a.apellidos, nombre: a.nombre, fecha_nac: a.fechaNac, sexo: a.sexo, apoderado: a.apoderado, apoderado2: a.apoderado2, telefono: a.telefono, email: a.email, observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia });
@@ -1517,6 +1672,7 @@ export default function App() {
       case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
+      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} />;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
       default: return null;
     }
