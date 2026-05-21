@@ -3,6 +3,30 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "./supabase.js";
 
+// ── Date format helpers ──────────────────────────────────────────────────────
+// Internal: YYYY-MM-DD, Display/input: DD-MM-YYYY
+const toDisplay = (iso) => {
+  if (!iso) return "";
+  const [y,m,d] = iso.split("-");
+  if (!y||!m||!d) return iso;
+  return `${d}-${m}-${y}`;
+};
+const toISO = (display) => {
+  if (!display) return "";
+  const parts = display.replace(/\//g,"-").split("-");
+  if (parts.length !== 3) return display;
+  if (parts[0].length === 4) return display; // already ISO
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+const DateInput = ({ value, onChange, placeholder="DD-MM-AAAA" }) => (
+  <Input
+    value={toDisplay(value)}
+    onChange={e => onChange(toISO(e.target.value))}
+    placeholder={placeholder}
+    maxLength={10}
+  />
+);
+
 // ── localStorage fallback (session only) ─────────────────────────────────────
 const S = {
   get(k) {
@@ -1588,7 +1612,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               <Field label="Primer nombre"><Input value={form.nombre} onChange={e => setForm(f=>({...f,nombre:e.target.value}))} /></Field>
               <Field label="Segundo nombre"><Input value={form.nombre2} onChange={e => setForm(f=>({...f,nombre2:e.target.value}))} /></Field>
               <Field label="RUT"><Input value={form.rut} onChange={e => setForm(f=>({...f,rut:e.target.value}))} placeholder="12345678-9" /></Field>
-              <Field label="Fecha nacimiento"><Input type="date" value={form.fechaNac} onChange={e => setForm(f=>({...f,fechaNac:e.target.value}))} /></Field>
+              <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.fechaNac} onChange={v => setForm(f=>({...f,fechaNac:v}))} /></Field>
               <Field label="Sexo"><Select value={form.sexo} onChange={e => setForm(f=>({...f,sexo:e.target.value}))}><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
             </div>
             <SecTitle t="Apoderado principal" />
@@ -1597,7 +1621,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               <Field label="RUT"><Input value={form.apod1_rut} onChange={e => setForm(f=>({...f,apod1_rut:e.target.value}))} placeholder="12345678-9" /></Field>
               <Field label="Teléfono"><Input value={form.apod1_cel} onChange={e => setForm(f=>({...f,apod1_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod1_email} onChange={e => setForm(f=>({...f,apod1_email:e.target.value}))} /></Field>
-              <Field label="Fecha nacimiento"><Input type="date" value={form.apod1_fnac} onChange={e => setForm(f=>({...f,apod1_fnac:e.target.value}))} /></Field>
+              <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod1_fnac} onChange={v => setForm(f=>({...f,apod1_fnac:v}))} /></Field>
             </div>
             <SecTitle t="Segundo apoderado" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -1605,7 +1629,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" /></Field>
               <Field label="Teléfono"><Input value={form.apod2_cel} onChange={e => setForm(f=>({...f,apod2_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod2_email} onChange={e => setForm(f=>({...f,apod2_email:e.target.value}))} /></Field>
-              <Field label="Fecha nacimiento"><Input type="date" value={form.apod2_fnac} onChange={e => setForm(f=>({...f,apod2_fnac:e.target.value}))} /></Field>
+              <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod2_fnac} onChange={v => setForm(f=>({...f,apod2_fnac:v}))} /></Field>
             </div>
           </div>
         )}
