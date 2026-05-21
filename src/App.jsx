@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "./supabase.js";
+import * as XLSX from "xlsx";
 
 // ── Date format helpers ──────────────────────────────────────────────────────
 // Internal: YYYY-MM-DD, Display/input: DD-MM-YYYY
@@ -1559,7 +1560,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
         {/* Detalle */}
         {selected && !editMode && (
           <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 24, overflowY: "auto", maxHeight: "75vh" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
                 <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 18 }}>
                   {[selected.apellidos, selected.apellido2, selected.nombres, selected.nombre2].filter(Boolean).join(" ")}
@@ -1569,29 +1570,51 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               {isAdmin && <Btn small onClick={() => openEdit(selected)}><Icon name="edit" size={13} />Editar</Btn>}
             </div>
 
-            <SecTitle t="Datos del alumno" />
+            {/* Columnas seleccionadas como tabla */}
+            <div style={{ background: PALETTE.bg, borderRadius: 10, overflow: "hidden", border: `1px solid ${PALETTE.border}` }}>
+              <div style={{ padding: "10px 16px", borderBottom: `1px solid ${PALETTE.border}`, color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+                Campos seleccionados ({selCols.size})
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+                {ALL_COLS.filter(c => selCols.has(c.id)).map((c, i) => {
+                  let v = selected[c.id] || "";
+                  if (c.id === "sexo") v = v === "M" ? "Masculino" : "Femenino";
+                  if (!v && c.id === "apod1_nombre") v = selected.apoderado || "";
+                  if (!v && c.id === "apod1_cel") v = selected.telefono || "";
+                  if (!v && c.id === "apod1_email") v = selected.email || "";
+                  if (!v && c.id === "apod2_nombre") v = selected.apoderado2 || "";
+                  return (
+                    <div key={c.id} style={{ padding: "8px 14px", borderBottom: `1px solid ${PALETTE.border}22`, borderRight: i % 2 === 0 ? `1px solid ${PALETTE.border}22` : "none" }}>
+                      <div style={{ color: PALETTE.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{c.label}</div>
+                      <div style={{ color: v ? PALETTE.text : PALETTE.border, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v || "—"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Datos completos siempre visibles abajo */}
+            <SecTitle t="Todos los datos" />
             <InfoRow label="Apellido paterno" value={selected.apellidos} />
             <InfoRow label="Apellido materno" value={selected.apellido2} />
             <InfoRow label="Primer nombre" value={selected.nombres} />
             <InfoRow label="Segundo nombre" value={selected.nombre2} />
             <InfoRow label="RUT" value={selected.rut} />
-            <InfoRow label="Fecha de nacimiento" value={selected.fechaNac} />
+            <InfoRow label="Fecha de nacimiento" value={toDisplay(selected.fechaNac)} />
             <InfoRow label="Sexo" value={selected.sexo === "M" ? "Masculino" : "Femenino"} />
-
             <SecTitle t="Apoderado principal" />
             <InfoRow label="Nombre" value={selected.apod1_nombre || selected.apoderado} />
             <InfoRow label="RUT" value={selected.apod1_rut} />
             <InfoRow label="Teléfono" value={selected.apod1_cel || selected.telefono} />
             <InfoRow label="Email" value={selected.apod1_email || selected.email} />
-            <InfoRow label="Fecha nacimiento" value={selected.apod1_fnac} />
-
+            <InfoRow label="Fecha nacimiento" value={toDisplay(selected.apod1_fnac)} />
             {(selected.apod2_nombre || selected.apoderado2) && <>
               <SecTitle t="Segundo apoderado" />
               <InfoRow label="Nombre" value={selected.apod2_nombre || selected.apoderado2} />
               <InfoRow label="RUT" value={selected.apod2_rut} />
               <InfoRow label="Teléfono" value={selected.apod2_cel} />
               <InfoRow label="Email" value={selected.apod2_email} />
-              <InfoRow label="Fecha nacimiento" value={selected.apod2_fnac} />
+              <InfoRow label="Fecha nacimiento" value={toDisplay(selected.apod2_fnac)} />
             </>}
           </div>
         )}
