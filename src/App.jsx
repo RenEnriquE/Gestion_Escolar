@@ -1535,8 +1535,34 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
 };
 
 // ── Map DB rows to app format ────────────────────────────────────────────────
-const dbToAlumno = r => ({ id: r.id, nombres: r.nombres || "", apellidos: r.apellidos || "", nombre: r.nombre || ((r.apellidos || "") + " " + (r.nombres || "")).toUpperCase().trim(), fechaNac: r.fecha_nac || "", sexo: r.sexo || "M", apoderado: r.apoderado || "", apoderado2: r.apoderado2 || "", telefono: r.telefono || "", email: r.email || "", observaciones: r.observaciones || "", socioAprendilandia: r.socio_aprendilandia || false });
-const alumnoToDB = a => ({ id: a.id, nombres: a.nombres, apellidos: a.apellidos, nombre: a.nombre, fecha_nac: a.fechaNac, sexo: a.sexo, apoderado: a.apoderado, apoderado2: a.apoderado2, telefono: a.telefono, email: a.email, observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia });
+const dbToAlumno = r => ({
+  id: r.id,
+  nombres: r.nombres || "", nombre2: r.nombre2 || "",
+  apellidos: r.apellidos || "", apellido2: r.apellido2 || "",
+  nombre: r.nombre || ((r.apellidos || "") + " " + (r.nombres || "")).toUpperCase().trim(),
+  rut: r.rut || "",
+  fechaNac: r.fecha_nac || "", sexo: r.sexo || "M",
+  apoderado: r.apoderado || "", apoderado2: r.apoderado2 || "",
+  telefono: r.telefono || "", email: r.email || "",
+  observaciones: r.observaciones || "", socioAprendilandia: r.socio_aprendilandia || false,
+  apod1_nombre: r.apod1_nombre || "", apod1_rut: r.apod1_rut || "",
+  apod1_cel: r.apod1_cel || "", apod1_email: r.apod1_email || "", apod1_fnac: r.apod1_fnac || "",
+  apod2_nombre: r.apod2_nombre || "", apod2_rut: r.apod2_rut || "",
+  apod2_cel: r.apod2_cel || "", apod2_email: r.apod2_email || "", apod2_fnac: r.apod2_fnac || "",
+});
+const alumnoToDB = a => ({
+  id: a.id, nombres: a.nombres, nombre2: a.nombre2 || "",
+  apellidos: a.apellidos, apellido2: a.apellido2 || "",
+  nombre: a.nombre, rut: a.rut || "",
+  fecha_nac: a.fechaNac, sexo: a.sexo,
+  apoderado: a.apoderado, apoderado2: a.apoderado2,
+  telefono: a.telefono, email: a.email,
+  observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia,
+  apod1_nombre: a.apod1_nombre || "", apod1_rut: a.apod1_rut || "",
+  apod1_cel: a.apod1_cel || "", apod1_email: a.apod1_email || "", apod1_fnac: a.apod1_fnac || "",
+  apod2_nombre: a.apod2_nombre || "", apod2_rut: a.apod2_rut || "",
+  apod2_cel: a.apod2_cel || "", apod2_email: a.apod2_email || "", apod2_fnac: a.apod2_fnac || "",
+});
 const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null });
 const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null });
 const dbToEnc = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", descripcion: r.descripcion || "", estado: r.estado, actividadId: r.actividad_id || null, opciones: r.opciones || [], respuestas: r.respuestas || {}, _encuestaId: r.encuesta_id });
