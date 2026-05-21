@@ -1868,7 +1868,7 @@ export default function App() {
 
       {/* Content */}
       <div style={{ paddingTop: 56 }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
+        <div style={{ maxWidth: validPage === "ficha" ? 1400 : 900, margin: "0 auto", padding: "24px 16px" }}>
           {renderPage()}
         </div>
       </div>
