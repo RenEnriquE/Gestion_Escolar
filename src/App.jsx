@@ -1482,20 +1482,21 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
   // Export to CSV (works everywhere without extra libs)
   const exportExcel = () => {
     const cols = ALL_COLS.filter(c => selCols.has(c.id));
-    const header = cols.map(c => c.label).join(",");
+    const header = cols.map(c => c.label);
     const rows = alumnosOrdenados.map(al =>
       cols.map(c => {
         let v = al[c.id] || "";
         if (c.id === "sexo") v = v === "M" ? "Masculino" : "Femenino";
-        return `"${String(v).replace(/"/g,'""')}"`;
-      }).join(",")
+        return v;
+      })
     );
-    const csv = [header, ...rows].join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "fichas_alumnos.csv"; a.click();
-    URL.revokeObjectURL(url);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    ws["!cols"] = header.map((h, i) => ({
+      wch: Math.min(Math.max(h.length, ...rows.map(r => String(r[i]||"").length)) + 2, 40)
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Fichas");
+    XLSX.writeFile(wb, "fichas_alumnos.xlsx");
   };
 
   const InfoRow = ({ label, value }) => value ? (
@@ -1531,7 +1532,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
             )}
           </div>
           <Btn variant="ghost" small onClick={exportExcel}>
-            <Icon name="stats" size={13} /> Exportar CSV
+            <Icon name="stats" size={13} /> Exportar Excel
           </Btn>
         </div>
       </div>
