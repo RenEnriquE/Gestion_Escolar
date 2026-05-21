@@ -1437,8 +1437,8 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
   ];
   const [selCols, setSelCols] = useState(new Set(["rut","nombre_completo","apod1_rut","apod1_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
-  const [sort1, setSort1] = useState("apellidos");
-  const [sort2, setSort2] = useState("nombres");
+  const [sort1, setSort1] = useState("nombres");
+  const [sort2, setSort2] = useState("apellidos");
   const [sort3, setSort3] = useState("");
 
   const toggleCol = (id) => setSelCols(prev => {
