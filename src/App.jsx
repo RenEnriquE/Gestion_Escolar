@@ -1606,10 +1606,10 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
               </div>
             </div>
             <SecTitle t="Datos completos" />
-            <InfoRow label="Apellido paterno" value={selected.apellidos} />
-            <InfoRow label="Apellido materno" value={selected.apellido2} />
             <InfoRow label="Primer nombre" value={selected.nombres} />
             <InfoRow label="Segundo nombre" value={selected.nombre2} />
+            <InfoRow label="Apellido paterno" value={selected.apellidos} />
+            <InfoRow label="Apellido materno" value={selected.apellido2} />
             <InfoRow label="RUT" value={selected.rut} />
             <InfoRow label="Fecha de nacimiento" value={toDisplay(selected.fechaNac)} />
             <InfoRow label="Sexo" value={selected.sexo === "M" ? "Masculino" : "Femenino"} />
@@ -1617,15 +1617,11 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
             <InfoRow label="Nombre" value={selected.apod1_nombre || selected.apoderado} />
             <InfoRow label="RUT" value={selected.apod1_rut} />
             <InfoRow label="Teléfono" value={selected.apod1_cel || selected.telefono} />
-            <InfoRow label="Email" value={selected.apod1_email || selected.email} />
-            <InfoRow label="Fecha nacimiento" value={toDisplay(selected.apod1_fnac)} />
             {(selected.apod2_nombre || selected.apoderado2) && <>
               <SecTitle t="Segundo apoderado" />
               <InfoRow label="Nombre" value={selected.apod2_nombre || selected.apoderado2} />
               <InfoRow label="RUT" value={selected.apod2_rut} />
               <InfoRow label="Teléfono" value={selected.apod2_cel} />
-              <InfoRow label="Email" value={selected.apod2_email} />
-              <InfoRow label="Fecha nacimiento" value={toDisplay(selected.apod2_fnac)} />
             </>}
           </div>
         )}
