@@ -1447,7 +1447,17 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
   const getVal = (al, colId) => { if (!colId) return ""; const col = ALL_COLS.find(c => c.id === colId); return col ? col.get(al) : ""; };
 
   const alumnosOrdenados = [...alumnos]
-    .filter(a => (a.apellidos||a.nombre||"").toLowerCase().includes(search.toLowerCase()) || (a.nombres||"").toLowerCase().includes(search.toLowerCase()))
+    .filter(a => {
+      const q = search.toLowerCase();
+      if (!q) return true;
+      return (a.apellidos||"").toLowerCase().includes(q)
+          || (a.apellido2||"").toLowerCase().includes(q)
+          || (a.nombres||"").toLowerCase().includes(q)
+          || (a.nombre2||"").toLowerCase().includes(q)
+          || (a.nombre||"").toLowerCase().includes(q)
+          || (a.apod1_nombre||a.apoderado||"").toLowerCase().includes(q)
+          || (a.apod2_nombre||a.apoderado2||"").toLowerCase().includes(q);
+    })
     .sort((a,b) => {
       const v1 = getVal(a,sort1).localeCompare(getVal(b,sort1),"es"); if (v1 !== 0) return v1;
       const v2 = getVal(a,sort2).localeCompare(getVal(b,sort2),"es"); if (v2 !== 0) return v2;
