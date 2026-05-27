@@ -633,7 +633,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   // Helper: participó si está en participacion O si respondió la encuesta vinculada
   const partioEn = (act, alumId) => {
     if (participacion[act.id]?.[alumId]) return true;
-    const enc = (encuestas || []).find(e => e.id === act._encuestaId || e.nombre === act.nombre);
+    if (!act._encuestaId) return false;
+    const enc = (encuestas || []).find(e => e.id === act._encuestaId);
     return !!(enc?.respuestas?.[alumId]);
   };
 
@@ -815,7 +816,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                   <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
                   {actsVisibles.map(act => {
                     const partio = partioEn(act, al.id);
-                    const esEncuesta = !!act._encuestaId || encuestas.some(e => e.nombre === act.nombre);
+                    const esEncuesta = !!act._encuestaId;
                     const isActSort = sortActId === act.id;
                     return (
                       <td key={act.id} style={{ textAlign: "center", padding: "12px 10px", background: isActSort ? PALETTE.accent + "08" : "transparent" }}>
@@ -985,7 +986,7 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
                       </tr>
                     </thead>
                     <tbody>
-                      {[...alumnos].sort((a,b) => (a.nombres||a.nombre||"").localeCompare(b.nombres||b.nombre||"","es")).map(al => (
+                      {[...alumnos].sort((a,b) => { const na = a.nombres || a.nombre.split(" ").slice(-1)[0] || ""; const nb = b.nombres || b.nombre.split(" ").slice(-1)[0] || ""; return na.localeCompare(nb,"es"); }).map(al => (
                         <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                           <td style={{ padding: "10px 0", color: PALETTE.text, fontSize: 13, fontWeight: 600 }}>{al.nombre}</td>
                           {enc.opciones.map((op, i) => {
