@@ -985,7 +985,7 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
                       </tr>
                     </thead>
                     <tbody>
-                      {alumnos.map(al => (
+                      {[...alumnos].sort((a,b) => (a.nombres||a.nombre||"").localeCompare(b.nombres||b.nombre||"","es")).map(al => (
                         <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                           <td style={{ padding: "10px 0", color: PALETTE.text, fontSize: 13, fontWeight: 600 }}>{al.nombre}</td>
                           {enc.opciones.map((op, i) => {
