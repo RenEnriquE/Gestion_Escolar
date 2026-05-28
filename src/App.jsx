@@ -619,9 +619,9 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
           <Field label="Subactividades (opcional — para registrar cómo participó cada alumno)">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
               {(form.subactividades || []).map((s, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, background: subColor(i) + "22", border: `1px solid ${subColor(i)}44`, borderRadius: 20, padding: "3px 10px" }}>
-                  <span style={{ color: subColor(i), fontSize: 12, fontWeight: 600 }}>{s}</span>
-                  <button onClick={() => setForm(f => ({ ...f, subactividades: f.subactividades.filter((_,j) => j !== i) }))} style={{ background: "none", border: "none", cursor: "pointer", color: subColor(i), fontSize: 14, lineHeight: 1 }}>×</button>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: subColor(i) + "22", border: `1px solid ${subColor(i)}55`, borderRadius: 20, padding: "4px 12px" }}>
+                  <span style={{ color: subColor(i), fontSize: 13, fontWeight: 700 }}>{s}</span>
+                  <button onClick={() => setForm(f => ({ ...f, subactividades: f.subactividades.filter((_,j) => j !== i) }))} style={{ background: "none", border: "none", cursor: "pointer", color: subColor(i), fontSize: 16, lineHeight: 1, opacity: 0.7 }}>&#x2715;</button>
                 </div>
               ))}
             </div>
