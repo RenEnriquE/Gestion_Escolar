@@ -655,10 +655,9 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   const partioEn = (act, alumId) => {
     const p = participacion[act.id]?.[alumId];
     if (act.subactividades?.length > 0) {
-      // For activities with subactividades, only count if array has entries
-      return Array.isArray(p) && p.length > 0;
+      return !!(p?.subs?.length > 0);
     }
-    if (p && (!Array.isArray(p) || p.length > 0)) return true;
+    if (p === true || p === 1) return true;
     if (!act._encuestaId) return false;
     const enc = (encuestas || []).find(e => e.id === act._encuestaId);
     return !!(enc?.respuestas?.[alumId]);
@@ -702,16 +701,14 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   const toggleSub = (actId, alumId, sub) => {
     setParticipacion(prev => {
       const cur = prev[actId]?.[alumId];
-      const arr = Array.isArray(cur) ? [...cur] : (cur ? [] : []);
-      const idx = arr.indexOf(sub);
-      const next = idx >= 0 ? arr.filter(s => s !== sub) : [...arr, sub];
-      return { ...prev, [actId]: { ...prev[actId], [alumId]: next.length > 0 ? next : false } };
+      const arr = cur?.subs ? [...cur.subs] : [];
+      const next = arr.includes(sub) ? arr.filter(s => s !== sub) : [...arr, sub];
+      return { ...prev, [actId]: { ...prev[actId], [alumId]: { subs: next } } };
     });
   };
 
   const hasSub = (actId, alumId, sub) => {
-    const cur = participacion[actId]?.[alumId];
-    return Array.isArray(cur) ? cur.includes(sub) : false;
+    return participacion[actId]?.[alumId]?.subs?.includes(sub) || false;
   };
 
   const estadoColor = { "Activa": PALETTE.green, "Finalizada": PALETTE.accent, "Suspendida": PALETTE.red, "No activada": PALETTE.muted };
@@ -867,7 +864,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                     const esEncuesta = !!act._encuestaId;
                     const isActSort = sortActId === act.id;
                     const hasSubs = act.subactividades?.length > 0;
-                    const curSubs = Array.isArray(participacion[act.id]?.[al.id]) ? participacion[act.id][al.id] : [];
+                    const curSubs = participacion[act.id]?.[al.id]?.subs || [];
                     const isSubMenuOpen = subMenu?.actId === act.id && subMenu?.alumId === al.id;
                     return (
                       <td key={act.id} style={{ textAlign: "center", padding: "8px 6px", background: isActSort ? PALETTE.accent + "08" : "transparent", position: "relative" }}>
@@ -1837,7 +1834,11 @@ export default function App() {
           const partObj = {};
           dbPart.forEach(r => {
             if (!partObj[r.act_id]) partObj[r.act_id] = {};
-            partObj[r.act_id][r.alum_id] = r.participo;
+            if (r.subs && Array.isArray(r.subs) && r.subs.length > 0) {
+              partObj[r.act_id][r.alum_id] = { subs: r.subs };
+            } else {
+              partObj[r.act_id][r.alum_id] = r.participo;
+            }
           });
           setParticipacion(partObj);
         } else {
@@ -1878,8 +1879,13 @@ export default function App() {
     const rows = [];
     Object.entries(participacion).forEach(([actId, alums]) =>
       Object.entries(alums).forEach(([alumId, v]) => {
-        if (!prev[actId] || prev[actId][alumId] !== v)
-          rows.push({ act_id: actId, alum_id: alumId, participo: v });
+        if (!prev[actId] || JSON.stringify(prev[actId][alumId]) !== JSON.stringify(v)) {
+          if (v?.subs) {
+            rows.push({ act_id: actId, alum_id: alumId, participo: v.subs.length > 0, subs: v.subs });
+          } else {
+            rows.push({ act_id: actId, alum_id: alumId, participo: !!v, subs: [] });
+          }
+        }
       })
     );
     if (rows.length) DB.upsertPK('participacion', rows, 'act_id,alum_id');
