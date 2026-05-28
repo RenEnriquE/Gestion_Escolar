@@ -616,29 +616,31 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
             <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option><option>Suspendida</option></Select></Field>
           </div>
           {/* Subactividades */}
-          <Field label="Subactividades (opcional — para registrar cómo participó cada alumno)">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-              {(form.subactividades || []).map((s, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: subColor(i) + "22", border: `1px solid ${subColor(i)}55`, borderRadius: 20, padding: "4px 12px" }}>
-                  <span style={{ color: subColor(i), fontSize: 13, fontWeight: 700 }}>{s}</span>
-                  <button onClick={() => setForm(f => ({ ...f, subactividades: f.subactividades.filter((_,j) => j !== i) }))} style={{ background: "none", border: "none", cursor: "pointer", color: subColor(i), fontSize: 16, lineHeight: 1, opacity: 0.7 }}>&#x2715;</button>
+          {(() => {
+            const [newSub, setNewSub] = useState("");
+            const addSub = () => {
+              if (!newSub.trim()) return;
+              setForm(f => ({ ...f, subactividades: [...(f.subactividades||[]), newSub.trim()] }));
+              setNewSub("");
+            };
+            return (
+              <Field label="Subactividades (opcional — para registrar cómo participó cada alumno)">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  {(form.subactividades || []).map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: subColor(i) + "22", border: `1px solid ${subColor(i)}55`, borderRadius: 20, padding: "4px 12px" }}>
+                      <span style={{ color: subColor(i), fontSize: 13, fontWeight: 700 }}>{s}</span>
+                      <button onClick={() => setForm(f => ({ ...f, subactividades: f.subactividades.filter((_,j) => j !== i) }))} style={{ background: "none", border: "none", cursor: "pointer", color: subColor(i), fontSize: 16, lineHeight: 1, opacity: 0.7 }}>&#x2715;</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Input id="new-subact" placeholder="Ej: Jugando, Stand, Barra..." onKeyDown={e => {
-                if (e.key === "Enter" && e.target.value.trim()) {
-                  setForm(f => ({ ...f, subactividades: [...(f.subactividades||[]), e.target.value.trim()] }));
-                  e.target.value = "";
-                }
-              }} />
-              <Btn variant="ghost" small onClick={() => {
-                const inp = document.getElementById("new-subact");
-                if (inp?.value.trim()) { setForm(f => ({ ...f, subactividades: [...(f.subactividades||[]), inp.value.trim()] })); inp.value = ""; }
-              }}>+ Agregar</Btn>
-            </div>
-            <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 4 }}>Escribe y presiona Enter o clic en + Agregar</div>
-          </Field>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Input value={newSub} onChange={e => setNewSub(e.target.value)} placeholder="Ej: Jugando, Stand, Barra..." onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSub(); }}} />
+                  <Btn variant="ghost" small onClick={addSub}>+ Agregar</Btn>
+                </div>
+                <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 4 }}>Escribe y presiona Enter o clic en + Agregar</div>
+              </Field>
+            );
+          })()}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
             <Btn onClick={save}>Guardar</Btn>
