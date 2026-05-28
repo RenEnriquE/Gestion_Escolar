@@ -654,9 +654,11 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   // Helper: participó si está en participacion O si respondió la encuesta vinculada
   const partioEn = (act, alumId) => {
     const p = participacion[act.id]?.[alumId];
-    if (p && (!Array.isArray(p) || p.length > 0)) {
-      if (!Array.isArray(p) || p.length > 0) return true;
+    if (act.subactividades?.length > 0) {
+      // For activities with subactividades, only count if array has entries
+      return Array.isArray(p) && p.length > 0;
     }
+    if (p && (!Array.isArray(p) || p.length > 0)) return true;
     if (!act._encuestaId) return false;
     const enc = (encuestas || []).find(e => e.id === act._encuestaId);
     return !!(enc?.respuestas?.[alumId]);
