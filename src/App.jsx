@@ -141,6 +141,9 @@ const SEED_ALUMNOS = [
 
 const SEED_TIPOS = [{"id":"69feb9c34b383d80660995ac","nombre":"Salida","color":"#3b82f6"},{"id":"69feb9c34b383d80660995ad","nombre":"Campeonato","color":"#8b5cf6"},{"id":"69feb9c34b383d80660995b0","nombre":"Campaña","color":"#f59e0b"},{"id":"69feb9c34b383d80660995b2","nombre":"Encuesta","color":"#10b981"},{"id":"69feb9e04b97644adcc4bade","nombre":"Actividad CEPA","color":"#ef4444"},{"id":"69feb9c34b383d80660995b3","nombre":"Otro","color":"#6b7280"}];
 
+// ── Subactividad color by rank ───────────────────────────────────────────────
+const subColor = (rank) => rank === 0 ? PALETTE.green : rank === 1 ? PALETTE.accent : PALETTE.red;
+
 const SEED_ACTIVIDADES = [{"id":"69ed99ece5542bd797ed84cf","nombre":"Paseo de fin de año","fecha":"2026-12-27","tipos":["69feb9c34b383d80660995ac"],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed99bebcf1f1f1037355ed","nombre":"Stand Bingo CEPA","fecha":"2026-11-27","tipos":["69feb9e04b97644adcc4bade"],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed98cb5cf2f7a47a648a3b","nombre":"Cicletada","fecha":"2026-10-24","tipos":["69feb9c34b383d80660995ad"],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed99d89f79fcb1c80fae5e","nombre":"Rifa Anual","fecha":"2026-10-15","tipos":[],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed98c0444a67a98fc944ed","nombre":"Corrida Familiar","fecha":"2026-10-10","tipos":["69feb9c34b383d80660995ad"],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed9bbeaf932c58d58fa7c9","nombre":"Canasta familiar Septiembre","fecha":"2026-09-30","tipos":["69feb9c34b383d80660995b0"],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed9c23332519e7ee473e29","nombre":"Once Reunion Julio","fecha":"2026-07-29","tipos":["69feb9c34b383d80660995b3"],"costo":"Gratuita","recurrencia":"Mensual","estado":"No activada","descripcion":""},{"id":"69ed9b9821204e06ef30f573","nombre":"Canasta Solidaria Junio","fecha":"2026-06-30","tipos":["69feb9c34b383d80660995b0"],"costo":"Gratuita","recurrencia":"Mensual","estado":"No activada","descripcion":""},{"id":"69ed9cd1b8972072dce03c0b","nombre":"Pago foto CEPA","fecha":"2026-05-31","tipos":["69feb9e04b97644adcc4bade"],"costo":"Gratuita","recurrencia":"Anual","estado":"Activa","descripcion":""},{"id":"69d065cd05f1350df287494c","nombre":"Copa Kids 2026","fecha":"2026-05-30","tipos":["69feb9c34b383d80660995ad"],"costo":"Gratuita","recurrencia":"Anual","estado":"Activa","descripcion":"Campeonato intercursos de fútbol"},{"id":"69ed99a8384066965cad7cba","nombre":"Stand Copa Kids","fecha":"2026-05-30","tipos":["69feb9c34b383d80660995b0"],"costo":"Gratuita","recurrencia":"Anual","estado":"No activada","descripcion":""},{"id":"69ed98ebe87e9c3d8b8ab4a1","nombre":"Once Reunion Mayo","fecha":"2026-05-27","tipos":["69feb9c34b383d80660995b3"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Suspendida","descripcion":""},{"id":"69fe2a10af255fff752dba55","nombre":"Compra de materiales pequeños","fecha":"2026-05-04","tipos":["69feb9c34b383d80660995b2"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Finalizada","descripcion":"Esta de acuerdo?"},{"id":"69fe29e40c60c3f77fa142e7","nombre":"Despedida de fin de año","fecha":"2026-05-04","tipos":["69feb9c34b383d80660995b2"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Finalizada","descripcion":"Despedida de fin de año 2026"},{"id":"69ed9801e1ce55f1bbe587a9","nombre":"Útiles de aseo","fecha":"2026-04-30","tipos":["69feb9c34b383d80660995b3"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Activa","descripcion":""},{"id":"69ee3812dc2c465bfb6d4a2b","nombre":"Materiales Disco de Netwon","fecha":"2026-04-07","tipos":["69feb9c34b383d80660995b2"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Finalizada","descripcion":"Necesita materiales para realizar Disco de Newton"},{"id":"69ee1e3ad3f822f7ea4e2013","nombre":"Elección huevitos pascua resurrección","fecha":"2026-04-02","tipos":["69feb9c34b383d80660995b2"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Finalizada","descripcion":"Elección de huevitos de chocolate"},{"id":"69ed990ab59d67a65cc6782c","nombre":"Organización onces","fecha":"2026-04-01","tipos":[],"costo":"Gratuita","recurrencia":"Mensual","estado":"No activada","descripcion":""},{"id":"69ed9c81a3f6626d4f0bbbd8","nombre":"Calentar almuerzos marzo","fecha":"2026-03-31","tipos":["69feb9c34b383d80660995b3"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Activa","descripcion":""},{"id":"69ed9b83f7675b28d1330f65","nombre":"Canasta solidaria Marzo","fecha":"2026-03-31","tipos":["69feb9c34b383d80660995b0"],"costo":"Gratuita","recurrencia":"Mensual","estado":"Activa","descripcion":""},{"id":"69ee41a1db5e4dbdb2116a01","nombre":"CEPA 2026","fecha":"2026-03-01","tipos":["69feb9e04b97644adcc4bade"],"costo":"Gratuita","recurrencia":"Anual","estado":"Activa","descripcion":"Socios CEPA 2026"}];
 
 const SEED_ENCUESTAS = [{"id":"69fe2a11f92d97f51365bcec","nombre":"Compra de materiales pequeños","descripcion":"Esta de acuerdo?","estado":"Cerrada","actividadId":"69fe2a10af255fff752dba55","opciones":[{"id":"o1_69fe2a","texto":"Estoy de acuerdo"},{"id":"o2_69fe2a","texto":"No estoy de acuerdo"}],"respuestas":{"a14":"o2_69fe2a","a36":"o2_69fe2a","a19":"o2_69fe2a","a41":"o2_69fe2a","a12":"o2_69fe2a","a30":"o1_69fe2a","a25":"o1_69fe2a","a22":"o1_69fe2a","a24":"o1_69fe2a","a28":"o1_69fe2a","a3":"o1_69fe2a","a33":"o1_69fe2a","a2":"o1_69fe2a","a42":"o1_69fe2a","a43":"o1_69fe2a","a5":"o1_69fe2a","a4":"o1_69fe2a","a8":"o1_69fe2a","a27":"o1_69fe2a","a40":"o1_69fe2a","a37":"o1_69fe2a","a17":"o1_69fe2a","a26":"o1_69fe2a","a45":"o1_69fe2a","a6":"o1_69fe2a","a11":"o1_69fe2a","a7":"o1_69fe2a","a21":"o2_69fe2a","a10":"o1_69fe2a","a23":"o1_69fe2a","a16":"o1_69fe2a","a20":"o1_69fe2a","a13":"o1_69fe2a","a15":"o1_69fe2a"}},{"id":"69fe29e452ab5ac95aa25be6","nombre":"Despedida de fin de año","descripcion":"Despedida de fin de año 2026","estado":"Cerrada","actividadId":"69fe29e40c60c3f77fa142e7","opciones":[{"id":"o1_69fe29","texto":"Parque de entretenciones (Mampato)"},{"id":"o2_69fe29","texto":"Parcela"}],"respuestas":{"a22":"o2_69fe29","a37":"o2_69fe29","a45":"o1_69fe29","a30":"o2_69fe29","a5":"o2_69fe29","a25":"o2_69fe29","a28":"o2_69fe29","a24":"o2_69fe29","a3":"o2_69fe29","a2":"o2_69fe29","a33":"o2_69fe29","a42":"o2_69fe29","a43":"o2_69fe29","a8":"o2_69fe29","a40":"o2_69fe29","a34":"o2_69fe29","a17":"o2_69fe29","a27":"o2_69fe29","a14":"o2_69fe29","a36":"o2_69fe29","a12":"o2_69fe29","a10":"o2_69fe29","a44":"o2_69fe29","a26":"o2_69fe29","a6":"o2_69fe29","a19":"o2_69fe29","a11":"o2_69fe29","a4":"o2_69fe29","a21":"o2_69fe29","a23":"o2_69fe29","a20":"o2_69fe29","a16":"o2_69fe29","a1":"o2_69fe29","a13":"o2_69fe29","a15":"o2_69fe29","a9":"o2_69fe29"}},{"id":"69ee3812aa78c7007e69f645","nombre":"Materiales Disco de Netwon","descripcion":"Necesita materiales para realizar Disco de Newton","estado":"Cerrada","actividadId":"69ee3812dc2c465bfb6d4a2b","opciones":[{"id":"o1_69ee38","texto":"Si, necesito brochetas y lana"},{"id":"o2_69ee38","texto":"No, no necesito materiales"}],"respuestas":{"a37":"o2_69ee38","a19":"o2_69ee38","a41":"o2_69ee38","a36":"o2_69ee38","a13":"o2_69ee38","a33":"o2_69ee38","a32":"o2_69ee38","a39":"o2_69ee38","a26":"o2_69ee38","a3":"o2_69ee38","a5":"o2_69ee38","a14":"o2_69ee38","a44":"o2_69ee38","a45":"o1_69ee38","a9":"o1_69ee38","a24":"o1_69ee38","a7":"o1_69ee38","a27":"o1_69ee38","a28":"o1_69ee38","a8":"o1_69ee38","a30":"o1_69ee38","a22":"o1_69ee38","a34":"o1_69ee38","a16":"o1_69ee38","a20":"o1_69ee38","a23":"o1_69ee38","a42":"o1_69ee38","a1":"o1_69ee38","a11":"o1_69ee38","a38":"o1_69ee38","a29":"o1_69ee38","a4":"o1_69ee38","a6":"o1_69ee38","a25":"o1_69ee38","a2":"o1_69ee38","a15":"o1_69ee38"}},{"id":"69ee1e3bf3a559d84b848ae0","nombre":"Elección huevitos pascua resurrección","descripcion":"Elección de huevitos de chocolate","estado":"Cerrada","actividadId":"69ee1e3ad3f822f7ea4e2013","opciones":[{"id":"o1_69ee1e","texto":"Loly Choc $55.000 aprox"},{"id":"o2_69ee1e","texto":"Ambrosoli $85.000 aprox"}],"respuestas":{"a11":"o2_69ee1e","a6":"o2_69ee1e","a40":"o2_69ee1e","a20":"o2_69ee1e","a21":"o2_69ee1e","a19":"o2_69ee1e","a7":"o2_69ee1e","a17":"o2_69ee1e","a18":"o1_69ee1e","a23":"o1_69ee1e","a33":"o1_69ee1e","a2":"o1_69ee1e","a42":"o1_69ee1e","a38":"o1_69ee1e","a9":"o1_69ee1e","a30":"o1_69ee1e","a37":"o1_69ee1e","a45":"o1_69ee1e","a12":"o1_69ee1e","a10":"o1_69ee1e","a39":"o1_69ee1e","a13":"o1_69ee1e","a5":"o1_69ee1e","a24":"o1_69ee1e","a43":"o1_69ee1e","a36":"o2_69ee1e","a41":"o2_69ee1e","a3":"o2_69ee1e","a28":"o2_69ee1e","a44":"o2_69ee1e","a8":"o2_69ee1e","a14":"o2_69ee1e","a34":"o2_69ee1e","a16":"o2_69ee1e","a31":"o2_69ee1e","a25":"o2_69ee1e","a15":"o2_69ee1e","a4":"o2_69ee1e","a27":"o2_69ee1e"}}];
@@ -547,14 +550,14 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
   const [editAct, setEditAct] = useState(null);
   const [form, setForm] = useState({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa" });
 
-  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa" }); setEditAct(null); setModalOpen(true); };
-  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado }); setEditAct(a); setModalOpen(true); };
+  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa", subactividades: [] }); setEditAct(null); setModalOpen(true); };
+  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, subactividades: a.subactividades || [] }); setEditAct(a); setModalOpen(true); };
   const del = (id) => { if (window.confirm("¿Eliminar actividad?")) setActividades(prev => prev.filter(a => a.id !== id)); };
   const toggleTipo = (tid) => setForm(f => ({ ...f, tipos: f.tipos.includes(tid) ? f.tipos.filter(x => x !== tid) : [...f.tipos, tid] }));
   const save = () => {
     if (!form.nombre.trim()) return;
     if (editAct) setActividades(prev => prev.map(a => a.id === editAct.id ? { ...a, ...form } : a));
-    else setActividades(prev => [...prev, { ...form, id: "act" + Date.now() }]);
+    else setActividades(prev => [...prev, { ...form, subactividades: form.subactividades || [], id: "act" + Date.now() }]);
     setModalOpen(false);
   };
 
@@ -612,6 +615,30 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
             <Field label="Recurrencia"><Select value={form.recurrencia} onChange={e => setForm(f => ({ ...f, recurrencia: e.target.value }))}><option>Anual</option><option>Mensual</option></Select></Field>
             <Field label="Estado"><Select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}><option>Activa</option><option>No activada</option><option>Finalizada</option><option>Suspendida</option></Select></Field>
           </div>
+          {/* Subactividades */}
+          <Field label="Subactividades (opcional — para registrar cómo participó cada alumno)">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {(form.subactividades || []).map((s, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, background: subColor(i) + "22", border: `1px solid ${subColor(i)}44`, borderRadius: 20, padding: "3px 10px" }}>
+                  <span style={{ color: subColor(i), fontSize: 12, fontWeight: 600 }}>{s}</span>
+                  <button onClick={() => setForm(f => ({ ...f, subactividades: f.subactividades.filter((_,j) => j !== i) }))} style={{ background: "none", border: "none", cursor: "pointer", color: subColor(i), fontSize: 14, lineHeight: 1 }}>×</button>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Input id="new-subact" placeholder="Ej: Jugando, Stand, Barra..." onKeyDown={e => {
+                if (e.key === "Enter" && e.target.value.trim()) {
+                  setForm(f => ({ ...f, subactividades: [...(f.subactividades||[]), e.target.value.trim()] }));
+                  e.target.value = "";
+                }
+              }} />
+              <Btn variant="ghost" small onClick={() => {
+                const inp = document.getElementById("new-subact");
+                if (inp?.value.trim()) { setForm(f => ({ ...f, subactividades: [...(f.subactividades||[]), inp.value.trim()] })); inp.value = ""; }
+              }}>+ Agregar</Btn>
+            </div>
+            <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 4 }}>Escribe y presiona Enter o clic en + Agregar</div>
+          </Field>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
             <Btn onClick={save}>Guardar</Btn>
@@ -632,7 +659,10 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
 
   // Helper: participó si está en participacion O si respondió la encuesta vinculada
   const partioEn = (act, alumId) => {
-    if (participacion[act.id]?.[alumId]) return true;
+    const p = participacion[act.id]?.[alumId];
+    if (p && (!Array.isArray(p) || p.length > 0)) {
+      if (!Array.isArray(p) || p.length > 0) return true;
+    }
     if (!act._encuestaId) return false;
     const enc = (encuestas || []).find(e => e.id === act._encuestaId);
     return !!(enc?.respuestas?.[alumId]);
@@ -661,9 +691,31 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     setSortAp(false);
   };
 
-  const toggle = (actId, alumId) => {
+  const [subMenu, setSubMenu] = useState(null); // {actId, alumId, x, y}
+
+  const toggle = (actId, alumId, act) => {
     if (!isAdmin) return;
-    setParticipacion(prev => ({ ...prev, [actId]: { ...prev[actId], [alumId]: !prev[actId]?.[alumId] } }));
+    if (act?.subactividades?.length > 0) {
+      // Show submenu
+      setSubMenu(prev => prev?.actId === actId && prev?.alumId === alumId ? null : { actId, alumId });
+    } else {
+      setParticipacion(prev => ({ ...prev, [actId]: { ...prev[actId], [alumId]: !prev[actId]?.[alumId] } }));
+    }
+  };
+
+  const toggleSub = (actId, alumId, sub) => {
+    setParticipacion(prev => {
+      const cur = prev[actId]?.[alumId];
+      const arr = Array.isArray(cur) ? [...cur] : (cur ? [] : []);
+      const idx = arr.indexOf(sub);
+      const next = idx >= 0 ? arr.filter(s => s !== sub) : [...arr, sub];
+      return { ...prev, [actId]: { ...prev[actId], [alumId]: next.length > 0 ? next : false } };
+    });
+  };
+
+  const hasSub = (actId, alumId, sub) => {
+    const cur = participacion[actId]?.[alumId];
+    return Array.isArray(cur) ? cur.includes(sub) : false;
   };
 
   const estadoColor = { "Activa": PALETTE.green, "Finalizada": PALETTE.accent, "Suspendida": PALETTE.red, "No activada": PALETTE.muted };
@@ -818,11 +870,41 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                     const partio = partioEn(act, al.id);
                     const esEncuesta = !!act._encuestaId;
                     const isActSort = sortActId === act.id;
+                    const hasSubs = act.subactividades?.length > 0;
+                    const curSubs = Array.isArray(participacion[act.id]?.[al.id]) ? participacion[act.id][al.id] : [];
+                    const isSubMenuOpen = subMenu?.actId === act.id && subMenu?.alumId === al.id;
                     return (
-                      <td key={act.id} style={{ textAlign: "center", padding: "12px 10px", background: isActSort ? PALETTE.accent + "08" : "transparent" }}>
-                        <button onClick={() => !esEncuesta && toggle(act.id, al.id)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: (isAdmin && !esEncuesta) ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                          <Icon name={partio ? "check" : "x"} size={14} color={partio ? PALETTE.green : PALETTE.red} />
-                        </button>
+                      <td key={act.id} style={{ textAlign: "center", padding: "8px 6px", background: isActSort ? PALETTE.accent + "08" : "transparent", position: "relative" }}>
+                        {hasSubs ? (
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <button onClick={() => isAdmin && toggle(act.id, al.id, act)}
+                              style={{ background: curSubs.length > 0 ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${curSubs.length > 0 ? PALETTE.green : PALETTE.red}`, borderRadius: 8, padding: "2px 6px", cursor: isAdmin ? "pointer" : "default", minWidth: 32, minHeight: 28, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap" }}>
+                              {curSubs.length > 0
+                                ? curSubs.map((s,i) => {
+                                    const rank = act.subactividades.indexOf(s);
+                                    return <span key={s} style={{ fontSize: 9, fontWeight: 700, color: subColor(rank) }}>{s.substring(0,3).toUpperCase()}</span>;
+                                  })
+                                : <Icon name="x" size={12} color={PALETTE.red} />
+                              }
+                            </button>
+                            {isSubMenuOpen && (
+                              <div style={{ position: "absolute", top: "110%", left: "50%", transform: "translateX(-50%)", background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 10, padding: 10, zIndex: 500, minWidth: 140, boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+                                <div style={{ color: PALETTE.muted, fontSize: 10, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" }}>{act.nombre.substring(0,20)}</div>
+                                {act.subactividades.map((s, i) => (
+                                  <label key={s} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+                                    <input type="checkbox" checked={hasSub(act.id, al.id, s)} onChange={() => toggleSub(act.id, al.id, s)} />
+                                    <span style={{ color: subColor(i), fontSize: 12, fontWeight: 600 }}>{s}</span>
+                                  </label>
+                                ))}
+                                <button onClick={() => setSubMenu(null)} style={{ marginTop: 6, width: "100%", background: PALETTE.border, border: "none", borderRadius: 6, color: PALETTE.text, fontSize: 11, padding: "4px 0", cursor: "pointer" }}>Cerrar</button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <button onClick={() => !esEncuesta && toggle(act.id, al.id, act)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: (isAdmin && !esEncuesta) ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                            <Icon name={partio ? "check" : "x"} size={14} color={partio ? PALETTE.green : PALETTE.red} />
+                          </button>
+                        )}
                       </td>
                     );
                   })}
@@ -1710,8 +1792,8 @@ const alumnoToDB = a => ({
   apod2_nombre: a.apod2_nombre || "", apod2_rut: a.apod2_rut || "",
   apod2_cel: a.apod2_cel || "", apod2_email: a.apod2_email || "", apod2_fnac: a.apod2_fnac || "",
 });
-const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null });
-const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null });
+const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null, subactividades: r.subactividades || [] });
+const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null, subactividades: a.subactividades || [] });
 const dbToEnc = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", descripcion: r.descripcion || "", estado: r.estado, actividadId: r.actividad_id || null, opciones: r.opciones || [], respuestas: r.respuestas || {}, _encuestaId: r.encuesta_id });
 const encToDB = e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha || "", descripcion: e.descripcion || "", estado: e.estado, actividad_id: e.actividadId || null, opciones: e.opciones, respuestas: e.respuestas });
 
