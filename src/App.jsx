@@ -828,11 +828,12 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
         </div>
       )}
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
+        <div style={{ overflowX: "auto", overflowY: "visible" }}>
+          <style>{".part-table .sticky-col { position: sticky; left: 0; background: #1e293b; z-index: 2; box-shadow: 2px 0 4px rgba(0,0,0,0.3); }"}</style>
+          <table className="part-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, position: "sticky", left: 0, background: PALETTE.card }}>Alumno</th>
+                <th className="sticky-col" style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12 }}>Alumno</th>
                 {actsVisibles.map(a => {
                   const isActSort = sortActId === a.id;
                   const partCount = alumnos.filter(al => partioEn(a, al.id)).length;
@@ -858,7 +859,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
             <tbody>
               {alumnosOrdenados.map(al => (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <td style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, position: "sticky", left: 0, background: PALETTE.card, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
+                  <td className="sticky-col" style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
                   {actsVisibles.map(act => {
                     const partio = partioEn(act, al.id);
                     const esEncuesta = !!act._encuestaId;
