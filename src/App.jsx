@@ -1309,6 +1309,7 @@ const USERS_BASE = [
   { usuario: "RenEnriquE", clave: "rene26",      nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
   { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
   { usuario: "Tercero",    clave: "gestion26",   nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
+  { usuario: "copakids",   clave: "copa2026",    nombre: "Copa Kids 2026",   rol: "collab", color: "#f59e0b" },
 ];
 // Merge base users with any saved username/password overrides
 const getUsers = () => {
@@ -1330,6 +1331,7 @@ const NAV_ITEMS = [
   { id: "estadisticas", label: "Estadísticas",       icon: "stats"         },
   { id: "tipos",        label: "Tipos de Actividad", icon: "tag"           },
   { id: "ficha",        label: "Fichas",             icon: "users"         },
+  { id: "colaboraciones", label: "Colaboraciones",   icon: "tag"           },
   { id: "usuarios",     label: "Usuarios",           icon: "shield"        },
 ];
 
@@ -1443,7 +1445,7 @@ const Usuarios = ({ visibility, setVisibility }) => {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Badge text={u.rol === "admin" ? "Administrador" : "Solo vista"} color={u.rol === "admin" ? PALETTE.accent : PALETTE.green} />
+              <Badge text={u.rol === "admin" ? "Administrador" : u.rol === "collab" ? "Colaboraciones" : "Solo vista"} color={u.rol === "admin" ? PALETTE.accent : u.rol === "collab" ? PALETTE.orange : PALETTE.green} />
               <button onClick={() => openEditClave(u)} title="Cambiar clave" style={{ background: PALETTE.accent + "22", border: `1px solid ${PALETTE.accent}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.accent, padding: "5px 10px", fontSize: 11, fontWeight: 600 }}>
                 🔑 Clave
               </button>
@@ -1482,6 +1484,197 @@ const Usuarios = ({ visibility, setVisibility }) => {
 };
 
 // ── Main App ──────────────────────────────────────────────────────────────────
+// ── Colaboraciones ───────────────────────────────────────────────────────────
+const Colaboraciones = ({ alumnos, colaboraciones, setColaboraciones, isAdmin }) => {
+  const [filterAct, setFilterAct] = useState("69d065cd05f1350df287494c");
+  const [editId, setEditId] = useState(null);
+  const [newInsumo, setNewInsumo] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({ alumId: "", cuota: 5000, notas: "" });
+
+  const actividades = [...new Set(colaboraciones.map(c => c.actividadId))].map(id => ({
+    id, nombre: colaboraciones.find(c => c.actividadId === id)?.actividadNombre || id
+  }));
+
+  const filtered = colaboraciones.filter(c => !filterAct || c.actividadId === filterAct)
+    .sort((a,b) => a.nombre.localeCompare(b.nombre,"es"));
+
+  const totalCuota = filtered.filter(c => c.cuotaPagada).length;
+  const totalInsumos = filtered.reduce((s,c) => s + c.insumos.length, 0);
+  const entregados = filtered.reduce((s,c) => s + c.insumos.filter(i => i.entregado).length, 0);
+  const totalValor = filtered.reduce((s,c) => s + c.insumos.reduce((ss,i) => ss + (i.valor||0), 0), 0);
+  const pagadoValor = filtered.reduce((s,c) => s + (c.cuotaPagada ? c.cuota : 0) + c.insumos.filter(i=>i.entregado).reduce((ss,i)=>ss+(i.valor||0),0),0);
+
+  const toggleCuota = (id) => {
+    if (!isAdmin) return;
+    setColaboraciones(prev => prev.map(c => c.id === id ? {...c, cuotaPagada: !c.cuotaPagada} : c));
+  };
+  const toggleInsumo = (colId, insId) => {
+    if (!isAdmin) return;
+    setColaboraciones(prev => prev.map(c => c.id === colId ? {...c, insumos: c.insumos.map(i => i.id === insId ? {...i, entregado: !i.entregado} : i)} : c));
+  };
+  const updateInsumoValor = (colId, insId, valor) => {
+    setColaboraciones(prev => prev.map(c => c.id === colId ? {...c, insumos: c.insumos.map(i => i.id === insId ? {...i, valor: parseInt(valor)||0} : i)} : c));
+  };
+  const addInsumo = (colId) => {
+    if (!newInsumo.trim()) return;
+    setColaboraciones(prev => prev.map(c => c.id === colId ? {...c, insumos: [...c.insumos, {id:"ins_"+Date.now(), descripcion:newInsumo.trim(), valor:0, entregado:false}]} : c));
+    setNewInsumo("");
+  };
+  const removeInsumo = (colId, insId) => {
+    setColaboraciones(prev => prev.map(c => c.id === colId ? {...c, insumos: c.insumos.filter(i => i.id !== insId)} : c));
+  };
+  const addColaborador = () => {
+    if (!addForm.alumId) return;
+    const al = alumnos.find(a => a.id === addForm.alumId);
+    const nombre = al ? [al.nombres, al.apellidos].filter(Boolean).join(" ") : "Alumno";
+    setColaboraciones(prev => [...prev, {
+      id: "col_"+Date.now(), actividadId: filterAct,
+      actividadNombre: actividades.find(a=>a.id===filterAct)?.nombre||"",
+      alumId: addForm.alumId, nombre, cuota: addForm.cuota,
+      cuotaPagada: false, insumos: [], notas: addForm.notas
+    }]);
+    setShowAdd(false); setAddForm({ alumId: "", cuota: 5000, notas: "" });
+  };
+  const deleteColab = (id) => { if (window.confirm("¿Eliminar colaborador?")) setColaboraciones(prev => prev.filter(c => c.id !== id)); };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+        <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Colaboraciones</h1>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Select value={filterAct} onChange={e => setFilterAct(e.target.value)} style={{ flex: "1 1 200px" }}>
+            <option value="">Todas las actividades</option>
+            {actividades.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+          </Select>
+          {isAdmin && <Btn small onClick={() => setShowAdd(s=>!s)}><Icon name="plus" size={13} />Agregar</Btn>}
+        </div>
+      </div>
+
+      {/* Resumen */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
+        {[
+          { label: "Cuotas pagadas", value: `${totalCuota}/${filtered.length}`, color: PALETTE.green, sub: `$${(totalCuota*5000).toLocaleString("es-CL")}` },
+          { label: "Insumos entregados", value: `${entregados}/${totalInsumos}`, color: PALETTE.accent, sub: totalInsumos>0?`${Math.round(entregados/totalInsumos*100)}%`:"—" },
+          { label: "Colaboradores", value: filtered.length, color: PALETTE.purple, sub: `${filtered.length} comprometidos` },
+          { label: "Total cuotas pendientes", value: `$${((filtered.length-totalCuota)*5000).toLocaleString("es-CL")}`, color: PALETTE.orange, sub: `${filtered.length-totalCuota} pendientes` },
+        ].map(s => (
+          <div key={s.label} style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 6 }}>{s.label}</div>
+            <div style={{ color: s.color, fontSize: 22, fontWeight: 800 }}>{s.value}</div>
+            <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Formulario agregar */}
+      {showAdd && isAdmin && (
+        <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 20, marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, color: PALETTE.text, marginBottom: 12 }}>Agregar colaborador</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <Field label="Alumno">
+              <Select value={addForm.alumId} onChange={e => setAddForm(f=>({...f, alumId:e.target.value}))}>
+                <option value="">Seleccionar...</option>
+                {[...alumnos].sort((a,b)=>(a.nombres||"").localeCompare(b.nombres||"","es")).map(al => (
+                  <option key={al.id} value={al.id}>{[al.nombres,al.apellidos].filter(Boolean).join(" ")||al.nombre}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Cuota ($)"><Input type="number" value={addForm.cuota} onChange={e=>setAddForm(f=>({...f,cuota:parseInt(e.target.value)||0}))} /></Field>
+            <Field label="Notas"><Input value={addForm.notas} onChange={e=>setAddForm(f=>({...f,notas:e.target.value}))} placeholder="Opcional..." /></Field>
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Btn variant="ghost" small onClick={() => setShowAdd(false)}>Cancelar</Btn>
+            <Btn small onClick={addColaborador}>Guardar</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* Lista */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {filtered.map(col => {
+          const isEditing = editId === col.id;
+          const pendientes = col.insumos.filter(i => !i.entregado).length;
+          return (
+            <div key={col.id} style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: col.insumos.length > 0 ? `1px solid ${PALETTE.border}` : "none", flexWrap: "wrap" }}>
+                {/* Nombre */}
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  <span style={{ color: PALETTE.text, fontWeight: 700, fontSize: 14 }}>{col.nombre}</span>
+                  {col.notas && <span style={{ color: PALETTE.muted, fontSize: 12, marginLeft: 8 }}>{col.notas}</span>}
+                </div>
+                {/* Cuota */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: PALETTE.muted, fontSize: 12 }}>Cuota $5.000:</span>
+                  <button onClick={() => toggleCuota(col.id)} style={{
+                    background: col.cuotaPagada ? PALETTE.green+"22" : PALETTE.red+"22",
+                    border: `2px solid ${col.cuotaPagada ? PALETTE.green : PALETTE.red}`,
+                    borderRadius: 20, padding: "3px 12px", cursor: isAdmin ? "pointer" : "default",
+                    color: col.cuotaPagada ? PALETTE.green : PALETTE.red, fontSize: 12, fontWeight: 700
+                  }}>
+                    {col.cuotaPagada ? "✓ Pagada" : "✗ Pendiente"}
+                  </button>
+                </div>
+                {/* Estado insumos */}
+                {col.insumos.length > 0 && (
+                  <Badge text={pendientes === 0 ? "Todo entregado" : `${pendientes} pendiente${pendientes>1?"s":""}`}
+                    color={pendientes === 0 ? PALETTE.green : PALETTE.orange} />
+                )}
+                {isAdmin && (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setEditId(isEditing ? null : col.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="edit" size={14} /></button>
+                    <button onClick={() => deleteColab(col.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={14} /></button>
+                  </div>
+                )}
+              </div>
+              {/* Insumos */}
+              {col.insumos.length > 0 && (
+                <div style={{ padding: "10px 20px" }}>
+                  {col.insumos.map(ins => (
+                    <div key={ins.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: `1px solid ${PALETTE.border}22` }}>
+                      <button onClick={() => toggleInsumo(col.id, ins.id)} style={{
+                        width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                        background: ins.entregado ? PALETTE.green+"22" : PALETTE.red+"11",
+                        border: `2px solid ${ins.entregado ? PALETTE.green : PALETTE.red}`,
+                        cursor: isAdmin ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center"
+                      }}>
+                        <Icon name={ins.entregado ? "check" : "x"} size={11} color={ins.entregado ? PALETTE.green : PALETTE.red} />
+                      </button>
+                      <span style={{ color: ins.entregado ? PALETTE.muted : PALETTE.text, fontSize: 13, flex: 1, textDecoration: ins.entregado ? "line-through" : "none" }}>{ins.descripcion}</span>
+                      {isEditing && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: PALETTE.muted, fontSize: 11 }}>$</span>
+                          <input type="number" value={ins.valor||""} onChange={e => updateInsumoValor(col.id, ins.id, e.target.value)}
+                            placeholder="0" style={{ width: 70, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "3px 6px", color: PALETTE.text, fontSize: 12, outline: "none" }} />
+                          <button onClick={() => removeInsumo(col.id, ins.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={12} /></button>
+                        </div>
+                      )}
+                      {!isEditing && ins.valor > 0 && <span style={{ color: PALETTE.muted, fontSize: 11 }}>${ins.valor.toLocaleString("es-CL")}</span>}
+                    </div>
+                  ))}
+                  {isEditing && isAdmin && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <Input value={newInsumo} onChange={e => setNewInsumo(e.target.value)} placeholder="Agregar insumo..." onKeyDown={e => { if(e.key==="Enter"){e.preventDefault();addInsumo(col.id);}}} style={{ fontSize: 12 }} />
+                      <Btn variant="ghost" small onClick={() => addInsumo(col.id)}>+ Agregar</Btn>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isEditing && isAdmin && col.insumos.length === 0 && (
+                <div style={{ padding: "10px 20px", display: "flex", gap: 8 }}>
+                  <Input value={newInsumo} onChange={e => setNewInsumo(e.target.value)} placeholder="Agregar insumo..." onKeyDown={e => { if(e.key==="Enter"){e.preventDefault();addInsumo(col.id);}}} style={{ fontSize: 12 }} />
+                  <Btn variant="ghost" small onClick={() => addInsumo(col.id)}>+ Agregar</Btn>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // ── Fichas de Alumnos ─────────────────────────────────────────────────────────
 const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
   const [selected, setSelected] = useState(null);
@@ -1756,6 +1949,9 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
 };
 
 
+// ── Colaboraciones seed ──────────────────────────────────────────────────────
+const SEED_COLABORACIONES = [{"id": "col_a17", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a17", "nombre": "Vicente Loyola", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a17_0", "descripcion": "3 bebidas de 3 litros", "valor": 0, "entregado": false}, {"id": "ins_a17_1", "descripcion": "2 cilindros de gas 5kg", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a2", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a2", "nombre": "Liliana Aguado", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a2_0", "descripcion": "1 litro de aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a15", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a15", "nombre": "Roberto Lillo", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a15_0", "descripcion": "3 bebidas de 3 litros", "valor": 0, "entregado": false}, {"id": "ins_a15_1", "descripcion": "tickets de ventas", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a30", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a30", "nombre": "Josefa Orellana", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a30_0", "descripcion": "máquina de pago", "valor": 0, "entregado": false}, {"id": "ins_a30_1", "descripcion": "bebida 3 lts", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a44", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a44", "nombre": "Laura Villegas", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a44_0", "descripcion": "salchichas", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a10", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a10", "nombre": "Bastián Ferrada", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a10_0", "descripcion": "ketchup", "valor": 0, "entregado": false}, {"id": "ins_a10_1", "descripcion": "mostaza", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a24", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a24", "nombre": "María Montanchez", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a24_0", "descripcion": "mostaza", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a3", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a3", "nombre": "Simón Bahamondes", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a3_0", "descripcion": "freidora", "valor": 0, "entregado": false}, {"id": "ins_a3_1", "descripcion": "espumadera", "valor": 0, "entregado": false}, {"id": "ins_a3_2", "descripcion": "olla grande", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a4", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a4", "nombre": "Mia Caraballo", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a4_0", "descripcion": "freidora", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a39", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a39", "nombre": "Isabella Terán", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a39_0", "descripcion": "3 bebidas de 3 litros", "valor": 0, "entregado": false}, {"id": "ins_a39_1", "descripcion": "tarro de café 400gr", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a5", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a5", "nombre": "Tomás Carmona", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a5_0", "descripcion": "salchichas", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a35", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a35", "nombre": "Agustina Rivera", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a35_0", "descripcion": "1 litro de aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a45", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a45", "nombre": "Amir Zacarias", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a45_0", "descripcion": "ketchup", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a25", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a25", "nombre": "Ignacio Mora", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a25_0", "descripcion": "jugos", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a11", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a11", "nombre": "Korina Gallardo", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a11_0", "descripcion": "mostaza", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a34", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a34", "nombre": "Gahel Pinto", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a34_0", "descripcion": "freidora", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a16", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a16", "nombre": "Fredy Lino", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a16_0", "descripcion": "aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a9", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a9", "nombre": "Maite Echavarria", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a9_0", "descripcion": "aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a23", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a23", "nombre": "Aranza Molina", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a23_0", "descripcion": "aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a19", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a19", "nombre": "Amanda Martínez", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a19_0", "descripcion": "cooperación", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a43", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a43", "nombre": "Millan Vicuña", "cuota": 5000, "cuotaPagada": false, "insumos": [], "notas": ""}, {"id": "col_a13", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a13", "nombre": "Diego González", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a13_0", "descripcion": "mayonesa", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a6", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a6", "nombre": "Luciana Cordovez", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a6_0", "descripcion": "aceite", "valor": 0, "entregado": false}, {"id": "ins_a6_1", "descripcion": "ketchup", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a28", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a28", "nombre": "Matteo Notari", "cuota": 5000, "cuotaPagada": false, "insumos": [], "notas": ""}, {"id": "col_a8", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a8", "nombre": "Mathias Díaz", "cuota": 5000, "cuotaPagada": false, "insumos": [], "notas": ""}, {"id": "col_a37", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a37", "nombre": "Emiliano Soto", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a37_0", "descripcion": "20 vienesas", "valor": 0, "entregado": false}, {"id": "ins_a37_1", "descripcion": "cocinilla", "valor": 0, "entregado": false}, {"id": "ins_a37_2", "descripcion": "bowl", "valor": 0, "entregado": false}, {"id": "ins_a37_3", "descripcion": "cuchillos", "valor": 0, "entregado": false}, {"id": "ins_a37_4", "descripcion": "gas", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a22", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a22", "nombre": "Derek Mina", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a22_0", "descripcion": "ayuda en stand", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a27", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a27", "nombre": "Thiago Muñoz", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a27_0", "descripcion": "aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a20", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a20", "nombre": "Benjamin Medina", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a20_0", "descripcion": "aceite", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a41", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a41", "nombre": "Matías Vásquez", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a41_0", "descripcion": "ayuda en stand", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a18", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a18", "nombre": "Amparo Marchant", "cuota": 5000, "cuotaPagada": false, "insumos": [{"id": "ins_a18_0", "descripcion": "ayuda en stand", "valor": 0, "entregado": false}], "notas": ""}, {"id": "col_a33", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a33", "nombre": "Gemma Pesantez", "cuota": 5000, "cuotaPagada": false, "insumos": [], "notas": ""}, {"id": "col_a40", "actividadId": "69d065cd05f1350df287494c", "actividadNombre": "Copa Kids 2026", "alumId": "a40", "nombre": "Bruno Trujillo", "cuota": 5000, "cuotaPagada": false, "insumos": [], "notas": ""}];
+
 // ── Map DB rows to app format ────────────────────────────────────────────────
 const dbToAlumno = r => ({
   id: r.id,
@@ -1802,6 +1998,7 @@ export default function App() {
   const [tipos, setTipos] = useState(SEED_TIPOS);
   const [encuestas, setEncuestas] = useState(SEED_ENCUESTAS);
   const [participacion, setParticipacion] = useState(SEED_PARTICIPACION);
+  const [colaboraciones, setColaboraciones] = useState(() => S.get("ge_colaboraciones") || SEED_COLABORACIONES);
 
   const initialized = useRef(false);
 
@@ -1868,6 +2065,7 @@ export default function App() {
   useEffect(() => { if (!loading) debounceSave('actividades', () => DB.upsert('actividades', actividades.map(actToDB))); }, [actividades, loading]);
   useEffect(() => { if (!loading) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
   useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
+  useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
 
   // Participacion saves individually per change (more granular)
   const prevPart = useRef(null);
@@ -1891,7 +2089,7 @@ export default function App() {
     if (rows.length) DB.upsertPK('participacion', rows, 'act_id,alum_id');
   }, [participacion, loading]);
 
-  const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage("dashboard"); };
+  const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage(u.rol === "collab" ? "colaboraciones" : "dashboard"); };
   const handleLogout = () => { S.set("ge_session", null); setUser(null); setPage("dashboard"); };
 
   if (!user) return <Login onLogin={handleLogin} />;
@@ -1908,9 +2106,11 @@ export default function App() {
   const isAdmin = user.rol === "admin";
 
   // Nav visible según rol
+  const isCollab = user.rol === "collab";
   const nav = NAV_ITEMS.filter(item => {
-    if (isAdmin) return true; // admins ven todo
-    if (item.id === "usuarios" || item.id === "tipos") return false; // siempre oculto para viewers
+    if (isAdmin) return true;
+    if (isCollab) return item.id === "colaboraciones"; // collab only sees colaboraciones
+    if (item.id === "usuarios" || item.id === "tipos") return false;
     return visibility[item.id] !== false;
   });
 
@@ -1930,6 +2130,7 @@ export default function App() {
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
       case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} />;
+      case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
       default: return null;
     }
