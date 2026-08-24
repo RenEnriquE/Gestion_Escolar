@@ -650,6 +650,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   const [filterAct, setFilterAct] = useState("");
   const [sortAp, setSortAp] = useState(false);
   const [sortActId, setSortActId] = useState(null);
+  const [showPdfPicker, setShowPdfPicker] = useState(false);
+  const [pdfColsExcluded, setPdfColsExcluded] = useState(new Set()); // IDs excluidos del PDF
 
   // Helper: participó si está en participacion O si respondió la encuesta vinculada
   const partioEn = (act, alumId) => {
@@ -715,7 +717,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
 
   const exportarPDF = () => {
     const fecha = new Date().toLocaleDateString("es-CL");
-    const nActs = actsVisibles.length;
+    const actsPDF = actsVisibles.filter(a => !pdfColsExcluded.has(a.id));
+    const nActs = actsPDF.length;
 
     // Portrait A4: 210mm wide, fit all 45 rows in one page
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -742,7 +745,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     doc.setTextColor(0);
 
     // Activity names wrap across multiple lines in header
-    const head = [["Alumno", ...actsVisibles.map(a => a.nombre)]];
+    const head = [["Alumno", ...actsPDF.map(a => a.nombre)]];
 
     // Only first name + first surname for brevity
     const body = alumnosOrdenados.map(al => {
@@ -753,7 +756,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     });
 
     // Summary row
-    const summary = ["TOTAL", ...actsVisibles.map(act => {
+    const summary = ["TOTAL", ...actsPDF.map(act => {
       const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
       const p = alumnosOrdenados.length > 0 ? (n/alumnosOrdenados.length*100).toFixed(1) : "0.0";
       return `${n}/${alumnosOrdenados.length} (${p}%)`;
@@ -814,9 +817,39 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
         <Btn variant={sortAp ? "primary" : "ghost"} onClick={() => { setSortAp(s => !s); setSortActId(null); }} small>
           {sortAp ? "Por apoderado ✓" : "Ordenar por apoderado"}
         </Btn>
-        <Btn variant="ghost" onClick={exportarPDF} small style={{ marginLeft: "auto" }}>
-          Exportar PDF
-        </Btn>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+          <Btn variant="ghost" small onClick={() => setShowPdfPicker(s => !s)}>
+            Columnas PDF {pdfColsExcluded.size > 0 ? `(-${pdfColsExcluded.size})` : ""}
+          </Btn>
+          <Btn variant="ghost" onClick={exportarPDF} small>
+            Exportar PDF
+          </Btn>
+          {showPdfPicker && (
+            <div style={{ position: "absolute", right: 0, top: "110%", background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 12, padding: 16, zIndex: 300, minWidth: 280, maxHeight: 400, overflowY: "auto", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Actividades en PDF</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setPdfColsExcluded(new Set())} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.green, fontSize: 11 }}>Todas</button>
+                  <button onClick={() => setPdfColsExcluded(new Set(actsVisibles.map(a=>a.id)))} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red, fontSize: 11 }}>Ninguna</button>
+                  <button onClick={() => setShowPdfPicker(false)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 14 }}>×</button>
+                </div>
+              </div>
+              {actsVisibles.map(a => {
+                const excluded = pdfColsExcluded.has(a.id);
+                return (
+                  <label key={a.id} onClick={() => setPdfColsExcluded(prev => { const n = new Set(prev); excluded ? n.delete(a.id) : n.add(a.id); return n; })}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}22` }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${excluded ? PALETTE.border : PALETTE.accent}`, background: excluded ? "transparent" : PALETTE.accent, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {!excluded && <Icon name="check" size={10} color="white" />}
+                    </div>
+                    <span style={{ color: excluded ? PALETTE.muted : PALETTE.text, fontSize: 12 }}>{a.nombre}</span>
+                    <span style={{ color: PALETTE.muted, fontSize: 10, marginLeft: "auto" }}>{a.fecha}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
       {/* Resumen de filtros / orden activo */}
       {(filterTipo || filterEstado || sortActId) && (
