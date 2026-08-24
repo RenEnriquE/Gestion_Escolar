@@ -718,92 +718,102 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
   const exportarPDF = () => {
     const fecha = new Date().toLocaleDateString("es-CL");
     const actsPDF = actsVisibles.filter(a => !pdfColsExcluded.has(a.id));
-    const nActs = actsPDF.length;
+    const TIPO_ENC = "69feb9c34b383d80660995b2";
 
-    // Portrait A4: 210mm wide, fit all 45 rows in one page
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth(); // 210mm
+    // Split into encuestas and non-encuestas
+    const actsEncuesta = actsPDF.filter(a => a.tipos.includes(TIPO_ENC));
+    const actsOtras   = actsPDF.filter(a => !a.tipos.includes(TIPO_ENC));
 
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
     const margin = 8;
-    const nameColW = 40;
-    const available = pageW - margin * 2 - nameColW;
-    const actColW = nActs > 0 ? Math.max(7, Math.min(20, available / nActs)) : 20;
-    // Shrink font to fit 45 rows + header in ~270mm page height
-    const fs = nActs > 10 ? 5 : 5.5;
+    const nameColW = 42;
+    const pctColW = 14;
 
-    // Title
-    doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
-    doc.text("GestionEscolar - Participacion", margin, 12);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    const filtros = [];
-    if (filterTipo) filtros.push("Tipo: " + (tipos.find(t => t.id === filterTipo)?.nombre || ""));
-    if (filterEstado) filtros.push("Estado: " + filterEstado);
-    doc.text((filtros.length ? filtros.join("  |  ") : "Todas las actividades") + "  -  " + fecha, margin, 18);
-    doc.setTextColor(0);
+    const displayName = (al) => al.nombres && al.apellidos
+      ? al.nombres.split(" ")[0] + " " + al.apellidos.split(" ")[0]
+      : al.nombre;
 
-    // Activity names wrap across multiple lines in header
-    const head = [[
+    const makeHead = (acts) => [[
       "Alumno",
-      ...actsPDF.map(a => {
-        const tipoNombre = tipos.filter(t => a.tipos.includes(t.id)).map(t => t.nombre).join(", ");
+      ...acts.map(a => {
         const fechaCorta = a.fecha ? a.fecha.substring(8,10)+"/"+a.fecha.substring(5,7) : "";
-        return a.nombre + (fechaCorta ? ` (${fechaCorta})` : "") + (tipoNombre ? `\n[${tipoNombre}]` : "");
+        return a.nombre + (fechaCorta ? ` (${fechaCorta})` : "");
       }),
       "% Part."
     ]];
 
-    // Only first name + first surname for brevity
-    const body = alumnosOrdenados.map(al => {
-      const displayName = al.nombres && al.apellidos
-        ? al.nombres.split(" ")[0] + " " + al.apellidos.split(" ")[0]
-        : al.nombre;
-      const partCount = actsPDF.filter(act => partioEn(act, al.id)).length;
-      const partPct = actsPDF.length > 0 ? (partCount/actsPDF.length*100).toFixed(1)+"%" : "-";
-      return [displayName, ...actsPDF.map(act => partioEn(act, al.id) ? "SI" : "-"), partPct];
-    });
+    const makeBody = (acts) => {
+      const sorted = [...alumnosOrdenados].sort((a,b) => {
+        const pa = acts.filter(act => partioEn(act, a.id)).length;
+        const pb = acts.filter(act => partioEn(act, b.id)).length;
+        if (pb !== pa) return pb - pa;
+        return (a.nombres||a.nombre||"").localeCompare(b.nombres||b.nombre||"","es");
+      });
+      const rows = sorted.map(al => {
+        const partCount = acts.filter(act => partioEn(act, al.id)).length;
+        const partPct = acts.length > 0 ? (partCount/acts.length*100).toFixed(1)+"%" : "-";
+        return [displayName(al), ...acts.map(act => partioEn(act, al.id) ? "SI" : "-"), partPct];
+      });
+      // Summary row
+      const summary = ["TOTAL", ...acts.map(act => {
+        const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
+        const p = alumnosOrdenados.length > 0 ? (n/alumnosOrdenados.length*100).toFixed(1) : "0.0";
+        return `${n}/${alumnosOrdenados.length} (${p}%)`;
+      })];
+      const totalAll = sorted.reduce((s,al) => s + acts.filter(act=>partioEn(act,al.id)).length, 0);
+      const avgPct = alumnosOrdenados.length > 0 && acts.length > 0 ? (totalAll/(alumnosOrdenados.length*acts.length)*100).toFixed(1)+"%" : "-";
+      summary.push(avgPct);
+      rows.push(summary);
+      return rows;
+    };
 
-    // Summary row
-    const totalPartAll = alumnosOrdenados.reduce((s,al) => s + actsPDF.filter(act => partioEn(act,al.id)).length, 0);
-    const avgPct = alumnosOrdenados.length > 0 && actsPDF.length > 0 ? (totalPartAll/(alumnosOrdenados.length*actsPDF.length)*100).toFixed(1)+"%" : "-";
-    const summary = ["TOTAL", ...actsPDF.map(act => {
-      const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
-      const p = alumnosOrdenados.length > 0 ? (n/alumnosOrdenados.length*100).toFixed(1) : "0.0";
-      return `${n}/${alumnosOrdenados.length} (${p}%)`;
-    }), avgPct];
-    body.push(summary);
+    const makeColStyles = (nActs) => {
+      const actColW = Math.max(7, Math.min(22, (pageW - margin*2 - nameColW - pctColW) / Math.max(nActs,1)));
+      const fs = nActs > 15 ? 5 : nActs > 8 ? 5.5 : 6;
+      const cols = { 0: { halign: "left", cellWidth: nameColW } };
+      for (let i = 1; i <= nActs; i++) cols[i] = { cellWidth: actColW, halign: "center" };
+      cols[nActs+1] = { cellWidth: pctColW, halign: "center" };
+      return { cols, fs, actColW };
+    };
 
-    // Build columnStyles dynamically
-    const colStyles = { 0: { halign: "left", cellWidth: nameColW } };
-    for (let i = 1; i <= nActs; i++) colStyles[i] = { cellWidth: actColW, halign: "center" };
-    colStyles[nActs + 1] = { cellWidth: 14, halign: "center" };
+    const addTable = (acts, title, startY) => {
+      if (acts.length === 0) return;
+      const { cols, fs } = makeColStyles(acts.length);
+      const body = makeBody(acts);
+      doc.setFontSize(10); doc.setFont("helvetica","bold");
+      doc.text(title, margin, startY - 3);
+      doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(100);
+      doc.text(fecha, pageW - margin - 20, startY - 3);
+      doc.setTextColor(0);
+      autoTable(doc, {
+        head: makeHead(acts), body,
+        startY,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: fs, cellPadding: 0.8, halign: "center", overflow: "linebreak" },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 1.2, minCellHeight: 16 },
+        columnStyles: cols,
+        tableWidth: pageW - margin*2,
+        didParseCell: (data) => {
+          if (data.section==="body" && data.row.index===body.length-1) { data.cell.styles.fontStyle="bold"; data.cell.styles.fillColor=[230,236,245]; }
+          if (data.section==="body" && data.column.index>0 && data.cell.text[0]==="SI") { data.cell.styles.textColor=[22,163,74]; data.cell.styles.fontStyle="bold"; }
+          if (data.section==="body" && data.column.index>0 && data.cell.text[0]==="-") { data.cell.styles.textColor=[180,180,180]; }
+        },
+        alternateRowStyles: { fillColor: [248,250,252] },
+      });
+    };
 
-    autoTable(doc, {
-      head,
-      body,
-      startY: 22,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: fs, cellPadding: 0.8, halign: "center", overflow: "linebreak" },
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 1.2, minCellHeight: 18 },
-      columnStyles: colStyles,
-      tableWidth: pageW - margin * 2,
-      didParseCell: (data) => {
-        if (data.section === "body" && data.row.index === body.length - 1) {
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [230, 236, 245];
-        }
-        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "SI") {
-          data.cell.styles.textColor = [22, 163, 74];
-          data.cell.styles.fontStyle = "bold";
-        }
-        if (data.section === "body" && data.column.index > 0 && data.cell.text[0] === "-") {
-          data.cell.styles.textColor = [180, 180, 180];
-        }
-      },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-    });
+    // Hoja 1: Encuestas
+    if (actsEncuesta.length > 0) {
+      addTable(actsEncuesta, "GestionEscolar - Encuestas", 14);
+    }
+    // Hoja 2: Otras actividades
+    if (actsOtras.length > 0) {
+      if (actsEncuesta.length > 0) doc.addPage();
+      addTable(actsOtras, "GestionEscolar - Actividades", 14);
+    }
+    // If only one type, single page
+    if (actsEncuesta.length === 0 && actsOtras.length === 0) return;
 
     doc.save(`participacion_${fecha.replace(/\//g, "-")}.pdf`);
   };
