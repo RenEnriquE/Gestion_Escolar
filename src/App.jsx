@@ -751,7 +751,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
       "Alumno",
       ...actsPDF.map(a => {
         const tipoNombre = tipos.filter(t => a.tipos.includes(t.id)).map(t => t.nombre).join(", ");
-        return a.nombre + (tipoNombre ? `\n[${tipoNombre}]` : "");
+        const fechaCorta = a.fecha ? a.fecha.substring(8,10)+"/"+a.fecha.substring(5,7) : "";
+        return a.nombre + (fechaCorta ? ` (${fechaCorta})` : "") + (tipoNombre ? `\n[${tipoNombre}]` : "");
       }),
       "% Part."
     ]];
@@ -893,6 +894,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                         style={{ cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                         <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80 }}>
                           <span style={{ fontWeight: isActSort ? 700 : 400 }}>{isActSort ? "↕ " : ""}{a.nombre}</span>
+                          {a.fecha && <span style={{ fontSize: 9, color: PALETTE.muted, marginLeft: 4 }}>{a.fecha.substring(8,10)}/{a.fecha.substring(5,7)}</span>}
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center", marginBottom: 2 }}>
                           {tipos.filter(t => a.tipos.includes(t.id)).map(t => (
