@@ -330,7 +330,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
     else setAlumnos(prev => [...prev, { ...data, id: "a" + Date.now() }]);
     setModalOpen(false);
   };
-  const del = (id) => { if (window.confirm("¿Eliminar alumno?")) setAlumnos(prev => prev.filter(a => a.id !== id)); };
+  const del = (id) => { if (window.confirm("¿Eliminar alumno?")) { setAlumnos(prev => prev.filter(a => a.id !== id)); DB.deleteRow('alumnos', { id }); } };
 
   return (
     <div>
@@ -554,7 +554,7 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
 
   const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa", subactividades: [] }); setEditAct(null); setModalOpen(true); };
   const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, subactividades: a.subactividades || [] }); setEditAct(a); setModalOpen(true); };
-  const del = (id) => { if (window.confirm("¿Eliminar actividad?")) setActividades(prev => prev.filter(a => a.id !== id)); };
+  const del = (id) => { if (window.confirm("¿Eliminar actividad?")) { setActividades(prev => prev.filter(a => a.id !== id)); DB.deleteRow('actividades', { id }); } };
   const toggleTipo = (tid) => setForm(f => ({ ...f, tipos: f.tipos.includes(tid) ? f.tipos.filter(x => x !== tid) : [...f.tipos, tid] }));
   const save = () => {
     if (!form.nombre.trim()) return;
@@ -963,6 +963,12 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
     if (window.confirm("¿Eliminar encuesta?")) {
       setEncuestas(prev => prev.filter(e => e.id !== id));
       setActividades(prev => prev.filter(a => a._encuestaId !== id));
+      DB.deleteRow('encuestas', { id });
+      // Also delete linked activity
+      DB.getAll('actividades').then(acts => {
+        const linked = acts?.find(a => a.encuesta_id === id);
+        if (linked) DB.deleteRow('actividades', { id: linked.id });
+      });
     }
   };
 
@@ -1178,7 +1184,7 @@ const TiposActividad = ({ tipos, setTipos, isAdmin }) => {
             </div>
             {isAdmin && <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => { setForm({ nombre: t.nombre, color: t.color }); setEditTipo(t); setModalOpen(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="edit" size={14} /></button>
-              <button onClick={() => { if (window.confirm("¿Eliminar tipo?")) setTipos(prev => prev.filter(x => x.id !== t.id)); }} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={14} /></button>
+              <button onClick={() => { if (window.confirm("¿Eliminar tipo?")) { setTipos(prev => prev.filter(x => x.id !== t.id)); DB.deleteRow('tipos', { id: t.id }); } }} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={14} /></button>
             </div>}
           </div>
         ))}
