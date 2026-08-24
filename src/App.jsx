@@ -769,11 +769,13 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     };
 
     const makeColStyles = (nActs) => {
-      const actColW = Math.max(6, Math.min(20, (pageW - margin*2 - nameColW - pctColW) / Math.max(nActs,1)));
+      // Distribute all available width across activity columns, min 6mm, pct col always at right
+      const availableForActs = pageW - margin*2 - nameColW - pctColW;
+      const actColW = nActs > 0 ? Math.max(6, availableForActs / nActs) : 20;
       const fs = nActs > 12 ? 4.5 : nActs > 6 ? 5 : 5.5;
       const cols = { 0: { halign: "left", cellWidth: nameColW } };
       for (let i = 1; i <= nActs; i++) cols[i] = { cellWidth: actColW, halign: "center" };
-      cols[nActs+1] = { cellWidth: pctColW, halign: "center" };
+      cols[nActs+1] = { cellWidth: pctColW, halign: "center", fontStyle: "bold" };
       return { cols, fs, actColW };
     };
 
@@ -800,8 +802,15 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
           const isPctCol = data.column.index === body[0].length - 1;
           // Name col slightly bigger
           if (isNameCol && data.section==="body") { data.cell.styles.fontSize = fs + 0.5; }
-          // % col bigger and bold for all rows
-          if (isPctCol && data.section==="body") { data.cell.styles.fontSize = fs + 0.8; data.cell.styles.fontStyle = "bold"; }
+          // % col bigger, bold and colored for all rows
+          if (isPctCol && data.section==="body" && !isSummary) {
+            data.cell.styles.fontSize = fs + 0.8;
+            data.cell.styles.fontStyle = "bold";
+            const val = parseFloat(data.cell.text[0]||"0");
+            if (val >= 65) { data.cell.styles.fillColor=[22,163,74]; data.cell.styles.textColor=[255,255,255]; }
+            else if (val >= 35) { data.cell.styles.fillColor=[251,146,60]; data.cell.styles.textColor=[0,0,0]; }
+            else { data.cell.styles.fillColor=[220,38,38]; data.cell.styles.textColor=[255,255,255]; }
+          }
           // Summary row: bold and bigger
           if (isSummary) { data.cell.styles.fontStyle="bold"; data.cell.styles.fontSize = fs + 1; }
           // Color ranges for % Part col in summary
