@@ -1118,7 +1118,7 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
         {isAdmin && <Btn onClick={openNew}><Icon name="plus" size={15} />Nueva Encuesta</Btn>}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {encuestas.map(enc => {
+        {[...encuestas].sort((a,b) => (b.fecha||"").localeCompare(a.fecha||"")).map(enc => {
           const totalResp = Object.keys(enc.respuestas || {}).length;
           const isExpanded = expandId === enc.id;
           return (
