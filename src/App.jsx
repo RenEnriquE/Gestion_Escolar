@@ -752,7 +752,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
       const displayName = al.nombres && al.apellidos
         ? al.nombres.split(" ")[0] + " " + al.apellidos.split(" ")[0]
         : al.nombre;
-      return [displayName, ...actsVisibles.map(act => partioEn(act, al.id) ? "SI" : "-")];
+      return [displayName, ...actsPDF.map(act => partioEn(act, al.id) ? "SI" : "-")];
     });
 
     // Summary row
