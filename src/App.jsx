@@ -781,10 +781,10 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
       if (acts.length === 0) return;
       const { cols, fs } = makeColStyles(acts.length);
       const body = makeBody(acts);
-      doc.setFontSize(10); doc.setFont("helvetica","bold");
-      doc.text(title, margin, startY - 3);
-      doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(100);
-      doc.text(fecha, pageW - margin - 20, startY - 3);
+      doc.setFontSize(13); doc.setFont("helvetica","bold");
+      doc.text(title, margin, startY - 4);
+      doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(100);
+      doc.text(fecha, pageW - margin - 20, startY - 4);
       doc.setTextColor(0);
       autoTable(doc, {
         head: makeHead(acts), body,
@@ -795,9 +795,35 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
         columnStyles: cols,
         tableWidth: pageW - margin*2,
         didParseCell: (data) => {
-          if (data.section==="body" && data.row.index===body.length-1) { data.cell.styles.fontStyle="bold"; data.cell.styles.fillColor=[230,236,245]; }
-          if (data.section==="body" && data.column.index>0 && data.cell.text[0]==="SI") { data.cell.styles.textColor=[22,163,74]; data.cell.styles.fontStyle="bold"; }
-          if (data.section==="body" && data.column.index>0 && data.cell.text[0]==="-") { data.cell.styles.textColor=[180,180,180]; }
+          const isSummary = data.section==="body" && data.row.index===body.length-1;
+          const isNameCol = data.column.index === 0;
+          const isPctCol = data.column.index === body[0].length - 1;
+          // Name col slightly bigger
+          if (isNameCol && data.section==="body") { data.cell.styles.fontSize = fs + 0.5; }
+          // % col bigger and bold for all rows
+          if (isPctCol && data.section==="body") { data.cell.styles.fontSize = fs + 0.8; data.cell.styles.fontStyle = "bold"; }
+          // Summary row: bold and bigger
+          if (isSummary) { data.cell.styles.fontStyle="bold"; data.cell.styles.fontSize = fs + 1; }
+          // Color ranges for % Part col in summary
+          if (isSummary && isPctCol) {
+            const val = parseFloat(data.cell.text[0]||"0");
+            data.cell.styles.fontSize = fs + 1.5;
+            if (val >= 65) { data.cell.styles.fillColor=[22,163,74]; data.cell.styles.textColor=[255,255,255]; }
+            else if (val >= 35) { data.cell.styles.fillColor=[251,146,60]; data.cell.styles.textColor=[0,0,0]; }
+            else { data.cell.styles.fillColor=[220,38,38]; data.cell.styles.textColor=[255,255,255]; }
+          }
+          // Color ranges for activity totals in summary (e.g. "32/45 (71.1%)")
+          if (isSummary && !isNameCol && !isPctCol) {
+            const m = (data.cell.text[0]||"").match(/[(](\d+\.?\d*)%[)]/);
+            if (m) {
+              const val = parseFloat(m[1]);
+              if (val >= 65) { data.cell.styles.fillColor=[22,163,74]; data.cell.styles.textColor=[255,255,255]; }
+              else if (val >= 35) { data.cell.styles.fillColor=[251,146,60]; data.cell.styles.textColor=[0,0,0]; }
+              else { data.cell.styles.fillColor=[220,38,38]; data.cell.styles.textColor=[255,255,255]; }
+            }
+          }
+          if (data.section==="body" && !isSummary && data.column.index>0 && data.cell.text[0]==="SI") { data.cell.styles.textColor=[22,163,74]; data.cell.styles.fontStyle="bold"; }
+          if (data.section==="body" && !isSummary && data.column.index>0 && data.cell.text[0]==="-") { data.cell.styles.textColor=[180,180,180]; }
         },
         alternateRowStyles: { fillColor: [248,250,252] },
       });
