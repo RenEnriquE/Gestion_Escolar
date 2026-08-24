@@ -830,14 +830,14 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                 <span style={{ color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Actividades en PDF</span>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => setPdfColsExcluded(new Set())} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.green, fontSize: 11 }}>Todas</button>
-                  <button onClick={() => setPdfColsExcluded(new Set(actsVisibles.filter(a => alumnos.filter(al => partioEn(a, al.id)).length === 0).map(a=>a.id)))} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.orange, fontSize: 11 }}>Sin votos</button>
+                  <button onClick={() => setPdfColsExcluded(new Set(actsVisibles.filter(a => alumnosOrdenados.filter(al => partioEn(a, al.id)).length === 0).map(a=>a.id)))} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.orange, fontSize: 11 }}>Sin votos</button>
                   <button onClick={() => setPdfColsExcluded(new Set(actsVisibles.map(a=>a.id)))} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red, fontSize: 11 }}>Ninguna</button>
                   <button onClick={() => setShowPdfPicker(false)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 14 }}>×</button>
                 </div>
               </div>
               {actsVisibles.map(a => {
                 const excluded = pdfColsExcluded.has(a.id);
-                const votos = alumnos.filter(al => partioEn(a, al.id)).length;
+                const votos = alumnosOrdenados.filter(al => partioEn(a, al.id)).length;
                 const sinVotos = votos === 0;
                 return (
                   <label key={a.id} onClick={() => setPdfColsExcluded(prev => { const n = new Set(prev); excluded ? n.delete(a.id) : n.add(a.id); return n; })}
