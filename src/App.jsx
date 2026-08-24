@@ -387,8 +387,10 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
                       {isAdmin && <button onClick={() => del(al.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={16} /></button>}
                     </div>
                   </td>
+                  <td style={{ textAlign: "center", padding: "8px 6px", color: pctColor(parseFloat(alPct)), fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{alPct}%</td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -745,27 +747,39 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     doc.setTextColor(0);
 
     // Activity names wrap across multiple lines in header
-    const head = [["Alumno", ...actsPDF.map(a => a.nombre)]];
+    const head = [[
+      "Alumno",
+      ...actsPDF.map(a => {
+        const tipoNombre = tipos.filter(t => a.tipos.includes(t.id)).map(t => t.nombre).join(", ");
+        return a.nombre + (tipoNombre ? `\n[${tipoNombre}]` : "");
+      }),
+      "% Part."
+    ]];
 
     // Only first name + first surname for brevity
     const body = alumnosOrdenados.map(al => {
       const displayName = al.nombres && al.apellidos
         ? al.nombres.split(" ")[0] + " " + al.apellidos.split(" ")[0]
         : al.nombre;
-      return [displayName, ...actsPDF.map(act => partioEn(act, al.id) ? "SI" : "-")];
+      const partCount = actsPDF.filter(act => partioEn(act, al.id)).length;
+      const partPct = actsPDF.length > 0 ? (partCount/actsPDF.length*100).toFixed(1)+"%" : "-";
+      return [displayName, ...actsPDF.map(act => partioEn(act, al.id) ? "SI" : "-"), partPct];
     });
 
     // Summary row
+    const totalPartAll = alumnosOrdenados.reduce((s,al) => s + actsPDF.filter(act => partioEn(act,al.id)).length, 0);
+    const avgPct = alumnosOrdenados.length > 0 && actsPDF.length > 0 ? (totalPartAll/(alumnosOrdenados.length*actsPDF.length)*100).toFixed(1)+"%" : "-";
     const summary = ["TOTAL", ...actsPDF.map(act => {
       const n = alumnosOrdenados.filter(al => partioEn(act, al.id)).length;
       const p = alumnosOrdenados.length > 0 ? (n/alumnosOrdenados.length*100).toFixed(1) : "0.0";
       return `${n}/${alumnosOrdenados.length} (${p}%)`;
-    })];
+    }), avgPct];
     body.push(summary);
 
     // Build columnStyles dynamically
     const colStyles = { 0: { halign: "left", cellWidth: nameColW } };
     for (let i = 1; i <= nActs; i++) colStyles[i] = { cellWidth: actColW, halign: "center" };
+    colStyles[nActs + 1] = { cellWidth: 14, halign: "center" };
 
     autoTable(doc, {
       head,
@@ -880,6 +894,11 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                         <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80 }}>
                           <span style={{ fontWeight: isActSort ? 700 : 400 }}>{isActSort ? "↕ " : ""}{a.nombre}</span>
                         </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center", marginBottom: 2 }}>
+                          {tipos.filter(t => a.tipos.includes(t.id)).map(t => (
+                            <span key={t.id} style={{ fontSize: 8, color: t.color, fontWeight: 700, background: t.color+"22", borderRadius: 4, padding: "1px 4px" }}>{t.nombre.substring(0,4)}</span>
+                          ))}
+                        </div>
                         <span style={{ fontSize: 10, color: isActSort ? PALETTE.accent : PALETTE.muted }}>
                           {partCount}/{alumnos.length}
                         </span>
@@ -890,10 +909,14 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                     </th>
                   );
                 })}
+                <th style={{ textAlign: "center", padding: "12px 6px", color: PALETTE.accent, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>% Part.</th>
               </tr>
             </thead>
             <tbody>
-              {alumnosOrdenados.map(al => (
+              {alumnosOrdenados.map(al => {
+                const alPartCount = actsVisibles.filter(act => partioEn(act, al.id)).length;
+                const alPct = actsVisibles.length > 0 ? (alPartCount/actsVisibles.length*100).toFixed(1) : "0.0";
+                return (
                 <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                   <td className="sticky-col" style={{ padding: "12px 16px", color: PALETTE.text, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>{al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}</td>
                   {actsVisibles.map(act => {
