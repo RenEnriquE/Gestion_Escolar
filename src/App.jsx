@@ -961,8 +961,10 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                       </td>
                     );
                   })}
+                  <td style={{ textAlign: "center", padding: "8px 6px", color: pctColor(parseFloat(alPct)), fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{alPct}%</td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
