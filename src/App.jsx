@@ -830,20 +830,23 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                 <span style={{ color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Actividades en PDF</span>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => setPdfColsExcluded(new Set())} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.green, fontSize: 11 }}>Todas</button>
+                  <button onClick={() => setPdfColsExcluded(new Set(actsVisibles.filter(a => alumnos.filter(al => partioEn(a, al.id)).length === 0).map(a=>a.id)))} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.orange, fontSize: 11 }}>Sin votos</button>
                   <button onClick={() => setPdfColsExcluded(new Set(actsVisibles.map(a=>a.id)))} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red, fontSize: 11 }}>Ninguna</button>
                   <button onClick={() => setShowPdfPicker(false)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 14 }}>×</button>
                 </div>
               </div>
               {actsVisibles.map(a => {
                 const excluded = pdfColsExcluded.has(a.id);
+                const votos = alumnos.filter(al => partioEn(a, al.id)).length;
+                const sinVotos = votos === 0;
                 return (
                   <label key={a.id} onClick={() => setPdfColsExcluded(prev => { const n = new Set(prev); excluded ? n.delete(a.id) : n.add(a.id); return n; })}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}22` }}>
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}22`, background: sinVotos ? PALETTE.orange + "0a" : "transparent" }}>
                     <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${excluded ? PALETTE.border : PALETTE.accent}`, background: excluded ? "transparent" : PALETTE.accent, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {!excluded && <Icon name="check" size={10} color="white" />}
                     </div>
-                    <span style={{ color: excluded ? PALETTE.muted : PALETTE.text, fontSize: 12 }}>{a.nombre}</span>
-                    <span style={{ color: PALETTE.muted, fontSize: 10, marginLeft: "auto" }}>{a.fecha}</span>
+                    <span style={{ color: excluded ? PALETTE.muted : PALETTE.text, fontSize: 12, flex: 1 }}>{a.nombre}</span>
+                    <span style={{ color: sinVotos ? PALETTE.orange : PALETTE.muted, fontSize: 10, fontWeight: sinVotos ? 700 : 400 }}>{sinVotos ? "0 votos" : `${votos}/${alumnos.length}`}</span>
                   </label>
                 );
               })}
