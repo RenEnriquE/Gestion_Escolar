@@ -387,8 +387,10 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
                       {isAdmin && <button onClick={() => del(al.id)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.red }}><Icon name="trash" size={16} /></button>}
                     </div>
                   </td>
+                  <td style={{ textAlign: "center", padding: "8px 6px", color: pctColor(parseFloat(alPct)), fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{alPct}%</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
