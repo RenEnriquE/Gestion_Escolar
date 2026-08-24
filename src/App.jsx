@@ -724,11 +724,11 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     const actsEncuesta = actsPDF.filter(a => a.tipos.includes(TIPO_ENC));
     const actsOtras   = actsPDF.filter(a => !a.tipos.includes(TIPO_ENC));
 
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const margin = 8;
-    const nameColW = 42;
-    const pctColW = 14;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const pageW = doc.internal.pageSize.getWidth(); // 215.9mm
+    const margin = 4;
+    const nameColW = 38;
+    const pctColW = 12;
 
     const displayName = (al) => al.nombres && al.apellidos
       ? al.nombres.split(" ")[0] + " " + al.apellidos.split(" ")[0]
@@ -769,8 +769,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
     };
 
     const makeColStyles = (nActs) => {
-      const actColW = Math.max(7, Math.min(22, (pageW - margin*2 - nameColW - pctColW) / Math.max(nActs,1)));
-      const fs = nActs > 15 ? 5 : nActs > 8 ? 5.5 : 6;
+      const actColW = Math.max(6, Math.min(20, (pageW - margin*2 - nameColW - pctColW) / Math.max(nActs,1)));
+      const fs = nActs > 12 ? 4.5 : nActs > 6 ? 5 : 5.5;
       const cols = { 0: { halign: "left", cellWidth: nameColW } };
       for (let i = 1; i <= nActs; i++) cols[i] = { cellWidth: actColW, halign: "center" };
       cols[nActs+1] = { cellWidth: pctColW, halign: "center" };
@@ -790,8 +790,8 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
         head: makeHead(acts), body,
         startY,
         margin: { left: margin, right: margin },
-        styles: { fontSize: fs, cellPadding: 0.8, halign: "center", overflow: "linebreak" },
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 1.2, minCellHeight: 16 },
+        styles: { fontSize: fs, cellPadding: 0.5, halign: "center", overflow: "linebreak" },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: fs, cellPadding: 0.8, minCellHeight: 12 },
         columnStyles: cols,
         tableWidth: pageW - margin*2,
         didParseCell: (data) => {
