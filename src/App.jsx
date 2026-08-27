@@ -278,7 +278,7 @@ const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNa
 };
 
 // ── Alumnos ───────────────────────────────────────────────────────────────────
-const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdmin }) => {
+const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, encuestas, isAdmin, creditosConfig, creditosManuales }) => {
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
   const [sortMode, setSortMode] = useState("apellido");
@@ -357,6 +357,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
               <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", color: PALETTE.muted, fontSize: 12, fontWeight: 700 }}>Nombre</th>
                 {tiposConActividades.map(t => <th key={t.id} style={{ textAlign: "center", padding: "12px 10px", color: t.color, fontSize: 11, fontWeight: 700 }}>{t.nombre}</th>)}
+                <th style={{ textAlign: "center", padding: "12px 10px", color: PALETTE.accent, fontSize: 11, fontWeight: 700 }}>Créditos</th>
                 <th style={{ textAlign: "center", padding: "12px 10px", color: PALETTE.muted, fontSize: 12 }}>Acciones</th>
               </tr>
             </thead>
@@ -380,6 +381,11 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
                       </td>
                     );
                   })}
+                  <td style={{ textAlign: "center", padding: "14px 10px" }}>
+                    <span style={{ color: PALETTE.accent, fontWeight: 800, fontSize: 14 }}>
+                      ${calcCreditos(al.id, actividades, encuestas, participacion, creditosConfig, creditosManuales).total.toLocaleString("es-CL")}
+                    </span>
+                  </td>
                   <td style={{ textAlign: "center", padding: "14px 10px" }}>
                     <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                       <button onClick={() => setViewAlumno(al)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="eye" size={16} /></button>
@@ -552,8 +558,8 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
   const [newSub, setNewSub] = useState("");
   const addSub = () => { if (!newSub.trim()) return; setForm(f => ({ ...f, subactividades: [...(f.subactividades||[]), newSub.trim()] })); setNewSub(""); };
 
-  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa", subactividades: [] }); setEditAct(null); setModalOpen(true); };
-  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, subactividades: a.subactividades || [] }); setEditAct(a); setModalOpen(true); };
+  const openNew = () => { setForm({ nombre: "", fecha: "", tipos: [], recurrencia: "Anual", estado: "Activa", subactividades: [], acumulaCreditos: false, valorCredito: 1000, labelCredito: "unidad" }); setEditAct(null); setModalOpen(true); };
+  const openEdit = (a) => { setForm({ nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, subactividades: a.subactividades || [], acumulaCreditos: a.acumulaCreditos || false, valorCredito: a.valorCredito || 1000, labelCredito: a.labelCredito || "unidad" }); setEditAct(a); setModalOpen(true); };
   const del = (id) => { if (window.confirm("¿Eliminar actividad?")) { setActividades(prev => prev.filter(a => a.id !== id)); DB.deleteRow('actividades', { id }); } };
   const toggleTipo = (tid) => setForm(f => ({ ...f, tipos: f.tipos.includes(tid) ? f.tipos.filter(x => x !== tid) : [...f.tipos, tid] }));
   const save = () => {
@@ -633,6 +639,25 @@ const Actividades = ({ actividades, setActividades, tipos, isAdmin }) => {
             </div>
             <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 4 }}>Escribe y presiona Enter o clic en + Agregar</div>
           </Field>
+          {/* Créditos */}
+          <div style={{ background: PALETTE.bg, borderRadius: 10, padding: 14, border: `1px solid ${PALETTE.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: form.acumulaCreditos ? 14 : 0 }}>
+              <button onClick={() => setForm(f => ({ ...f, acumulaCreditos: !f.acumulaCreditos }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.acumulaCreditos ? PALETTE.accent : PALETTE.border, border: "none", cursor: "pointer", position: "relative", flexShrink: 0 }}>
+                <span style={{ position: "absolute", top: 3, left: form.acumulaCreditos ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+              </button>
+              <span style={{ color: PALETTE.text, fontSize: 14, fontWeight: 600 }}>¿Acumula créditos?</span>
+            </div>
+            {form.acumulaCreditos && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
+                <Field label="Valor por unidad ($)">
+                  <Input type="number" value={form.valorCredito} onChange={e => setForm(f => ({ ...f, valorCredito: parseInt(e.target.value)||0 }))} placeholder="1000" />
+                </Field>
+                <Field label="Nombre de la unidad">
+                  <Input value={form.labelCredito} onChange={e => setForm(f => ({ ...f, labelCredito: e.target.value }))} placeholder="Ej: rifa, merienda..." />
+                </Field>
+              </div>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
             <Btn onClick={save}>Guardar</Btn>
@@ -998,6 +1023,31 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
                               </div>
                             )}
                           </div>
+                        ) : act.acumulaCreditos ? (
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <button onClick={() => isAdmin && setSubMenu(prev => prev?.actId===act.id&&prev?.alumId===al.id ? null : {actId:act.id,alumId:al.id})}
+                              style={{ background: (participacion[act.id]?.[al.id]?.cantidad||0)>0 ? PALETTE.accent+"33" : PALETTE.red+"11", border: `2px solid ${(participacion[act.id]?.[al.id]?.cantidad||0)>0 ? PALETTE.accent : PALETTE.red}`, borderRadius: 8, padding: "2px 8px", cursor: isAdmin?"pointer":"default", minWidth: 32, minHeight: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                              {(participacion[act.id]?.[al.id]?.cantidad||0) > 0
+                                ? <span style={{ fontSize: 10, fontWeight: 700, color: PALETTE.accent }}>{participacion[act.id][al.id].cantidad} {act.labelCredito||"u"}</span>
+                                : <Icon name="x" size={12} color={PALETTE.red} />}
+                            </button>
+                            {subMenu?.actId===act.id && subMenu?.alumId===al.id && (
+                              <div style={{ position: "absolute", top: "110%", left: "50%", transform: "translateX(-50%)", background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 10, padding: 12, zIndex: 500, minWidth: 180, boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+                                <div style={{ color: PALETTE.muted, fontSize: 10, marginBottom: 8, fontWeight: 700 }}>{act.nombre.substring(0,24)}</div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                  <span style={{ color: PALETTE.text, fontSize: 12 }}>Cantidad de {act.labelCredito||"unidades"}:</span>
+                                  <input type="number" min="0" value={participacion[act.id]?.[al.id]?.cantidad||0}
+                                    onChange={e => {
+                                      const val = parseInt(e.target.value)||0;
+                                      setParticipacion(prev => { const ex = prev[act.id]?.[al.id]||{}; return {...prev,[act.id]:{...prev[act.id],[al.id]:{...ex,cantidad:val}}}; });
+                                    }}
+                                    style={{ width: 60, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "4px 8px", color: PALETTE.text, fontSize: 13, fontWeight: 700, outline: "none", textAlign: "center" }} />
+                                </div>
+                                <div style={{ color: PALETTE.muted, fontSize: 11 }}>= ${((participacion[act.id]?.[al.id]?.cantidad||0)*act.valorCredito).toLocaleString("es-CL")}</div>
+                                <button onClick={() => setSubMenu(null)} style={{ marginTop: 8, width: "100%", background: PALETTE.border, border: "none", borderRadius: 6, color: PALETTE.text, fontSize: 11, padding: "4px 0", cursor: "pointer" }}>Cerrar</button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <button onClick={() => !esEncuesta && toggle(act.id, al.id, act)} style={{ background: partio ? PALETTE.green + "22" : PALETTE.red + "22", border: `2px solid ${partio ? PALETTE.green : PALETTE.red}`, borderRadius: "50%", width: 32, height: 32, cursor: (isAdmin && !esEncuesta) ? "pointer" : "default", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                             <Icon name={partio ? "check" : "x"} size={14} color={partio ? PALETTE.green : PALETTE.red} />
@@ -1021,7 +1071,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
 // ── Encuestas ─────────────────────────────────────────────────────────────────
 const TIPO_ENCUESTA_ID = "69feb9c34b383d80660995b2";
 
-const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividades, isAdmin }) => {
+const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividades, isAdmin, creditosConfig, setCreditosConfig }) => {
   const [expandId, setExpandId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editEnc, setEditEnc] = useState(null);
@@ -1113,9 +1163,19 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Encuestas</h1>
-        {isAdmin && <Btn onClick={openNew}><Icon name="plus" size={15} />Nueva Encuesta</Btn>}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {isAdmin && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 10, padding: "6px 14px" }}>
+              <span style={{ color: PALETTE.muted, fontSize: 12 }}>Créditos por encuesta:</span>
+              <span style={{ color: PALETTE.muted, fontSize: 12 }}>$</span>
+              <input type="number" value={creditosConfig?.encuestaValor||1000} onChange={e => setCreditosConfig(c=>({...c, encuestaValor: parseInt(e.target.value)||0}))}
+                style={{ width: 70, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "3px 6px", color: PALETTE.accent, fontSize: 13, fontWeight: 700, outline: "none", textAlign: "center" }} />
+            </div>
+          )}
+          {isAdmin && <Btn onClick={openNew}><Icon name="plus" size={15} />Nueva Encuesta</Btn>}
+        </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {[...encuestas].sort((a,b) => (b.fecha||"").localeCompare(a.fecha||"")).map(enc => {
@@ -1788,8 +1848,56 @@ const Colaboraciones = ({ alumnos, colaboraciones, setColaboraciones, isAdmin })
   );
 };
 
+// ── Calcular créditos por alumno ─────────────────────────────────────────────
+const calcCreditos = (alumId, actividades, encuestas, participacion, creditosConfig, creditosManuales) => {
+  let total = 0;
+  const detalle = [];
+  // Encuestas respondidas
+  const encVal = creditosConfig?.encuestaValor || 1;
+  (encuestas||[]).forEach(enc => {
+    if (enc.respuestas?.[alumId]) {
+      total += encVal;
+      detalle.push({ fuente: enc.nombre, creditos: encVal, tipo: "encuesta" });
+    }
+  });
+  // Actividades con créditos
+  (actividades||[]).forEach(act => {
+    if (!act.acumulaCreditos || !act.valorCredito) return;
+    const cantidad = participacion[act.id]?.[alumId]?.cantidad || 0;
+    if (cantidad > 0) {
+      const cred = cantidad * act.valorCredito;
+      total += cred;
+      detalle.push({ fuente: `${act.nombre} (${cantidad} ${act.labelCredito||"u"} × $${act.valorCredito.toLocaleString("es-CL")})`, creditos: cred, tipo: "actividad" });
+    }
+  });
+  // Manuales
+  (creditosManuales?.[alumId] || []).forEach(m => {
+    total += m.creditos;
+    detalle.push({ fuente: m.descripcion, creditos: m.creditos, tipo: "manual", fecha: m.fecha });
+  });
+  return { total, detalle };
+};
+
+// ── Manual Credit Form ────────────────────────────────────────────────────────
+const ManualCreditForm = ({ alumId, creditosManuales, setCreditosManuales }) => {
+  const [desc, setDesc] = useState("");
+  const [val, setVal] = useState(1000);
+  const add = () => {
+    if (!desc.trim()) return;
+    setCreditosManuales(prev => ({ ...prev, [alumId]: [...(prev[alumId]||[]), { descripcion: desc.trim(), creditos: val, fecha: new Date().toISOString().substring(0,10) }] }));
+    setDesc(""); setVal(1000);
+  };
+  return (
+    <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+      <Input value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Descripción..." style={{ flex: 2, fontSize: 11 }} onKeyDown={e=>e.key==="Enter"&&add()} />
+      <Input type="number" value={val} onChange={e=>setVal(parseInt(e.target.value)||0)} style={{ flex: 0.7, fontSize: 11 }} />
+      <Btn small onClick={add}>+ Agregar</Btn>
+    </div>
+  );
+};
+
 // ── Fichas de Alumnos ─────────────────────────────────────────────────────────
-const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
+const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, encuestas, participacion, creditosConfig, creditosManuales, setCreditosManuales }) => {
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
@@ -1997,6 +2105,30 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin }) => {
                 })}
               </div>
             </div>
+            {/* Créditos */}
+            {(() => {
+              const { total, detalle } = calcCreditos(selected.id, actividades, encuestas, participacion, creditosConfig, creditosManuales);
+              return (
+                <div style={{ background: PALETTE.bg, borderRadius: 10, border: `1px solid ${PALETTE.border}`, marginBottom: 8, overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: PALETTE.muted, fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>Créditos acumulados</span>
+                    <span style={{ color: PALETTE.accent, fontSize: 20, fontWeight: 800 }}>${total.toLocaleString("es-CL")}</span>
+                  </div>
+                  {detalle.map((d,i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 14px", borderBottom: `1px solid ${PALETTE.border}22`, alignItems: "center" }}>
+                      <span style={{ color: PALETTE.text, fontSize: 11 }}>{d.fuente}</span>
+                      <span style={{ color: d.tipo==="manual" ? PALETTE.purple : d.tipo==="encuesta" ? PALETTE.green : PALETTE.accent, fontWeight: 700, fontSize: 12 }}>+${d.creditos.toLocaleString("es-CL")}</span>
+                    </div>
+                  ))}
+                  {isAdmin && (
+                    <div style={{ padding: "8px 14px" }}>
+                      <div style={{ color: PALETTE.muted, fontSize: 10, marginBottom: 4 }}>Agregar crédito manual</div>
+                      <ManualCreditForm alumId={selected.id} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <SecTitle t="Datos completos" />
             <InfoRow label="Primer nombre" value={selected.nombres} />
             <InfoRow label="Segundo nombre" value={selected.nombre2} />
@@ -2094,8 +2226,8 @@ const alumnoToDB = a => ({
   apod2_nombre: a.apod2_nombre || "", apod2_rut: a.apod2_rut || "",
   apod2_cel: a.apod2_cel || "", apod2_email: a.apod2_email || "", apod2_fnac: a.apod2_fnac || "",
 });
-const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null, subactividades: r.subactividades || [] });
-const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null, subactividades: a.subactividades || [] });
+const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null, subactividades: r.subactividades || [], acumulaCreditos: r.acumula_creditos || false, valorCredito: r.valor_credito || 0, labelCredito: r.label_credito || "unidad" });
+const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null, subactividades: a.subactividades || [], acumula_creditos: a.acumulaCreditos || false, valor_credito: a.valorCredito || 0, label_credito: a.labelCredito || "unidad" });
 const dbToEnc = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", descripcion: r.descripcion || "", estado: r.estado, actividadId: r.actividad_id || null, opciones: r.opciones || [], respuestas: r.respuestas || {}, _encuestaId: r.encuesta_id });
 const encToDB = e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha || "", descripcion: e.descripcion || "", estado: e.estado, actividad_id: e.actividadId || null, opciones: e.opciones, respuestas: e.respuestas });
 
@@ -2112,6 +2244,8 @@ export default function App() {
   const [encuestas, setEncuestas] = useState(SEED_ENCUESTAS);
   const [participacion, setParticipacion] = useState(SEED_PARTICIPACION);
   const [colaboraciones, setColaboraciones] = useState(() => S.get("ge_colaboraciones") || SEED_COLABORACIONES);
+  const [creditosConfig, setCreditosConfig] = useState(() => S.get("ge_creditos_config") || { encuestaValor: 1000 });
+  const [creditosManuales, setCreditosManuales] = useState(() => S.get("ge_creditos_manuales") || {});
 
   const initialized = useRef(false);
 
@@ -2179,6 +2313,8 @@ export default function App() {
   useEffect(() => { if (!loading) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
   useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
+  useEffect(() => { S.set("ge_creditos_config", creditosConfig); }, [creditosConfig]);
+  useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
 
   // Participacion saves individually per change (more granular)
   const prevPart = useRef(null);
@@ -2231,18 +2367,18 @@ export default function App() {
   const validPage = nav.find(n => n.id === page) ? page : "dashboard";
 
   const goTo = (id) => { setPage(id); setSidebarOpen(false); };
-  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin };
+  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosConfig, setCreditosConfig, creditosManuales, setCreditosManuales };
 
   const renderPage = () => {
     switch (validPage) {
       case "dashboard":     return <Dashboard {...props} onNavigate={goTo} />;
-      case "alumnos":       return <Alumnos {...props} />;
+      case "alumnos":       return <Alumnos {...props} encuestas={encuestas} creditosConfig={creditosConfig} creditosManuales={creditosManuales} />;
       case "actividades":   return <Actividades {...props} />;
       case "participacion": return <Participacion {...props} encuestas={encuestas} />;
-      case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
+      case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} creditosConfig={creditosConfig} setCreditosConfig={setCreditosConfig} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
-      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} />;
+      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} encuestas={encuestas} participacion={participacion} creditosConfig={creditosConfig} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
       default: return null;
