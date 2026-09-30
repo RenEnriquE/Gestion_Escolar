@@ -278,7 +278,7 @@ const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNa
 };
 
 // ── Alumnos ───────────────────────────────────────────────────────────────────
-const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, encuestas, isAdmin, creditosConfig, creditosManuales }) => {
+const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdmin, creditosManuales }) => {
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
   const [sortMode, setSortMode] = useState("apellido");
@@ -383,7 +383,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, encue
                   })}
                   <td style={{ textAlign: "center", padding: "14px 10px" }}>
                     <span style={{ color: PALETTE.accent, fontWeight: 800, fontSize: 14 }}>
-                      ${calcCreditos(al.id, actividades, encuestas, participacion, creditosConfig, creditosManuales).total.toLocaleString("es-CL")}
+                      ${calcCreditos(al.id, actividades, participacion, creditosManuales).total.toLocaleString("es-CL")}
                     </span>
                   </td>
                   <td style={{ textAlign: "center", padding: "14px 10px" }}>
@@ -1071,7 +1071,7 @@ const Participacion = ({ alumnos, actividades, participacion, setParticipacion, 
 // ── Encuestas ─────────────────────────────────────────────────────────────────
 const TIPO_ENCUESTA_ID = "69feb9c34b383d80660995b2";
 
-const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividades, isAdmin, creditosConfig, setCreditosConfig }) => {
+const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividades, isAdmin }) => {
   const [expandId, setExpandId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editEnc, setEditEnc] = useState(null);
@@ -1166,14 +1166,7 @@ const Encuestas = ({ alumnos, encuestas, setEncuestas, actividades, setActividad
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Encuestas</h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {isAdmin && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 10, padding: "6px 14px" }}>
-              <span style={{ color: PALETTE.muted, fontSize: 12 }}>Créditos por encuesta:</span>
-              <span style={{ color: PALETTE.muted, fontSize: 12 }}>$</span>
-              <input type="number" value={creditosConfig?.encuestaValor||1000} onChange={e => setCreditosConfig(c=>({...c, encuestaValor: parseInt(e.target.value)||0}))}
-                style={{ width: 70, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "3px 6px", color: PALETTE.accent, fontSize: 13, fontWeight: 700, outline: "none", textAlign: "center" }} />
-            </div>
-          )}
+
           {isAdmin && <Btn onClick={openNew}><Icon name="plus" size={15} />Nueva Encuesta</Btn>}
         </div>
       </div>
@@ -1849,17 +1842,9 @@ const Colaboraciones = ({ alumnos, colaboraciones, setColaboraciones, isAdmin })
 };
 
 // ── Calcular créditos por alumno ─────────────────────────────────────────────
-const calcCreditos = (alumId, actividades, encuestas, participacion, creditosConfig, creditosManuales) => {
+const calcCreditos = (alumId, actividades, participacion, creditosManuales) => {
   let total = 0;
   const detalle = [];
-  // Encuestas respondidas
-  const encVal = creditosConfig?.encuestaValor || 1;
-  (encuestas||[]).forEach(enc => {
-    if (enc.respuestas?.[alumId]) {
-      total += encVal;
-      detalle.push({ fuente: enc.nombre, creditos: encVal, tipo: "encuesta" });
-    }
-  });
   // Actividades con créditos
   (actividades||[]).forEach(act => {
     if (!act.acumulaCreditos || !act.valorCredito) return;
@@ -1897,7 +1882,7 @@ const ManualCreditForm = ({ alumId, creditosManuales, setCreditosManuales }) => 
 };
 
 // ── Fichas de Alumnos ─────────────────────────────────────────────────────────
-const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, encuestas, participacion, creditosConfig, creditosManuales, setCreditosManuales }) => {
+const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, creditosManuales, setCreditosManuales }) => {
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
@@ -2107,7 +2092,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, encuestas, particip
             </div>
             {/* Créditos */}
             {(() => {
-              const { total, detalle } = calcCreditos(selected.id, actividades, encuestas, participacion, creditosConfig, creditosManuales);
+              const { total, detalle } = calcCreditos(selected.id, actividades, participacion, creditosManuales);
               return (
                 <div style={{ background: PALETTE.bg, borderRadius: 10, border: `1px solid ${PALETTE.border}`, marginBottom: 8, overflow: "hidden" }}>
                   <div style={{ padding: "10px 14px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2244,7 +2229,6 @@ export default function App() {
   const [encuestas, setEncuestas] = useState(SEED_ENCUESTAS);
   const [participacion, setParticipacion] = useState(SEED_PARTICIPACION);
   const [colaboraciones, setColaboraciones] = useState(() => S.get("ge_colaboraciones") || SEED_COLABORACIONES);
-  const [creditosConfig, setCreditosConfig] = useState(() => S.get("ge_creditos_config") || { encuestaValor: 1000 });
   const [creditosManuales, setCreditosManuales] = useState(() => S.get("ge_creditos_manuales") || {});
 
   const initialized = useRef(false);
@@ -2313,7 +2297,6 @@ export default function App() {
   useEffect(() => { if (!loading) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
   useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
-  useEffect(() => { S.set("ge_creditos_config", creditosConfig); }, [creditosConfig]);
   useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
 
   // Participacion saves individually per change (more granular)
@@ -2367,18 +2350,18 @@ export default function App() {
   const validPage = nav.find(n => n.id === page) ? page : "dashboard";
 
   const goTo = (id) => { setPage(id); setSidebarOpen(false); };
-  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosConfig, setCreditosConfig, creditosManuales, setCreditosManuales };
+  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
 
   const renderPage = () => {
     switch (validPage) {
       case "dashboard":     return <Dashboard {...props} onNavigate={goTo} />;
-      case "alumnos":       return <Alumnos {...props} encuestas={encuestas} creditosConfig={creditosConfig} creditosManuales={creditosManuales} />;
+      case "alumnos":       return <Alumnos {...props} creditosManuales={creditosManuales} />;
       case "actividades":   return <Actividades {...props} />;
       case "participacion": return <Participacion {...props} encuestas={encuestas} />;
-      case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} creditosConfig={creditosConfig} setCreditosConfig={setCreditosConfig} />;
+      case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
-      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} encuestas={encuestas} participacion={participacion} creditosConfig={creditosConfig} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
+      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
       default: return null;
