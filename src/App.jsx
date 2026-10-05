@@ -311,7 +311,6 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
   const emptyForm = { nombres: "", apellidos: "", fechaNac: "", sexo: "M", apoderado: "", apoderado2: "", telefono: "", email: "", observaciones: "", socioAprendilandia: false };
   const openNew = () => { setForm(emptyForm); setEditAlumno(null); setModalOpen(true); };
   const openEdit = (al) => {
-    // If nombres/apellidos missing (old localStorage data), split from nombre
     let nombres = al.nombres || "";
     let apellidos = al.apellidos || "";
     if (!nombres && al.nombre) {
@@ -319,13 +318,40 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       nombres = parts.slice(-1)[0];
       apellidos = parts.slice(0, -1).join(" ");
     }
-    setForm({ nombres, apellidos, fechaNac: al.fechaNac || "", sexo: al.sexo || "M", apoderado: al.apoderado || "", apoderado2: al.apoderado2 || "", telefono: al.telefono || "", email: al.email || "", observaciones: al.observaciones || "", socioAprendilandia: al.socioAprendilandia || false });
+    setForm({
+      nombres, apellidos,
+      nombre2: al.nombre2 || "", apellido2: al.apellido2 || "",
+      rut: al.rut || "", fechaNac: al.fechaNac || "", sexo: al.sexo || "M",
+      apoderado: al.apoderado || "", apoderado2: al.apoderado2 || "",
+      telefono: al.telefono || "", email: al.email || "",
+      observaciones: al.observaciones || "", socioAprendilandia: al.socioAprendilandia || false,
+      apod1_nombre: al.apod1_nombre || al.apoderado || "",
+      apod1_rut: al.apod1_rut || "",
+      apod1_cel: al.apod1_cel || al.telefono || "",
+      apod1_email: al.apod1_email || al.email || "",
+      apod1_fnac: al.apod1_fnac || "",
+      apod2_nombre: al.apod2_nombre || al.apoderado2 || "",
+      apod2_rut: al.apod2_rut || "",
+      apod2_cel: al.apod2_cel || "",
+      apod2_email: al.apod2_email || "",
+      apod2_fnac: al.apod2_fnac || "",
+    });
     setEditAlumno(al); setModalOpen(true);
   };
   const save = () => {
     if (!form.nombres.trim() || !form.apellidos.trim()) return;
-    const nombreCompleto = (form.apellidos.trim() + " " + form.nombres.trim()).toUpperCase();
-    const data = { ...form, nombre: nombreCompleto, nombres: form.nombres.trim().toUpperCase(), apellidos: form.apellidos.trim().toUpperCase() };
+    const nombreCompleto = [form.apellidos, form.apellido2, form.nombres, form.nombre2].filter(Boolean).map(s=>s.trim().toUpperCase()).join(" ");
+    const data = { ...form,
+      nombre: nombreCompleto,
+      nombres: form.nombres.trim().toUpperCase(),
+      nombre2: (form.nombre2||"").trim().toUpperCase(),
+      apellidos: form.apellidos.trim().toUpperCase(),
+      apellido2: (form.apellido2||"").trim().toUpperCase(),
+      apoderado: form.apod1_nombre || form.apoderado,
+      apoderado2: form.apod2_nombre || form.apoderado2,
+      telefono: form.apod1_cel || form.telefono,
+      email: form.apod1_email || form.email,
+    };
     if (editAlumno) setAlumnos(prev => prev.map(a => a.id === editAlumno.id ? { ...a, ...data } : a));
     else setAlumnos(prev => [...prev, { ...data, id: "a" + Date.now() }]);
     setModalOpen(false);
@@ -496,49 +522,50 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       })()}
       {modalOpen && (
         <Modal title={editAlumno ? "Editar Alumno" : "Nuevo Alumno"} onClose={() => setModalOpen(false)} wide>
-          {/* Nombres y Apellidos */}
+          {/* Datos del alumno */}
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Datos del alumno</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Nombre(s) *"><Input value={form.nombres} onChange={e => setForm(f => ({ ...f, nombres: e.target.value.toUpperCase() }))} placeholder="JEAN PIERRE" /></Field>
-            <Field label="Apellidos *"><Input value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value.toUpperCase() }))} placeholder="GARCÍA LÓPEZ" /></Field>
-          </div>
-          {/* Fecha y Sexo */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Fecha de nacimiento">
-              <Input type="date" value={form.fechaNac} onChange={e => setForm(f => ({ ...f, fechaNac: e.target.value }))} />
-            </Field>
+            <Field label="Primer nombre *"><Input value={form.nombres} onChange={e => setForm(f => ({ ...f, nombres: e.target.value.toUpperCase() }))} placeholder="JEAN PIERRE" /></Field>
+            <Field label="Segundo nombre"><Input value={form.nombre2||""} onChange={e => setForm(f => ({ ...f, nombre2: e.target.value.toUpperCase() }))} placeholder="Opcional" /></Field>
+            <Field label="Apellido paterno *"><Input value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value.toUpperCase() }))} placeholder="GARCÍA" /></Field>
+            <Field label="Apellido materno"><Input value={form.apellido2||""} onChange={e => setForm(f => ({ ...f, apellido2: e.target.value.toUpperCase() }))} placeholder="LÓPEZ" /></Field>
+            <Field label="RUT"><Input value={form.rut||""} onChange={e => setForm(f => ({ ...f, rut: e.target.value }))} placeholder="12345678-9" /></Field>
+            <Field label="Fecha de nacimiento"><Input type="date" value={form.fechaNac} onChange={e => setForm(f => ({ ...f, fechaNac: e.target.value }))} /></Field>
             <Field label="Sexo">
               <Select value={form.sexo} onChange={e => setForm(f => ({ ...f, sexo: e.target.value }))}>
                 <option value="M">Masculino</option><option value="F">Femenino</option>
               </Select>
             </Field>
           </div>
-          {/* Curso (fijo) */}
-          <Field label="Curso">
-            <div style={{ background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 8, padding: "10px 12px", color: PALETTE.muted, fontSize: 14 }}>3ro C — L. Miguel Rafael Prado</div>
-          </Field>
-          {/* Apoderados */}
-          <Field label="Apoderado principal"><Input value={form.apoderado} onChange={e => setForm(f => ({ ...f, apoderado: e.target.value }))} placeholder="Nombre del apoderado" /></Field>
-          <Field label="Segundo apoderado"><Input value={form.apoderado2} onChange={e => setForm(f => ({ ...f, apoderado2: e.target.value }))} placeholder="Opcional" /></Field>
-          {/* Teléfono y Email */}
+          {/* Apoderado 1 */}
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado principal</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Teléfono"><Input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
-            <Field label="Email apoderado"><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@email.com" /></Field>
+            <Field label="Nombre completo"><Input value={form.apod1_nombre||""} onChange={e => setForm(f => ({ ...f, apod1_nombre: e.target.value }))} placeholder="Nombre del apoderado" /></Field>
+            <Field label="RUT"><Input value={form.apod1_rut||""} onChange={e => setForm(f => ({ ...f, apod1_rut: e.target.value }))} placeholder="12345678-9" /></Field>
+            <Field label="Teléfono"><Input value={form.apod1_cel||""} onChange={e => setForm(f => ({ ...f, apod1_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
+            <Field label="Email"><Input type="email" value={form.apod1_email||""} onChange={e => setForm(f => ({ ...f, apod1_email: e.target.value }))} placeholder="correo@email.com" /></Field>
+            <Field label="Fecha de nacimiento"><DateInput value={form.apod1_fnac||""} onChange={v => setForm(f => ({ ...f, apod1_fnac: v }))} /></Field>
           </div>
-          {/* Socio Aprendilandia toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            <button onClick={() => setForm(f => ({ ...f, socioAprendilandia: !f.socioAprendilandia }))} style={{
-              width: 44, height: 24, borderRadius: 12, background: form.socioAprendilandia ? PALETTE.accent : PALETTE.border,
-              border: "none", cursor: "pointer", position: "relative", flexShrink: 0
-            }}>
+          {/* Apoderado 2 */}
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Segundo apoderado (opcional)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Nombre completo"><Input value={form.apod2_nombre||""} onChange={e => setForm(f => ({ ...f, apod2_nombre: e.target.value }))} placeholder="Opcional" /></Field>
+            <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" /></Field>
+            <Field label="Teléfono"><Input value={form.apod2_cel||""} onChange={e => setForm(f => ({ ...f, apod2_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
+            <Field label="Email"><Input type="email" value={form.apod2_email||""} onChange={e => setForm(f => ({ ...f, apod2_email: e.target.value }))} placeholder="correo@email.com" /></Field>
+            <Field label="Fecha de nacimiento"><DateInput value={form.apod2_fnac||""} onChange={v => setForm(f => ({ ...f, apod2_fnac: v }))} /></Field>
+          </div>
+          {/* Socio y observaciones */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "14px 0 8px" }}>
+            <button onClick={() => setForm(f => ({ ...f, socioAprendilandia: !f.socioAprendilandia }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.socioAprendilandia ? PALETTE.accent : PALETTE.border, border: "none", cursor: "pointer", position: "relative", flexShrink: 0 }}>
               <span style={{ position: "absolute", top: 3, left: form.socioAprendilandia ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
             </button>
             <span style={{ color: PALETTE.text, fontSize: 14 }}>Socio Aprendilandia</span>
           </div>
-          {/* Observaciones */}
           <Field label="Observaciones">
             <textarea value={form.observaciones} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))}
               placeholder="Notas adicionales..."
-              style={{ width: "100%", background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 8, padding: "10px 12px", color: PALETTE.text, fontSize: 14, outline: "none", boxSizing: "border-box", minHeight: 80, resize: "vertical", fontFamily: "inherit" }} />
+              style={{ width: "100%", background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 8, padding: "10px 12px", color: PALETTE.text, fontSize: 14, outline: "none", boxSizing: "border-box", minHeight: 60, resize: "vertical", fontFamily: "inherit" }} />
           </Field>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
