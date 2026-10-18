@@ -1505,14 +1505,37 @@ const USERS_BASE = [
   { usuario: "copakids",   clave: "copa2026",    nombre: "Copa Kids 2026",   rol: "collab", color: "#f59e0b" },
 ];
 // Merge base users with any saved username/password overrides
+// Genera usuario: inicial_nombre + apellido_paterno, si colisión agrega inicial apellido materno
+const generarUsuarioAlumno = (al, todos) => {
+  const limpiar = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g,"");
+  const ini = limpiar(al.nombres||al.nombre||"").charAt(0);
+  const ap1 = limpiar(al.apellidos);
+  const ap2ini = limpiar(al.apellido2||"").charAt(0);
+  const base = ini + ap1;
+  const colision = todos.some(a => a.id !== al.id &&
+    limpiar((a.nombres||a.nombre||"")).charAt(0) + limpiar(a.apellidos) === base);
+  return colision ? base + ap2ini : base;
+};
+const genClave = () => {
+  const c = "abcdefghjkmnpqrstuvwxyz23456789";
+  return Array.from({length:8}, () => c[Math.floor(Math.random()*c.length)]).join("");
+};
+
 const getUsers = () => {
   const saved = S.get("ge_claves") || {};
-  return USERS_BASE.map(u => ({
+  const cuentas = S.get("ge_cuentas_alumnos") || {};
+  const base = USERS_BASE.map(u => ({
     ...u,
     usuario: saved[u.usuario + "_alias"] || u.usuario,
     clave: saved[u.usuario] || u.clave,
-    _baseUsuario: u.usuario, // keep original key for lookups
+    _baseUsuario: u.usuario,
   }));
+  const alumnos = Object.entries(cuentas).map(([alumId, c]) => ({
+    usuario: c.usuario, clave: c.clave, nombre: c.nombre,
+    rol: "alumno", color: "#10b981", alumId, bloqueado: c.bloqueado || false,
+    _baseUsuario: c.usuario,
+  }));
+  return [...base, ...alumnos];
 };
 
 const NAV_ITEMS = [
@@ -1541,8 +1564,9 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState("");
 
   const intentar = () => {
-    const u = getUsers().find(u => u.usuario === usuario.trim() && u.clave === clave);
-    if (u) { setError(""); onLogin(u); }
+    const u = getUsers().find(u => u.usuario.toLowerCase() === usuario.trim().toLowerCase() && u.clave === clave);
+    if (u?.bloqueado) setError("Tu cuenta no tiene acceso. Consulta al administrador.");
+    else if (u) { setError(""); onLogin(u); }
     else setError("Usuario o clave incorrectos");
   };
 
@@ -1566,7 +1590,32 @@ const Login = ({ onLogin }) => {
 };
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
-const Usuarios = ({ visibility, setVisibility }) => {
+const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuentasAlumnos }) => {
+  const [tabU, setTabU] = useState("admins"); // admins | alumnos
+
+  const generarTodasCuentas = () => {
+    const nuevas = {};
+    alumnos.forEach(al => {
+      if (!cuentasAlumnos[al.id]) {
+        const usuario = generarUsuarioAlumno(al, alumnos);
+        const clave = genClave();
+        const nombre = [al.nombres, al.apellidos].filter(Boolean).join(" ") || al.nombre;
+        nuevas[al.id] = { usuario, clave, nombre, bloqueado: false };
+      }
+    });
+    setCuentasAlumnos(prev => ({ ...prev, ...nuevas }));
+  };
+
+  const toggleBloqueo = (alumId) => {
+    setCuentasAlumnos(prev => ({ ...prev, [alumId]: { ...prev[alumId], bloqueado: !prev[alumId]?.bloqueado } }));
+  };
+
+  const regenerarClave = (alumId) => {
+    setCuentasAlumnos(prev => ({ ...prev, [alumId]: { ...prev[alumId], clave: genClave() } }));
+  };
+
+  const alumnosConCuenta = alumnos.filter(al => cuentasAlumnos[al.id]).sort((a,b)=>(a.apellidos||"").localeCompare(b.apellidos||"","es"));
+  const alumnosSinCuenta = alumnos.filter(al => !cuentasAlumnos[al.id]);
   const [users, setUsers] = useState(getUsers());
   const [editingUser, setEditingUser] = useState(null);
   const [claveForm, setClaveForm] = useState({ nueva: "", confirmar: "" });
@@ -1598,7 +1647,71 @@ const Usuarios = ({ visibility, setVisibility }) => {
 
   return (
     <div>
-      <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Usuarios</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Usuarios</h1>
+        <div style={{ display: "flex", gap: 8 }}>
+          {["admins","alumnos"].map(t => (
+            <Btn key={t} variant={tabU===t?"primary":"ghost"} small onClick={() => setTabU(t)}>
+              {t === "admins" ? "Admins/Viewers" : `Alumnos (${Object.keys(cuentasAlumnos).length})`}
+            </Btn>
+          ))}
+        </div>
+      </div>
+
+      {tabU === "alumnos" && (
+        <div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+            <Btn small onClick={generarTodasCuentas} variant="ghost">
+              ✨ Generar cuentas pendientes ({alumnosSinCuenta.length})
+            </Btn>
+            <span style={{ color: PALETTE.muted, fontSize: 12 }}>
+              {Object.keys(cuentasAlumnos).length} de {alumnos.length} alumnos con cuenta
+            </span>
+          </div>
+          <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
+                  <th style={{ textAlign: "left", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Alumno</th>
+                  <th style={{ textAlign: "left", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Usuario</th>
+                  <th style={{ textAlign: "left", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Clave</th>
+                  <th style={{ textAlign: "center", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Estado</th>
+                  <th style={{ textAlign: "center", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alumnosConCuenta.map(al => {
+                  const cuenta = cuentasAlumnos[al.id];
+                  return (
+                    <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
+                      <td style={{ padding: "10px 16px", color: PALETTE.text, fontSize: 13 }}>
+                        {[al.nombres, al.apellidos].filter(Boolean).join(" ") || al.nombre}
+                      </td>
+                      <td style={{ padding: "10px 16px", fontFamily: "monospace", color: PALETTE.accent, fontSize: 13 }}>{cuenta.usuario}</td>
+                      <td style={{ padding: "10px 16px", fontFamily: "monospace", color: PALETTE.text, fontSize: 13 }}>{cuenta.clave}</td>
+                      <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                        <Badge text={cuenta.bloqueado ? "Bloqueado" : "Activo"} color={cuenta.bloqueado ? PALETTE.red : PALETTE.green} />
+                      </td>
+                      <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                          <button onClick={() => toggleBloqueo(al.id)} title={cuenta.bloqueado ? "Desbloquear" : "Bloquear"}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: cuenta.bloqueado ? PALETTE.green : PALETTE.orange, fontSize: 16 }}>
+                            {cuenta.bloqueado ? "🔓" : "🔒"}
+                          </button>
+                          <button onClick={() => regenerarClave(al.id)} title="Nueva clave"
+                            style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 16 }}>🔄</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tabU === "admins" && (
 
       {/* Modal cambio de clave */}
       {editingUser && (
@@ -1673,6 +1786,7 @@ const Usuarios = ({ visibility, setVisibility }) => {
           );
         })}
       </div>
+    </div>)}
     </div>
   );
 };
@@ -2426,6 +2540,7 @@ export default function App() {
   const [participacion, setParticipacion] = useState(SEED_PARTICIPACION);
   const [colaboraciones, setColaboraciones] = useState(() => S.get("ge_colaboraciones") || SEED_COLABORACIONES);
   const [creditosManuales, setCreditosManuales] = useState(() => S.get("ge_creditos_manuales") || {});
+  const [cuentasAlumnos, setCuentasAlumnos] = useState(() => S.get("ge_cuentas_alumnos") || {});
 
   const initialized = useRef(false);
 
@@ -2494,6 +2609,7 @@ export default function App() {
   useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
   useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
+  useEffect(() => { S.set("ge_cuentas_alumnos", cuentasAlumnos); }, [cuentasAlumnos]);
 
   // Participacion saves individually per change (more granular)
   const prevPart = useRef(null);
@@ -2517,7 +2633,7 @@ export default function App() {
     if (rows.length) DB.upsertPK('participacion', rows, 'act_id,alum_id');
   }, [participacion, loading]);
 
-  const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage(u.rol === "collab" ? "colaboraciones" : "dashboard"); };
+  const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage(u.rol === "collab" ? "colaboraciones" : u.rol === "alumno" ? "aprendo" : "dashboard"); };
   const handleLogout = () => { S.set("ge_session", null); setUser(null); setPage("dashboard"); };
 
   if (!user) return <Login onLogin={handleLogin} />;
@@ -2539,7 +2655,8 @@ export default function App() {
     if (isAdmin) return true;
     if (isCollab) return item.id === "colaboraciones"; // collab only sees colaboraciones
     if (item.id === "usuarios" || item.id === "tipos") return false;
-    if (item.id === "aprendo") return true; // always visible for all
+    if (user.rol === "alumno") return item.id === "aprendo";
+    if (item.id === "aprendo") return true;
     return visibility[item.id] !== false;
   });
 
@@ -2547,7 +2664,7 @@ export default function App() {
   const validPage = nav.find(n => n.id === page) ? page : "dashboard";
 
   const goTo = (id) => { setPage(id); setSidebarOpen(false); };
-  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
+  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales, cuentasAlumnos, setCuentasAlumnos };
 
   const renderPage = () => {
     switch (validPage) {
@@ -2561,7 +2678,7 @@ export default function App() {
       case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "aprendo":       return <Aprendo />;
-      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} />;
+      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} cuentasAlumnos={cuentasAlumnos} setCuentasAlumnos={setCuentasAlumnos} />;
       default: return null;
     }
   };
