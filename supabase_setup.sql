@@ -63,10 +63,5 @@ create table if not exists configuracion (
   valor jsonb
 );
 
--- Deshabilitar RLS para acceso público (la app maneja auth propia)
-alter table alumnos disable row level security;
-alter table tipos disable row level security;
-alter table actividades disable row level security;
-alter table participacion disable row level security;
-alter table encuestas disable row level security;
-alter table configuracion disable row level security;
+-- NOTA: la seguridad (RLS) y el acceso con Google se configuran en supabase_auth_setup.sql.
+-- No deshabilites RLS en estas tablas.

@@ -1500,47 +1500,7 @@ const Estadisticas = ({ alumnos, actividades, participacion, tipos }) => {
   );
 };
 
-// ── Login ────────────────────────────────────────────────────────────────────
-const USERS_BASE = [
-  { usuario: "RenEnriquE", clave: "rene26",      nombre: "René Lillo",       rol: "admin",  color: "#3b82f6" },
-  { usuario: "carolina",   clave: "carol2026",   nombre: "Carolina Parra",   rol: "admin",  color: "#8b5cf6" },
-  { usuario: "Tercero",    clave: "gestion26",   nombre: "Apoderados 3ro C", rol: "viewer", color: "#10b981" },
-  { usuario: "copakids",   clave: "copa2026",    nombre: "Copa Kids 2026",   rol: "collab", color: "#f59e0b" },
-];
-// Merge base users with any saved username/password overrides
-// Genera usuario: inicial_nombre + apellido_paterno, si colisión agrega inicial apellido materno
-const generarUsuarioAlumno = (al, todos) => {
-  const limpiar = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g,"");
-  const ini = limpiar(al.nombres||al.nombre||"").charAt(0);
-  const ap1 = limpiar(al.apellidos);
-  const ap2ini = limpiar(al.apellido2||"").charAt(0);
-  const base = ini + ap1;
-  const colision = todos.some(a => a.id !== al.id &&
-    limpiar((a.nombres||a.nombre||"")).charAt(0) + limpiar(a.apellidos) === base);
-  return colision ? base + ap2ini : base;
-};
-const genClave = () => {
-  const c = "abcdefghjkmnpqrstuvwxyz23456789";
-  return Array.from({length:8}, () => c[Math.floor(Math.random()*c.length)]).join("");
-};
-
-const getUsers = () => {
-  const saved = S.get("ge_claves") || {};
-  const cuentas = S.get("ge_cuentas_alumnos") || {};
-  const base = USERS_BASE.map(u => ({
-    ...u,
-    usuario: saved[u.usuario + "_alias"] || u.usuario,
-    clave: saved[u.usuario] || u.clave,
-    _baseUsuario: u.usuario,
-  }));
-  const alumnos = Object.entries(cuentas).map(([alumId, c]) => ({
-    usuario: c.usuario, clave: c.clave, nombre: c.nombre,
-    rol: "alumno", color: "#10b981", alumId, bloqueado: c.bloqueado || false,
-    _baseUsuario: c.usuario,
-  }));
-  return [...base, ...alumnos];
-};
-
+// ── Acceso con Google (Supabase Auth) ─────────────────────────────────────────
 const NAV_ITEMS = [
   { id: "dashboard",    label: "Dashboard",          icon: "dashboard"     },
   { id: "alumnos",      label: "Alumnos",            icon: "users"         },
@@ -1561,292 +1521,243 @@ const SEED_VISIBILITY = {
   tipos: false, usuarios: false,
 };
 
-const Login = ({ onLogin }) => {
-  const [usuario, setUsuario] = useState("");
-  const [clave, setClave] = useState("");
+const Cargando = ({ texto = "Cargando..." }) => (
+  <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
+    <div style={{ width: 40, height: 40, border: `4px solid ${PALETTE.border}`, borderTop: `4px solid ${PALETTE.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <span style={{ color: PALETTE.muted, fontSize: 14 }}>{texto}</span>
+  </div>
+);
+
+const TarjetaAcceso = ({ children }) => (
+  <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 20, padding: 40, width: "100%", maxWidth: 400, textAlign: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 28 }}>
+        <div style={{ background: PALETTE.accent, borderRadius: 12, padding: 10 }}><Icon name="dashboard" size={22} color="white" /></div>
+        <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>GestiónEscolar</div>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
+// Inicio de sesión con Google (Supabase Auth)
+const LoginGoogle = () => {
   const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(false);
 
-  const [verificando, setVerificando] = useState(false);
-
-  const intentar = async () => {
-    if (verificando) return;
-    setVerificando(true);
-    // Traer claves y cuentas vigentes desde Supabase (evita usar claves antiguas del navegador)
-    try {
-      const [dbClaves, dbCuentas] = await Promise.all([DB.getConfig('claves'), DB.getAll('cuentas_alumnos')]);
-      if (dbClaves) S.set("ge_claves", dbClaves);
-      if (dbCuentas?.length) {
-        const obj = {};
-        dbCuentas.forEach(r => { obj[r.alum_id] = { usuario: r.usuario, clave: r.clave, nombre: r.nombre, bloqueado: r.bloqueado }; });
-        S.set("ge_cuentas_alumnos", obj);
-      }
-    } catch {}
-    const u = getUsers().find(u => u.usuario.toLowerCase() === usuario.trim().toLowerCase() && u.clave === clave);
-    setVerificando(false);
-    if (u?.bloqueado) setError("Tu cuenta no tiene acceso. Consulta al administrador.");
-    else if (u) { setError(""); onLogin(u); }
-    else setError("Usuario o clave incorrectos");
+  const entrar = async () => {
+    setCargando(true); setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin, queryParams: { prompt: "select_account" } },
+    });
+    if (error) { setError("No se pudo iniciar sesión: " + error.message); setCargando(false); }
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 20, padding: 40, width: "100%", maxWidth: 380 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-          <div style={{ background: PALETTE.accent, borderRadius: 12, padding: 10 }}><Icon name="dashboard" size={22} color="white" /></div>
-          <div>
-            <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>GestiónEscolar</div>
-            <div style={{ color: PALETTE.muted, fontSize: 12 }}>3ro Básico C · L. M. R. Prado</div>
-          </div>
-        </div>
-        <Field label="Usuario"><Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="tu usuario" autoCapitalize="none" autoCorrect="off" autoComplete="username" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
-        <Field label="Contraseña"><Input type="password" value={clave} onChange={e => setClave(e.target.value)} placeholder="••••••••" autoCapitalize="none" autoCorrect="off" autoComplete="current-password" onKeyDown={e => e.key === "Enter" && intentar()} /></Field>
-        {error && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
-        <Btn onClick={intentar} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>Ingresar</Btn>
+    <TarjetaAcceso>
+      <div style={{ color: PALETTE.muted, fontSize: 14, marginBottom: 24 }}>
+        Ingresa con tu cuenta de Google. Tu acceso debe ser aprobado por un administrador.
       </div>
-    </div>
+      <button onClick={entrar} disabled={cargando}
+        style={{ width: "100%", background: "white", color: "#1f2937", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 15, fontWeight: 700, cursor: cargando ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: cargando ? 0.7 : 1 }}>
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+        {cargando ? "Redirigiendo..." : "Continuar con Google"}
+      </button>
+      {error && <div style={{ color: PALETTE.red, fontSize: 13, marginTop: 14 }}>{error}</div>}
+    </TarjetaAcceso>
+  );
+};
+
+// Pantalla para quien entró con Google pero aún no tiene acceso aprobado
+const PantallaAcceso = ({ acceso, error, email, onRefresh, onLogout }) => {
+  const estado = acceso?.estado;
+  const info = error
+    ? { icono: "⚠️", titulo: "No se pudo verificar tu acceso", texto: error }
+    : estado === "rechazado"
+    ? { icono: "⛔", titulo: "Solicitud rechazada", texto: "Un administrador no aprobó tu acceso. Si crees que es un error, contáctalo directamente." }
+    : estado === "bloqueado"
+    ? { icono: "🔒", titulo: "Acceso bloqueado", texto: "Tu acceso fue bloqueado. Contacta al administrador del curso." }
+    : { icono: "⏳", titulo: "Solicitud pendiente", texto: "Tu solicitud de acceso fue enviada. Un administrador debe aprobarla antes de que puedas ver la información del curso." };
+  return (
+    <TarjetaAcceso>
+      <div style={{ fontSize: 42, marginBottom: 10 }}>{info.icono}</div>
+      <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{info.titulo}</div>
+      <div style={{ color: PALETTE.muted, fontSize: 14, marginBottom: 6 }}>{info.texto}</div>
+      {email && <div style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 22 }}>Cuenta: <strong style={{ color: PALETTE.text }}>{email}</strong></div>}
+      <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+        {(estado === "pendiente" || error) && <Btn onClick={onRefresh}>Revisar de nuevo</Btn>}
+        <Btn variant="ghost" onClick={onLogout}>Usar otra cuenta</Btn>
+      </div>
+    </TarjetaAcceso>
   );
 };
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
-const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuentasAlumnos }) => {
-  const [tabU, setTabU] = useState("admins"); // admins | alumnos
+const ROL_LABEL = { admin: "Administrador", viewer: "Solo vista", collab: "Colaboraciones", alumno: "Alumno" };
+const ROL_COLOR = { admin: PALETTE.accent, viewer: PALETTE.green, collab: PALETTE.orange, alumno: PALETTE.green };
+const ESTADO_COLOR = { pendiente: PALETTE.orange, aprobado: PALETTE.green, rechazado: PALETTE.red, bloqueado: PALETTE.red };
 
-  const generarTodasCuentas = () => {
-    const nuevas = {};
-    alumnos.forEach(al => {
-      if (!cuentasAlumnos[al.id]) {
-        const usuario = generarUsuarioAlumno(al, alumnos);
-        const clave = genClave();
-        const nombre = [al.nombres, al.apellidos].filter(Boolean).join(" ") || al.nombre;
-        nuevas[al.id] = { usuario, clave, nombre, bloqueado: false };
-      }
-    });
-    setCuentasAlumnos(prev => ({ ...prev, ...nuevas }));
+const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
+  const [tabU, setTabU] = useState("solicitudes"); // solicitudes | accesos | secciones
+  const [accesos, setAccesos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [editando, setEditando] = useState(null); // { email, nombre, rol, alum_id, aprobando }
+  const [guardando, setGuardando] = useState(false);
+
+  const cargar = async () => {
+    setCargando(true);
+    const { data, error } = await supabase.from("accesos").select("*").order("solicitado_en", { ascending: false });
+    if (error) setError("No se pudo cargar la lista: " + error.message);
+    else { setAccesos(data || []); setError(""); }
+    setCargando(false);
+  };
+  useEffect(() => { cargar(); }, []);
+
+  const resolver = async (email, estado, rol = null, alum_id = null) => {
+    setGuardando(true); setError("");
+    const { error } = await supabase.rpc("resolver_acceso", { p_email: email, p_estado: estado, p_rol: rol, p_alum_id: alum_id });
+    setGuardando(false);
+    if (error) { setError(error.message); return false; }
+    await cargar();
+    return true;
   };
 
-  const toggleBloqueo = (alumId) => {
-    setCuentasAlumnos(prev => {
-      const updated = { ...prev, [alumId]: { ...prev[alumId], bloqueado: !prev[alumId]?.bloqueado } };
-      S.set("ge_cuentas_alumnos", updated);
-      DB.upsertPK('cuentas_alumnos', [{ alum_id: alumId, ...updated[alumId] }], 'alum_id');
-      return updated;
-    });
+  const guardarEdicion = async () => {
+    const ok = await resolver(editando.email, "aprobado", editando.rol, ["alumno", "viewer"].includes(editando.rol) ? editando.alum_id : "");
+    if (ok) setEditando(null);
   };
 
-  const regenerarClave = (alumId) => {
-    const clave = genClave();
-    setCuentasAlumnos(prev => {
-      const updated = { ...prev, [alumId]: { ...prev[alumId], clave } };
-      S.set("ge_cuentas_alumnos", updated);
-      DB.upsertPK('cuentas_alumnos', [{ alum_id: alumId, ...updated[alumId] }], 'alum_id');
-      return updated;
-    });
-  };
+  const pendientes = accesos.filter(a => a.estado === "pendiente");
+  const otros = accesos.filter(a => a.estado !== "pendiente");
+  const alumnosOrd = [...alumnos].sort((a, b) => (a.apellidos || "").localeCompare(b.apellidos || "", "es"));
+  const nombreAlumno = (id) => { const a = alumnos.find(x => x.id === id); return a ? `${a.apellidos || ""} ${a.nombres || ""}`.trim() : null; };
+  const fecha = (f) => { try { return new Date(f).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }); } catch { return ""; } };
 
-  const [editClaveId, setEditClaveId] = useState(null);
-  const [nuevaClave, setNuevaClave] = useState("");
+  const Fila = ({ a, children }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "14px 20px", borderBottom: `1px solid ${PALETTE.border}` }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ color: PALETTE.text, fontWeight: 700 }}>{a.nombre || a.email}</div>
+        <div style={{ color: PALETTE.muted, fontSize: 12, wordBreak: "break-all" }}>{a.email}</div>
+        <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>
+          Solicitó: {fecha(a.solicitado_en)}{a.alum_id && nombreAlumno(a.alum_id) ? ` · Alumno: ${nombreAlumno(a.alum_id)}` : ""}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{children}</div>
+    </div>
+  );
 
-  const guardarClaveAlumno = (alumId) => {
-    if (!nuevaClave.trim()) return;
-    setCuentasAlumnos(prev => {
-      const updated = { ...prev, [alumId]: { ...prev[alumId], clave: nuevaClave.trim() } };
-      S.set("ge_cuentas_alumnos", updated); // sync immediately so login works
-      DB.upsertPK('cuentas_alumnos', [{ alum_id: alumId, ...updated[alumId] }], 'alum_id');
-      return updated;
-    });
-    setEditClaveId(null); setNuevaClave("");
-  };
-
-  const alumnosConCuenta = alumnos.filter(al => cuentasAlumnos[al.id]).sort((a,b)=>(a.apellidos||"").localeCompare(b.apellidos||"","es"));
-  const alumnosSinCuenta = alumnos.filter(al => !cuentasAlumnos[al.id]);
-  const [users, setUsers] = useState(getUsers());
-  const [editingUser, setEditingUser] = useState(null);
-  const [claveForm, setClaveForm] = useState({ nueva: "", confirmar: "" });
-  const [claveError, setClaveError] = useState("");
-  const [claveOk, setClaveOk] = useState("");
-
-  const openEditClave = (u) => { setEditingUser(u); setClaveForm({ usuario: u.usuario, nueva: "", confirmar: "" }); setClaveError(""); setClaveOk(""); };
-
-  const guardarClave = async () => {
-    if (!claveForm.usuario.trim()) { setClaveError("El usuario no puede estar vacío"); return; }
-    if (claveForm.nueva && claveForm.nueva.length < 6) { setClaveError("La clave debe tener al menos 6 caracteres"); return; }
-    if (claveForm.nueva !== claveForm.confirmar) { setClaveError("Las claves no coinciden"); return; }
-    // Siempre usar el usuario base (no el alias) como llave, igual que getUsers()
-    const baseKey = editingUser._baseUsuario || editingUser.usuario;
-    // Partir desde lo que hay en Supabase para no pisar cambios hechos en otro dispositivo
-    const remoto = await DB.getConfig('claves');
-    const saved = { ...(remoto || S.get("ge_claves") || {}) };
-    const nuevoUsuario = claveForm.usuario.trim();
-    if (nuevoUsuario !== baseKey) saved[baseKey + "_alias"] = nuevoUsuario;
-    else delete saved[baseKey + "_alias"];
-    if (claveForm.nueva) saved[baseKey] = claveForm.nueva;
-    S.set("ge_claves", saved);
-    const ok = await DB.setConfig('claves', saved);
-    setUsers(getUsers());
-    if (!ok) { setClaveError("Se guardó solo en este navegador: no se pudo guardar en Supabase (tabla 'configuracion')."); return; }
-    setClaveOk("¡Guardado!");
-    setClaveError("");
-    setTimeout(() => { setEditingUser(null); setClaveOk(""); }, 1500);
-  };
+  const caja = { background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 28 };
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Usuarios</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          {["admins","alumnos"].map(t => (
-            <Btn key={t} variant={tabU===t?"primary":"ghost"} small onClick={() => setTabU(t)}>
-              {t === "admins" ? "Admins/Viewers" : `Alumnos (${Object.keys(cuentasAlumnos).length})`}
-            </Btn>
-          ))}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn variant={tabU === "solicitudes" ? "primary" : "ghost"} small onClick={() => setTabU("solicitudes")}>Solicitudes{pendientes.length ? ` (${pendientes.length})` : ""}</Btn>
+          <Btn variant={tabU === "accesos" ? "primary" : "ghost"} small onClick={() => setTabU("accesos")}>Accesos ({otros.length})</Btn>
+          <Btn variant={tabU === "secciones" ? "primary" : "ghost"} small onClick={() => setTabU("secciones")}>Secciones visibles</Btn>
         </div>
       </div>
 
-      {tabU === "alumnos" && (
-        <div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <Btn small onClick={generarTodasCuentas} variant="ghost">
-              ✨ Generar cuentas pendientes ({alumnosSinCuenta.length})
-            </Btn>
-            <span style={{ color: PALETTE.muted, fontSize: 12 }}>
-              {Object.keys(cuentasAlumnos).length} de {alumnos.length} alumnos con cuenta
-            </span>
-          </div>
-          <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                  <th style={{ textAlign: "left", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Alumno</th>
-                  <th style={{ textAlign: "left", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Usuario</th>
-                  <th style={{ textAlign: "left", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Clave</th>
-                  <th style={{ textAlign: "center", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Estado</th>
-                  <th style={{ textAlign: "center", padding: "10px 16px", color: PALETTE.muted, fontSize: 12 }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {alumnosConCuenta.map(al => {
-                  const cuenta = cuentasAlumnos[al.id];
-                  return (
-                    <tr key={al.id} style={{ borderBottom: `1px solid ${PALETTE.border}` }}>
-                      <td style={{ padding: "10px 16px", color: PALETTE.text, fontSize: 13 }}>
-                        {[al.nombres, al.apellidos].filter(Boolean).join(" ") || al.nombre}
-                      </td>
-                      <td style={{ padding: "10px 16px", fontFamily: "monospace", color: PALETTE.accent, fontSize: 13 }}>{cuenta.usuario}</td>
-                      <td style={{ padding: "8px 16px" }}>
-                        {editClaveId === al.id ? (
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            <Input value={nuevaClave} onChange={e => setNuevaClave(e.target.value)}
-                              placeholder="Nueva clave..." style={{ fontSize: 12, fontFamily: "monospace", width: 120 }}
-                              onKeyDown={e => { if(e.key==="Enter") guardarClaveAlumno(al.id); if(e.key==="Escape") { setEditClaveId(null); setNuevaClave(""); } }} />
-                            <Btn small onClick={() => guardarClaveAlumno(al.id)}>✓</Btn>
-                            <button onClick={() => { setEditClaveId(null); setNuevaClave(""); }} style={{ background:"none", border:"none", cursor:"pointer", color: PALETTE.muted, fontSize: 18 }}>✕</button>
-                          </div>
-                        ) : (
-                          <span onClick={() => { setEditClaveId(al.id); setNuevaClave(cuenta.clave); }}
-                            style={{ fontFamily: "monospace", color: PALETTE.text, fontSize: 13, cursor: "pointer", borderBottom: `1px dashed ${PALETTE.border}` }}
-                            title="Clic para editar">
-                            {cuenta.clave}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                        <Badge text={cuenta.bloqueado ? "Bloqueado" : "Activo"} color={cuenta.bloqueado ? PALETTE.red : PALETTE.green} />
-                      </td>
-                      <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                          <button onClick={() => toggleBloqueo(al.id)} title={cuenta.bloqueado ? "Desbloquear" : "Bloquear"}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: cuenta.bloqueado ? PALETTE.green : PALETTE.orange, fontSize: 16 }}>
-                            {cuenta.bloqueado ? "🔓" : "🔒"}
-                          </button>
-                          <button onClick={() => regenerarClave(al.id)} title="Generar clave aleatoria"
-                            style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 14 }}>🎲</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {error && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
-      {tabU === "admins" && (<div>
-
-      {/* Modal cambio de clave */}
-      {editingUser && (
-        <Modal title={`Editar cuenta — ${editingUser.nombre}`} onClose={() => setEditingUser(null)}>
-          <Field label="Nombre de usuario">
-            <Input value={claveForm.usuario} onChange={e => setClaveForm(f => ({ ...f, usuario: e.target.value }))} placeholder="usuario" />
+      {editando && (
+        <Modal title={editando.aprobando ? "Aprobar acceso" : "Editar acceso"} onClose={() => setEditando(null)}>
+          <div style={{ color: PALETTE.text, fontWeight: 700 }}>{editando.nombre || editando.email}</div>
+          <div style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>{editando.email}</div>
+          <Field label="Rol">
+            <Select value={editando.rol} onChange={e => setEditando(x => ({ ...x, rol: e.target.value }))}>
+              {Object.entries(ROL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </Select>
           </Field>
-          <div style={{ borderTop: `1px solid ${PALETTE.border}`, margin: "16px 0 16px", paddingTop: 4 }}>
-            <div style={{ color: PALETTE.muted, fontSize: 11, marginBottom: 12 }}>CAMBIAR CONTRASEÑA (dejar en blanco para no cambiar)</div>
-          </div>
-          <Field label="Nueva contraseña">
-            <Input type="password" value={claveForm.nueva} onChange={e => setClaveForm(f => ({ ...f, nueva: e.target.value }))} placeholder="Mínimo 6 caracteres" />
-          </Field>
-          <Field label="Confirmar contraseña">
-            <Input type="password" value={claveForm.confirmar} onChange={e => setClaveForm(f => ({ ...f, confirmar: e.target.value }))} placeholder="Repite la contraseña" onKeyDown={e => e.key === "Enter" && guardarClave()} />
-          </Field>
-          {claveError && <div style={{ color: PALETTE.red, fontSize: 13, marginBottom: 12 }}>{claveError}</div>}
-          {claveOk && <div style={{ color: PALETTE.green, fontSize: 13, marginBottom: 12 }}>{claveOk}</div>}
+          {["alumno", "viewer"].includes(editando.rol) && (
+            <Field label="Alumno asociado (opcional)">
+              <Select value={editando.alum_id || ""} onChange={e => setEditando(x => ({ ...x, alum_id: e.target.value }))}>
+                <option value="">— Sin alumno asociado —</option>
+                {alumnosOrd.map(a => <option key={a.id} value={a.id}>{a.apellidos} {a.nombres}</option>)}
+              </Select>
+            </Field>
+          )}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <Btn variant="ghost" onClick={() => setEditingUser(null)}>Cancelar</Btn>
-            <Btn onClick={guardarClave}>Guardar</Btn>
+            <Btn variant="ghost" onClick={() => setEditando(null)}>Cancelar</Btn>
+            <Btn onClick={guardarEdicion}>{guardando ? "Guardando..." : editando.aprobando ? "Aprobar" : "Guardar"}</Btn>
           </div>
         </Modal>
       )}
 
-      {/* Cuentas */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Cuentas</h3>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 28 }}>
-        {users.filter(x => x.rol !== "alumno").map((u, i, arr) => (
-          <div key={u.usuario} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.color + "33", border: `2px solid ${u.color}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: u.color, fontWeight: 800, fontSize: 16 }}>{u.usuario[0].toUpperCase()}</span>
-              </div>
-              <div>
-                <div style={{ color: PALETTE.text, fontWeight: 700 }}>{u.nombre}</div>
-                <div style={{ color: PALETTE.muted, fontSize: 12 }}>@{u.usuario}</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Badge text={u.rol === "admin" ? "Administrador" : u.rol === "collab" ? "Colaboraciones" : "Solo vista"} color={u.rol === "admin" ? PALETTE.accent : u.rol === "collab" ? PALETTE.orange : PALETTE.green} />
-              <button onClick={() => openEditClave(u)} title="Cambiar clave" style={{ background: PALETTE.accent + "22", border: `1px solid ${PALETTE.accent}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.accent, padding: "5px 10px", fontSize: 11, fontWeight: 600 }}>
-                🔑 Clave
-              </button>
-            </div>
+      {tabU === "solicitudes" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, margin: 0 }}>Solicitudes pendientes</h3>
+            <Btn small variant="ghost" onClick={cargar}>↻ Actualizar</Btn>
           </div>
-        ))}
-      </div>
+          <div style={caja}>
+            {cargando && <div style={{ padding: 20, color: PALETTE.muted, fontSize: 13 }}>Cargando...</div>}
+            {!cargando && pendientes.length === 0 && <div style={{ padding: 20, color: PALETTE.muted, fontSize: 13 }}>No hay solicitudes pendientes.</div>}
+            {pendientes.map(a => (
+              <Fila key={a.email} a={a}>
+                <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: "viewer", alum_id: "", aprobando: true })}>Aprobar</Btn>
+                <Btn small variant="ghost" onClick={() => resolver(a.email, "rechazado")}>Rechazar</Btn>
+              </Fila>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* Visibilidad para apoderados */}
-      <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Secciones visibles para Apoderados</h3>
-      <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Controla qué secciones del menú pueden ver los apoderados al iniciar sesión.</p>
-      <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-        {NAV_ITEMS.filter(n => n.id !== "usuarios").map((item, i) => {
-          const visible = visibility[item.id] ?? true;
-          return (
-            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < NAV_ITEMS.length - 2 ? `1px solid ${PALETTE.border}` : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <Icon name={item.icon} size={16} color={PALETTE.muted} />
-                <span style={{ color: PALETTE.text, fontSize: 14 }}>{item.label}</span>
-              </div>
-              <button onClick={() => setVisibility(v => ({ ...v, [item.id]: !visible }))} style={{
-                width: 44, height: 24, borderRadius: 12, background: visible ? PALETTE.accent : PALETTE.border,
-                border: "none", cursor: "pointer", position: "relative", transition: "background 0.2s"
-              }}>
-                <span style={{
-                  position: "absolute", top: 3, left: visible ? 23 : 3, width: 18, height: 18,
-                  borderRadius: "50%", background: "white", transition: "left 0.2s"
-                }} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-      </div>)}
+      {tabU === "accesos" && (
+        <div>
+          <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Personas con solicitud resuelta</h3>
+          <div style={caja}>
+            {!cargando && otros.length === 0 && <div style={{ padding: 20, color: PALETTE.muted, fontSize: 13 }}>Aún no hay accesos.</div>}
+            {otros.map(a => {
+              const yo = a.email === (miEmail || "").toLowerCase();
+              return (
+                <Fila key={a.email} a={a}>
+                  <Badge text={ROL_LABEL[a.rol] || a.rol} color={ROL_COLOR[a.rol] || PALETTE.muted} />
+                  <Badge text={a.estado} color={ESTADO_COLOR[a.estado] || PALETTE.muted} />
+                  {yo ? <span style={{ color: PALETTE.muted, fontSize: 12 }}>Tú</span> : (
+                    <>
+                      {a.estado === "aprobado" && <Btn small variant="ghost" onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "" })}>Editar</Btn>}
+                      {a.estado === "aprobado"
+                        ? <Btn small variant="ghost" onClick={() => resolver(a.email, "bloqueado")}>🔒 Bloquear</Btn>
+                        : <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", aprobando: true })}>Reactivar</Btn>}
+                    </>
+                  )}
+                </Fila>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tabU === "secciones" && (
+        <div>
+          <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Secciones visibles para Apoderados</h3>
+          <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Controla qué secciones del menú pueden ver los apoderados al iniciar sesión.</p>
+          <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
+            {NAV_ITEMS.filter(n => n.id !== "usuarios").map((item, i) => {
+              const visible = visibility[item.id] ?? true;
+              return (
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < NAV_ITEMS.length - 2 ? `1px solid ${PALETTE.border}` : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <Icon name={item.icon} size={16} color={PALETTE.muted} />
+                    <span style={{ color: PALETTE.text, fontSize: 14 }}>{item.label}</span>
+                  </div>
+                  <button onClick={() => setVisibility(v => ({ ...v, [item.id]: !visible }))} style={{
+                    width: 44, height: 24, borderRadius: 12, background: visible ? PALETTE.accent : PALETTE.border,
+                    border: "none", cursor: "pointer", position: "relative", transition: "background 0.2s"
+                  }}>
+                    <span style={{ position: "absolute", top: 3, left: visible ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -2425,7 +2336,13 @@ const dbToEnc = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", descri
 const encToDB = e => ({ id: e.id, nombre: e.nombre, fecha: e.fecha || "", descripcion: e.descripcion || "", estado: e.estado, actividad_id: e.actividadId || null, opciones: e.opciones, respuestas: e.respuestas });
 
 export default function App() {
-  const [user, setUser] = useState(() => S.get("ge_session") || null);
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [acceso, setAcceso] = useState(null);
+  const [accesoError, setAccesoError] = useState("");
+  const userOk = acceso?.estado === "aprobado";
+  const user = userOk ? { email: acceso.email, nombre: acceso.nombre || acceso.email, rol: acceso.rol, alumId: acceso.alum_id } : null;
+  const puedeEscribir = user?.rol === "admin";
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -2438,21 +2355,47 @@ export default function App() {
   const [participacion, setParticipacion] = useState(SEED_PARTICIPACION);
   const [colaboraciones, setColaboraciones] = useState(() => S.get("ge_colaboraciones") || SEED_COLABORACIONES);
   const [creditosManuales, setCreditosManuales] = useState(() => S.get("ge_creditos_manuales") || {});
-  const [cuentasAlumnos, setCuentasAlumnos] = useState(() => S.get("ge_cuentas_alumnos") || {});
 
   const initialized = useRef(false);
 
   // ── Load all data from Supabase on mount ──────────────────────────────────
+  // ── Sesión de Google ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (initialized.current) return;
+    // Borrar claves antiguas que pudieron quedar guardadas en este navegador
+    ["ge_claves", "ge_cuentas_alumnos", "ge_session"].forEach(k => { try { localStorage.removeItem(k); } catch {} });
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
+    const { data: sub } = supabase.auth.onAuthStateChange((_evento, ses) => setSession(ses));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const verificarAcceso = async () => {
+    setAccesoError("");
+    const nombre = session?.user?.user_metadata?.full_name || session?.user?.email || "";
+    const { data, error } = await supabase.rpc("solicitar_acceso", { p_nombre: nombre });
+    if (error) { setAccesoError(error.message); return; }
+    setAcceso(Array.isArray(data) ? data[0] : data);
+  };
+
+  useEffect(() => {
+    if (!session) { setAcceso(null); setAccesoError(""); return; }
+    verificarAcceso();
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (userOk) setPage(acceso.rol === "collab" ? "colaboraciones" : acceso.rol === "alumno" ? "aprendo" : "dashboard");
+  }, [userOk]);
+
+  // ── Cargar datos solo cuando el acceso está aprobado ──────────────────────
+  useEffect(() => {
+    if (!userOk || initialized.current) return;
     initialized.current = true;
     (async () => {
       setLoading(true);
       try {
-        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis, dbClaves] = await Promise.all([
+        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis] = await Promise.all([
           DB.getAll('alumnos'), DB.getAll('tipos'), DB.getAll('actividades'),
           DB.getAll('encuestas'), DB.getAll('participacion'),
-          DB.getConfig('visibility'), DB.getConfig('claves'),
+          DB.getConfig('visibility'),
         ]);
 
         if (dbAlumnos?.length) setAlumnos(dbAlumnos.map(dbToAlumno));
@@ -2487,20 +2430,10 @@ export default function App() {
         }
 
         if (dbVis) setVisibility(dbVis);
-        if (dbClaves) S.set("ge_claves", dbClaves);
-
-        // Load cuentas alumnos from Supabase
-        const dbCuentas = await DB.getAll('cuentas_alumnos');
-        if (dbCuentas?.length) {
-          const obj = {};
-          dbCuentas.forEach(r => { obj[r.alum_id] = { usuario: r.usuario, clave: r.clave, nombre: r.nombre, bloqueado: r.bloqueado }; });
-          setCuentasAlumnos(obj);
-          S.set("ge_cuentas_alumnos", obj);
-        }
       } catch (e) { console.error("Load error", e); }
       setLoading(false);
     })();
-  }, []);
+  }, [userOk]);
 
   // ── Auto-save to Supabase ─────────────────────────────────────────────────
   const saveTimeout = useRef({});
@@ -2509,27 +2442,17 @@ export default function App() {
     saveTimeout.current[key] = setTimeout(fn, delay);
   };
 
-  useEffect(() => { if (!loading) debounceSave('alumnos', () => DB.upsert('alumnos', alumnos.map(alumnoToDB))); }, [alumnos, loading]);
-  useEffect(() => { if (!loading) debounceSave('tipos', () => DB.upsert('tipos', tipos)); }, [tipos, loading]);
-  useEffect(() => { if (!loading) debounceSave('actividades', () => DB.upsert('actividades', actividades.map(actToDB))); }, [actividades, loading]);
-  useEffect(() => { if (!loading) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
-  useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
+  useEffect(() => { if (!loading && puedeEscribir) debounceSave('alumnos', () => DB.upsert('alumnos', alumnos.map(alumnoToDB))); }, [alumnos, loading]);
+  useEffect(() => { if (!loading && puedeEscribir) debounceSave('tipos', () => DB.upsert('tipos', tipos)); }, [tipos, loading]);
+  useEffect(() => { if (!loading && puedeEscribir) debounceSave('actividades', () => DB.upsert('actividades', actividades.map(actToDB))); }, [actividades, loading]);
+  useEffect(() => { if (!loading && puedeEscribir) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
+  useEffect(() => { if (!loading && puedeEscribir) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
   useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
-  useEffect(() => {
-    S.set("ge_cuentas_alumnos", cuentasAlumnos);
-    if (!loading && Object.keys(cuentasAlumnos).length > 0) {
-      const rows = Object.entries(cuentasAlumnos).map(([alum_id, c]) => ({
-        alum_id, usuario: c.usuario, clave: c.clave, nombre: c.nombre, bloqueado: c.bloqueado || false
-      }));
-      DB.upsertPK('cuentas_alumnos', rows, 'alum_id');
-    }
-  }, [cuentasAlumnos, loading]);
-
   // Participacion saves individually per change (more granular)
   const prevPart = useRef(null);
   useEffect(() => {
-    if (loading) return;
+    if (loading || !puedeEscribir) return;
     const prev = prevPart.current;
     prevPart.current = participacion;
     if (!prev) return;
@@ -2548,10 +2471,14 @@ export default function App() {
     if (rows.length) DB.upsertPK('participacion', rows, 'act_id,alum_id');
   }, [participacion, loading]);
 
-  const handleLogin = (u) => { S.set("ge_session", u); setUser(u); setPage(u.rol === "collab" ? "colaboraciones" : u.rol === "alumno" ? "aprendo" : "dashboard"); };
-  const handleLogout = () => { S.set("ge_session", null); setUser(null); setPage("dashboard"); };
+  const handleLogout = async () => { await supabase.auth.signOut(); setAcceso(null); setPage("dashboard"); };
 
-  if (!user) return <Login onLogin={handleLogin} />;
+  if (!authReady) return <Cargando />;
+  if (!session) return <LoginGoogle />;
+  if (!acceso) return accesoError
+    ? <PantallaAcceso error={accesoError} email={session.user.email} onRefresh={verificarAcceso} onLogout={handleLogout} />
+    : <Cargando texto="Verificando acceso..." />;
+  if (!userOk) return <PantallaAcceso acceso={acceso} email={session.user.email} onRefresh={verificarAcceso} onLogout={handleLogout} />;
   if (loading) return (
     <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
       <div style={{ width: 40, height: 40, border: `4px solid ${PALETTE.border}`, borderTop: `4px solid ${PALETTE.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
@@ -2559,8 +2486,6 @@ export default function App() {
       <span style={{ color: PALETTE.muted, fontSize: 14 }}>Cargando datos...</span>
     </div>
   );
-
-  if (!user) return <Login onLogin={handleLogin} />;
 
   const isAdmin = user.rol === "admin";
 
@@ -2579,7 +2504,7 @@ export default function App() {
   const validPage = nav.find(n => n.id === page) ? page : "dashboard";
 
   const goTo = (id) => { setPage(id); setSidebarOpen(false); };
-  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales, cuentasAlumnos, setCuentasAlumnos };
+  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
 
   const renderPage = () => {
     switch (validPage) {
@@ -2593,7 +2518,7 @@ export default function App() {
       case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "aprendo":       return <Aprendo />;
-      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} cuentasAlumnos={cuentasAlumnos} setCuentasAlumnos={setCuentasAlumnos} />;
+      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} miEmail={user.email} />;
       default: return null;
     }
   };
