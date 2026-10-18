@@ -49,6 +49,9 @@ export default function LocalizarObjetos({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "4px 0" }}>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+        ← Volver a actividades
+      </button>
       <div style={{ color: "white", fontSize: 17, fontWeight: 800, marginBottom: 4 }}>Localiza los objetos</div>
       <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 16 }}>Mira la cuadrícula e indica las coordenadas de cada objeto</div>
 
