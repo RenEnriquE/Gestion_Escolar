@@ -1629,7 +1629,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
   const [editClaveId, setEditClaveId] = useState(null);
   const [nuevaClave, setNuevaClave] = useState("");
 
-  const guardarClave = (alumId) => {
+  const guardarClaveAlumno = (alumId) => {
     if (!nuevaClave.trim()) return;
     setCuentasAlumnos(prev => {
       const updated = { ...prev, [alumId]: { ...prev[alumId], clave: nuevaClave.trim() } };
@@ -1719,8 +1719,8 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
                           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             <Input value={nuevaClave} onChange={e => setNuevaClave(e.target.value)}
                               placeholder="Nueva clave..." style={{ fontSize: 12, fontFamily: "monospace", width: 120 }}
-                              onKeyDown={e => { if(e.key==="Enter") guardarClave(al.id); if(e.key==="Escape") { setEditClaveId(null); setNuevaClave(""); } }} />
-                            <Btn small onClick={() => guardarClave(al.id)}>✓</Btn>
+                              onKeyDown={e => { if(e.key==="Enter") guardarClaveAlumno(al.id); if(e.key==="Escape") { setEditClaveId(null); setNuevaClave(""); } }} />
+                            <Btn small onClick={() => guardarClaveAlumno(al.id)}>✓</Btn>
                             <button onClick={() => { setEditClaveId(null); setNuevaClave(""); }} style={{ background:"none", border:"none", cursor:"pointer", color: PALETTE.muted, fontSize: 18 }}>✕</button>
                           </div>
                         ) : (
