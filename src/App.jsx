@@ -1711,7 +1711,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
         </div>
       )}
 
-      {tabU === "admins" && (
+      {tabU === "admins" && (<div>
 
       {/* Modal cambio de clave */}
       {editingUser && (
@@ -1786,7 +1786,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
           );
         })}
       </div>
-    </div>)}
+      </div>)}
     </div>
   );
 };
