@@ -2590,6 +2590,15 @@ export default function App() {
 
         if (dbVis) setVisibility(dbVis);
         if (dbClaves) S.set("ge_claves", dbClaves);
+
+        // Load cuentas alumnos from Supabase
+        const dbCuentas = await DB.getAll('cuentas_alumnos');
+        if (dbCuentas?.length) {
+          const obj = {};
+          dbCuentas.forEach(r => { obj[r.alum_id] = { usuario: r.usuario, clave: r.clave, nombre: r.nombre, bloqueado: r.bloqueado }; });
+          setCuentasAlumnos(obj);
+          S.set("ge_cuentas_alumnos", obj);
+        }
       } catch (e) { console.error("Load error", e); }
       setLoading(false);
     })();
@@ -2609,7 +2618,15 @@ export default function App() {
   useEffect(() => { if (!loading) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
   useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
-  useEffect(() => { S.set("ge_cuentas_alumnos", cuentasAlumnos); }, [cuentasAlumnos]);
+  useEffect(() => {
+    S.set("ge_cuentas_alumnos", cuentasAlumnos);
+    if (!loading && Object.keys(cuentasAlumnos).length > 0) {
+      const rows = Object.entries(cuentasAlumnos).map(([alum_id, c]) => ({
+        alum_id, usuario: c.usuario, clave: c.clave, nombre: c.nombre, bloqueado: c.bloqueado || false
+      }));
+      DB.upsertPK('cuentas_alumnos', rows, 'alum_id');
+    }
+  }, [cuentasAlumnos, loading]);
 
   // Participacion saves individually per change (more granular)
   const prevPart = useRef(null);
