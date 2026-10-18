@@ -1614,6 +1614,15 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
     setCuentasAlumnos(prev => ({ ...prev, [alumId]: { ...prev[alumId], clave: genClave() } }));
   };
 
+  const [editClaveId, setEditClaveId] = useState(null);
+  const [nuevaClave, setNuevaClave] = useState("");
+
+  const guardarClave = (alumId) => {
+    if (!nuevaClave.trim()) return;
+    setCuentasAlumnos(prev => ({ ...prev, [alumId]: { ...prev[alumId], clave: nuevaClave.trim() } }));
+    setEditClaveId(null); setNuevaClave("");
+  };
+
   const alumnosConCuenta = alumnos.filter(al => cuentasAlumnos[al.id]).sort((a,b)=>(a.apellidos||"").localeCompare(b.apellidos||"","es"));
   const alumnosSinCuenta = alumnos.filter(al => !cuentasAlumnos[al.id]);
   const [users, setUsers] = useState(getUsers());
@@ -1688,7 +1697,23 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
                         {[al.nombres, al.apellidos].filter(Boolean).join(" ") || al.nombre}
                       </td>
                       <td style={{ padding: "10px 16px", fontFamily: "monospace", color: PALETTE.accent, fontSize: 13 }}>{cuenta.usuario}</td>
-                      <td style={{ padding: "10px 16px", fontFamily: "monospace", color: PALETTE.text, fontSize: 13 }}>{cuenta.clave}</td>
+                      <td style={{ padding: "8px 16px" }}>
+                        {editClaveId === al.id ? (
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <Input value={nuevaClave} onChange={e => setNuevaClave(e.target.value)}
+                              placeholder="Nueva clave..." style={{ fontSize: 12, fontFamily: "monospace", width: 120 }}
+                              onKeyDown={e => { if(e.key==="Enter") guardarClave(al.id); if(e.key==="Escape") { setEditClaveId(null); setNuevaClave(""); } }} />
+                            <Btn small onClick={() => guardarClave(al.id)}>✓</Btn>
+                            <button onClick={() => { setEditClaveId(null); setNuevaClave(""); }} style={{ background:"none", border:"none", cursor:"pointer", color: PALETTE.muted, fontSize: 18 }}>✕</button>
+                          </div>
+                        ) : (
+                          <span onClick={() => { setEditClaveId(al.id); setNuevaClave(cuenta.clave); }}
+                            style={{ fontFamily: "monospace", color: PALETTE.text, fontSize: 13, cursor: "pointer", borderBottom: `1px dashed ${PALETTE.border}` }}
+                            title="Clic para editar">
+                            {cuenta.clave}
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: "10px 16px", textAlign: "center" }}>
                         <Badge text={cuenta.bloqueado ? "Bloqueado" : "Activo"} color={cuenta.bloqueado ? PALETTE.red : PALETTE.green} />
                       </td>
@@ -1698,8 +1723,8 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
                             style={{ background: "none", border: "none", cursor: "pointer", color: cuenta.bloqueado ? PALETTE.green : PALETTE.orange, fontSize: 16 }}>
                             {cuenta.bloqueado ? "🔓" : "🔒"}
                           </button>
-                          <button onClick={() => regenerarClave(al.id)} title="Nueva clave"
-                            style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 16 }}>🔄</button>
+                          <button onClick={() => regenerarClave(al.id)} title="Generar clave aleatoria"
+                            style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted, fontSize: 14 }}>🎲</button>
                         </div>
                       </td>
                     </tr>
