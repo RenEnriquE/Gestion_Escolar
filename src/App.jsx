@@ -80,8 +80,10 @@ const DB = {
   },
   async setConfig(key, value) {
     try {
-      await supabase.from('configuracion').upsert({ clave: key, valor: value }, { onConflict: 'clave' });
-    } catch {}
+      const { error } = await supabase.from('configuracion').upsert({ clave: key, valor: value }, { onConflict: 'clave' });
+      if (error) throw error;
+      return true;
+    } catch { return false; }
   },
 };
 
@@ -1564,8 +1566,23 @@ const Login = ({ onLogin }) => {
   const [clave, setClave] = useState("");
   const [error, setError] = useState("");
 
-  const intentar = () => {
+  const [verificando, setVerificando] = useState(false);
+
+  const intentar = async () => {
+    if (verificando) return;
+    setVerificando(true);
+    // Traer claves y cuentas vigentes desde Supabase (evita usar claves antiguas del navegador)
+    try {
+      const [dbClaves, dbCuentas] = await Promise.all([DB.getConfig('claves'), DB.getAll('cuentas_alumnos')]);
+      if (dbClaves) S.set("ge_claves", dbClaves);
+      if (dbCuentas?.length) {
+        const obj = {};
+        dbCuentas.forEach(r => { obj[r.alum_id] = { usuario: r.usuario, clave: r.clave, nombre: r.nombre, bloqueado: r.bloqueado }; });
+        S.set("ge_cuentas_alumnos", obj);
+      }
+    } catch {}
     const u = getUsers().find(u => u.usuario.toLowerCase() === usuario.trim().toLowerCase() && u.clave === clave);
+    setVerificando(false);
     if (u?.bloqueado) setError("Tu cuenta no tiene acceso. Consulta al administrador.");
     else if (u) { setError(""); onLogin(u); }
     else setError("Usuario o clave incorrectos");
@@ -1650,22 +1667,23 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
 
   const openEditClave = (u) => { setEditingUser(u); setClaveForm({ usuario: u.usuario, nueva: "", confirmar: "" }); setClaveError(""); setClaveOk(""); };
 
-  const guardarClave = () => {
+  const guardarClave = async () => {
     if (!claveForm.usuario.trim()) { setClaveError("El usuario no puede estar vacío"); return; }
     if (claveForm.nueva && claveForm.nueva.length < 6) { setClaveError("La clave debe tener al menos 6 caracteres"); return; }
     if (claveForm.nueva !== claveForm.confirmar) { setClaveError("Las claves no coinciden"); return; }
-    const saved = S.get("ge_claves") || {};
-    // Save new username if changed
-    if (claveForm.usuario.trim() !== editingUser.usuario) {
-      saved[editingUser.usuario + "_alias"] = claveForm.usuario.trim();
-    }
-    // Save new password if provided
-    if (claveForm.nueva) {
-      saved[editingUser.usuario] = claveForm.nueva;
-    }
+    // Siempre usar el usuario base (no el alias) como llave, igual que getUsers()
+    const baseKey = editingUser._baseUsuario || editingUser.usuario;
+    // Partir desde lo que hay en Supabase para no pisar cambios hechos en otro dispositivo
+    const remoto = await DB.getConfig('claves');
+    const saved = { ...(remoto || S.get("ge_claves") || {}) };
+    const nuevoUsuario = claveForm.usuario.trim();
+    if (nuevoUsuario !== baseKey) saved[baseKey + "_alias"] = nuevoUsuario;
+    else delete saved[baseKey + "_alias"];
+    if (claveForm.nueva) saved[baseKey] = claveForm.nueva;
     S.set("ge_claves", saved);
-    DB.setConfig('claves', saved);
+    const ok = await DB.setConfig('claves', saved);
     setUsers(getUsers());
+    if (!ok) { setClaveError("Se guardó solo en este navegador: no se pudo guardar en Supabase (tabla 'configuracion')."); return; }
     setClaveOk("¡Guardado!");
     setClaveError("");
     setTimeout(() => { setEditingUser(null); setClaveOk(""); }, 1500);
@@ -1782,8 +1800,8 @@ const Usuarios = ({ visibility, setVisibility, alumnos, cuentasAlumnos, setCuent
       {/* Cuentas */}
       <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Cuentas</h3>
       <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden", marginBottom: 28 }}>
-        {users.map((u, i) => (
-          <div key={u.usuario} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i < users.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
+        {users.filter(x => x.rol !== "alumno").map((u, i, arr) => (
+          <div key={u.usuario} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.color + "33", border: `2px solid ${u.color}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ color: u.color, fontWeight: 800, fontSize: 16 }}>{u.usuario[0].toUpperCase()}</span>
