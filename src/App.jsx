@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "./supabase.js";
 import Aprendo from "./aprendo/Aprendo.jsx";
+import { PermisosContext, crearPuede, CATALOGO } from "./aprendo/permisos.js";
 import * as XLSX from "xlsx";
 
 // ── Date format helpers ──────────────────────────────────────────────────────
@@ -1599,8 +1600,9 @@ const ROL_LABEL = { admin: "Administrador", viewer: "Solo vista", collab: "Colab
 const ROL_COLOR = { admin: PALETTE.accent, viewer: PALETTE.green, collab: PALETTE.orange, alumno: PALETTE.green };
 const ESTADO_COLOR = { pendiente: PALETTE.orange, aprobado: PALETTE.green, rechazado: PALETTE.red, bloqueado: PALETTE.red };
 
-const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
-  const [tabU, setTabU] = useState("solicitudes"); // solicitudes | accesos | secciones
+const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setGruposCfg }) => {
+  const [tabU, setTabU] = useState("solicitudes"); // solicitudes | accesos | grupos | secciones
+  const [nuevoGrupo, setNuevoGrupo] = useState("");
   const [accesos, setAccesos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -1627,8 +1629,57 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
 
   const guardarEdicion = async () => {
     const ok = await resolver(editando.email, "aprobado", editando.rol, ["alumno", "viewer"].includes(editando.rol) ? editando.alum_id : "");
-    if (ok) setEditando(null);
+    if (!ok) return;
+    // Grupos: solo si hay grupos creados o la persona ya tenía alguno
+    if (grupos.length > 0 || (editando.grupos || []).length > 0) {
+      const ids = editando.rol === "admin" ? [] : (editando.grupos || []).filter(id => grupos.some(g => g.id === id));
+      setGuardando(true);
+      const { error } = await supabase.rpc("asignar_grupos", { p_email: editando.email, p_grupos: ids });
+      setGuardando(false);
+      if (error) { setError("No se pudieron guardar los grupos: " + error.message); return; }
+      await cargar();
+    }
+    setEditando(null);
   };
+
+  // ── Grupos y permisos por contenido ───────────────────────────────────────
+  const grupos = gruposCfg?.grupos || [];
+  const permisos = gruposCfg?.permisos || {};
+  const upd = (fn) => setGruposCfg(c => fn({ grupos: c?.grupos || [], permisos: c?.permisos || {} }));
+  const crearGrupo = () => {
+    const n = nuevoGrupo.trim();
+    if (!n) return;
+    if (grupos.some(g => g.nombre.toLowerCase() === n.toLowerCase())) { setError("Ya existe un grupo con ese nombre."); return; }
+    upd(c => ({ ...c, grupos: [...c.grupos, { id: "g" + Date.now().toString(36), nombre: n }] }));
+    setNuevoGrupo(""); setError("");
+  };
+  const renombrarGrupo = (g) => {
+    const n = (window.prompt("Nuevo nombre del grupo", g.nombre) || "").trim();
+    if (!n || n === g.nombre) return;
+    if (grupos.some(x => x.id !== g.id && x.nombre.toLowerCase() === n.toLowerCase())) { setError("Ya existe un grupo con ese nombre."); return; }
+    upd(c => ({ ...c, grupos: c.grupos.map(x => x.id === g.id ? { ...x, nombre: n } : x) })); setError("");
+  };
+  const eliminarGrupo = (g) => {
+    if (!window.confirm(`¿Eliminar el grupo "${g.nombre}"?\n\nLos contenidos que solo este grupo podía ver quedarán visibles para todos.`)) return;
+    upd(c => {
+      const p = {};
+      Object.entries(c.permisos).forEach(([k, v]) => { const nv = v.filter(i => i !== g.id); if (nv.length) p[k] = nv; });
+      return { grupos: c.grupos.filter(x => x.id !== g.id), permisos: p };
+    });
+  };
+  const alternarPermiso = (itemId, gid) => upd(c => {
+    const cur = c.permisos[itemId] || [];
+    const nv = cur.includes(gid) ? cur.filter(i => i !== gid) : [...cur, gid];
+    const p = { ...c.permisos };
+    if (nv.length) p[itemId] = nv; else delete p[itemId];
+    return { ...c, permisos: p };
+  });
+  const nombresGrupos = (a) => (a.grupos || []).map(id => grupos.find(g => g.id === id)?.nombre).filter(Boolean).join(", ");
+  const chip = (on) => ({
+    padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
+    border: `1px solid ${on ? PALETTE.accent : PALETTE.border}`,
+    background: on ? PALETTE.accent : "transparent", color: on ? "white" : PALETTE.muted,
+  });
 
   const pendientes = accesos.filter(a => a.estado === "pendiente");
   const otros = accesos.filter(a => a.estado !== "pendiente");
@@ -1642,7 +1693,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
         <div style={{ color: PALETTE.text, fontWeight: 700 }}>{a.nombre || a.email}</div>
         <div style={{ color: PALETTE.muted, fontSize: 12, wordBreak: "break-all" }}>{a.email}</div>
         <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>
-          Solicitó: {fecha(a.solicitado_en)}{a.alum_id && nombreAlumno(a.alum_id) ? ` · Alumno: ${nombreAlumno(a.alum_id)}` : ""}
+          Solicitó: {fecha(a.solicitado_en)}{a.alum_id && nombreAlumno(a.alum_id) ? ` · Alumno: ${nombreAlumno(a.alum_id)}` : ""}{nombresGrupos(a) ? ` · Grupos: ${nombresGrupos(a)}` : ""}
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{children}</div>
@@ -1658,6 +1709,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Btn variant={tabU === "solicitudes" ? "primary" : "ghost"} small onClick={() => setTabU("solicitudes")}>Solicitudes{pendientes.length ? ` (${pendientes.length})` : ""}</Btn>
           <Btn variant={tabU === "accesos" ? "primary" : "ghost"} small onClick={() => setTabU("accesos")}>Accesos ({otros.length})</Btn>
+          <Btn variant={tabU === "grupos" ? "primary" : "ghost"} small onClick={() => setTabU("grupos")}>Grupos y contenidos</Btn>
           <Btn variant={tabU === "secciones" ? "primary" : "ghost"} small onClick={() => setTabU("secciones")}>Secciones visibles</Btn>
         </div>
       </div>
@@ -1681,6 +1733,21 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
               </Select>
             </Field>
           )}
+          {grupos.length > 0 && editando.rol !== "admin" && (
+            <Field label="Grupos (definen qué ramos y actividades ve)">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {grupos.map(g => {
+                  const on = (editando.grupos || []).includes(g.id);
+                  return (
+                    <button key={g.id} type="button" style={chip(on)}
+                      onClick={() => setEditando(x => ({ ...x, grupos: on ? (x.grupos || []).filter(i => i !== g.id) : [...(x.grupos || []), g.id] }))}>
+                      {on ? "✓ " : ""}{g.nombre}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Btn variant="ghost" onClick={() => setEditando(null)}>Cancelar</Btn>
             <Btn onClick={guardarEdicion}>{guardando ? "Guardando..." : editando.aprobando ? "Aprobar" : "Guardar"}</Btn>
@@ -1699,7 +1766,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
             {!cargando && pendientes.length === 0 && <div style={{ padding: 20, color: PALETTE.muted, fontSize: 13 }}>No hay solicitudes pendientes.</div>}
             {pendientes.map(a => (
               <Fila key={a.email} a={a}>
-                <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: "viewer", alum_id: "", aprobando: true })}>Aprobar</Btn>
+                <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: "viewer", alum_id: "", grupos: [], aprobando: true })}>Aprobar</Btn>
                 <Btn small variant="ghost" onClick={() => resolver(a.email, "rechazado")}>Rechazar</Btn>
               </Fila>
             ))}
@@ -1720,16 +1787,80 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail }) => {
                   <Badge text={a.estado} color={ESTADO_COLOR[a.estado] || PALETTE.muted} />
                   {yo ? <span style={{ color: PALETTE.muted, fontSize: 12 }}>Tú</span> : (
                     <>
-                      {a.estado === "aprobado" && <Btn small variant="ghost" onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "" })}>Editar</Btn>}
+                      {a.estado === "aprobado" && <Btn small variant="ghost" onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", grupos: a.grupos || [] })}>Editar</Btn>}
                       {a.estado === "aprobado"
                         ? <Btn small variant="ghost" onClick={() => resolver(a.email, "bloqueado")}>🔒 Bloquear</Btn>
-                        : <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", aprobando: true })}>Reactivar</Btn>}
+                        : <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", grupos: a.grupos || [], aprobando: true })}>Reactivar</Btn>}
                     </>
                   )}
                 </Fila>
               );
             })}
           </div>
+        </div>
+      )}
+
+      {tabU === "grupos" && (
+        <div>
+          <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Grupos de usuarios</h3>
+          <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Crea grupos (ej. "Reforzamiento", "Grupo A") y asígnalos a cada persona desde Accesos → Editar.</p>
+          <div style={caja}>
+            {grupos.length === 0 && <div style={{ padding: 20, color: PALETTE.muted, fontSize: 13 }}>Aún no hay grupos.</div>}
+            {grupos.map(g => {
+              const n = accesos.filter(a => a.estado === "aprobado" && (a.grupos || []).includes(g.id)).length;
+              return (
+                <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 20px", borderBottom: `1px solid ${PALETTE.border}` }}>
+                  <div>
+                    <span style={{ color: PALETTE.text, fontWeight: 700 }}>{g.nombre}</span>
+                    <span style={{ color: PALETTE.muted, fontSize: 12, marginLeft: 10 }}>{n} {n === 1 ? "persona" : "personas"}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Btn small variant="ghost" onClick={() => renombrarGrupo(g)}>Renombrar</Btn>
+                    <Btn small variant="ghost" onClick={() => eliminarGrupo(g)}>Eliminar</Btn>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", gap: 10, padding: "12px 20px", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <Input value={nuevoGrupo} placeholder="Nombre del nuevo grupo" onChange={e => setNuevoGrupo(e.target.value)} onKeyDown={e => { if (e.key === "Enter") crearGrupo(); }} />
+              </div>
+              <Btn small onClick={crearGrupo}>+ Crear grupo</Btn>
+            </div>
+          </div>
+
+          <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Contenidos de ¡Aprendo!</h3>
+          <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>
+            Marca qué grupos pueden ver cada ramo o actividad. Sin ningún grupo marcado, lo ven todos. Un ramo restringido oculta también sus actividades. Los administradores siempre ven todo.
+          </p>
+          {grupos.length === 0 ? (
+            <div style={{ ...caja, padding: 20, color: PALETTE.muted, fontSize: 13 }}>Crea al menos un grupo para configurar los contenidos.</div>
+          ) : (
+            <div style={caja}>
+              {CATALOGO.map(asig => (
+                <div key={asig.id}>
+                  {[{ ...asig, nivel: 0 }, ...asig.actividades.map(a => ({ ...a, nivel: 1 }))].map(item => {
+                    const sel = permisos[item.id] || [];
+                    return (
+                      <div key={item.id} style={{ padding: "12px 20px", paddingLeft: item.nivel ? 44 : 20, borderBottom: `1px solid ${PALETTE.border}`, background: item.nivel ? "transparent" : PALETTE.bg }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                          <span style={{ color: PALETTE.text, fontWeight: item.nivel ? 500 : 700, fontSize: item.nivel ? 13 : 14 }}>{item.emoji ? item.emoji + " " : ""}{item.label}</span>
+                          <span style={{ color: sel.length ? PALETTE.orange : PALETTE.green, fontSize: 11, fontWeight: 600 }}>{sel.length ? "Solo los grupos marcados" : "Visible para todos"}</span>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {grupos.map(g => (
+                            <button key={g.id} type="button" style={chip(sel.includes(g.id))} onClick={() => alternarPermiso(item.id, g.id)}>
+                              {sel.includes(g.id) ? "✓ " : ""}{g.nombre}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -2341,12 +2472,13 @@ export default function App() {
   const [acceso, setAcceso] = useState(null);
   const [accesoError, setAccesoError] = useState("");
   const userOk = acceso?.estado === "aprobado";
-  const user = userOk ? { email: acceso.email, nombre: acceso.nombre || acceso.email, rol: acceso.rol, alumId: acceso.alum_id } : null;
+  const user = userOk ? { email: acceso.email, nombre: acceso.nombre || acceso.email, rol: acceso.rol, alumId: acceso.alum_id, grupos: acceso.grupos || [] } : null;
   const puedeEscribir = user?.rol === "admin";
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [visibility, setVisibility] = useState(SEED_VISIBILITY);
+  const [gruposCfg, setGruposCfg] = useState({ grupos: [], permisos: {} });
 
   const [alumnos, setAlumnos] = useState(SEED_ALUMNOS);
   const [actividades, setActividades] = useState(SEED_ACTIVIDADES);
@@ -2392,10 +2524,11 @@ export default function App() {
     (async () => {
       setLoading(true);
       try {
-        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis] = await Promise.all([
+        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis, dbGrupos] = await Promise.all([
           DB.getAll('alumnos'), DB.getAll('tipos'), DB.getAll('actividades'),
           DB.getAll('encuestas'), DB.getAll('participacion'),
           DB.getConfig('visibility'),
+          DB.getConfig('grupos'),
         ]);
 
         if (dbAlumnos?.length) setAlumnos(dbAlumnos.map(dbToAlumno));
@@ -2430,6 +2563,7 @@ export default function App() {
         }
 
         if (dbVis) setVisibility(dbVis);
+        if (dbGrupos) setGruposCfg({ grupos: dbGrupos.grupos || [], permisos: dbGrupos.permisos || {} });
       } catch (e) { console.error("Load error", e); }
       setLoading(false);
     })();
@@ -2447,6 +2581,7 @@ export default function App() {
   useEffect(() => { if (!loading && puedeEscribir) debounceSave('actividades', () => DB.upsert('actividades', actividades.map(actToDB))); }, [actividades, loading]);
   useEffect(() => { if (!loading && puedeEscribir) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
   useEffect(() => { if (!loading && puedeEscribir) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
+  useEffect(() => { if (!loading && puedeEscribir) debounceSave('grupos', () => DB.setConfig('grupos', gruposCfg)); }, [gruposCfg, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
   useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
   // Participacion saves individually per change (more granular)
@@ -2517,8 +2652,8 @@ export default function App() {
       case "tipos":         return <TiposActividad {...props} />;
       case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
-      case "aprendo":       return <Aprendo />;
-      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} miEmail={user.email} />;
+      case "aprendo":       return <PermisosContext.Provider value={{ puede: crearPuede(user.rol, user.grupos, gruposCfg) }}><Aprendo /></PermisosContext.Provider>;
+      case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} miEmail={user.email} gruposCfg={gruposCfg} setGruposCfg={setGruposCfg} />;
       default: return null;
     }
   };
