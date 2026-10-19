@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Matematicas from "./matematicas/Matematicas.jsx";
 import Ingles from "./ingles/Ingles.jsx";
+import { usePermisos } from "./permisos.js";
 
 const ASIGNATURAS = [
   { id: "matematicas", label: "Matemáticas",            emoji: "🔢", color: "#3b82f6", activo: true  },
@@ -12,6 +13,7 @@ const ASIGNATURAS = [
 
 export default function Aprendo() {
   const [asignatura, setAsignatura] = useState(null);
+  const { puede } = usePermisos();
 
   if (asignatura === "matematicas") return <Matematicas onVolver={() => setAsignatura(null)} />;
   if (asignatura === "ingles") return <Ingles onVolver={() => setAsignatura(null)} />;
@@ -24,7 +26,7 @@ export default function Aprendo() {
         <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 4 }}>Elige una asignatura para practicar</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        {ASIGNATURAS.map(a => (
+        {ASIGNATURAS.filter(a => puede(a.id)).map(a => (
           <button key={a.id} onClick={() => a.activo && setAsignatura(a.id)}
             style={{
               background: a.activo ? "#1e293b" : "#0f172a",
