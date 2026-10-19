@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { VOCAB, CATEGORIAS } from "./unit4Data.js";
+import { usePermisos } from "../permisos.js";
+import { registrarRespuesta } from "../registro.js";
 
 const verde = "#22c55e", rojo = "#ef4444", azul = "#3b82f6", amarillo = "#f59e0b";
 const card = "#1e293b", border = "#334155", fondo = "#0f172a";
@@ -32,8 +34,8 @@ const hablar = (texto) => {
   } catch {}
 };
 
-const crearPreguntas = (cat, direccion) => {
-  const pool = cat === "todo" ? VOCAB : VOCAB.filter(v => v.cat === cat);
+const crearPreguntas = (cat, direccion, keys) => {
+  const pool = keys ? VOCAB.filter(v => keys.includes("v:" + v.en)) : cat === "todo" ? VOCAB : VOCAB.filter(v => v.cat === cat);
   return barajar(pool).slice(0, TOTAL).map(item => {
     const dir = direccion === "mezclado" ? (Math.random() < 0.5 ? "en-es" : "es-en") : direccion;
     const campo = dir === "en-es" ? "es" : "en";
@@ -61,11 +63,13 @@ const Volver = ({ onClick, texto }) => (
   </button>
 );
 
-export default function Unit4Vocabulario({ onVolver }) {
-  const [fase, setFase] = useState("config"); // config | juego | resultado
+export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
+  const { alumId } = usePermisos();
+  const refuerzo = !!refuerzoKeys; // modo "Reforzar mis errores": solo las palabras indicadas
+  const [fase, setFase] = useState(refuerzo ? "juego" : "config"); // config | juego | resultado
   const [cat, setCat] = useState("todo");
   const [dir, setDir] = useState("en-es");
-  const [preguntas, setPreguntas] = useState([]);
+  const [preguntas, setPreguntas] = useState(() => (refuerzo ? crearPreguntas("todo", "mezclado", refuerzoKeys) : []));
   const [actual, setActual] = useState(0);
   const [elegida, setElegida] = useState(null);
   const [aciertos, setAciertos] = useState([]);
@@ -80,6 +84,8 @@ export default function Unit4Vocabulario({ onVolver }) {
     if (elegida !== null) return;
     setElegida(op);
     setAciertos(a => [...a, op === preguntas[actual].correcta]);
+    const it = preguntas[actual].item;
+    registrarRespuesta({ actividad: "ingles.unit4", item: "v:" + it.en, etiqueta: `${it.en} = ${it.es}`, correcta: op === preguntas[actual].correcta, elegida: op, refuerzo, alumId });
   };
 
   const siguiente = () => {
@@ -157,8 +163,8 @@ export default function Unit4Vocabulario({ onVolver }) {
           )}
 
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <Boton onClick={empezar}>🔄 Practicar de nuevo</Boton>
-            <Boton onClick={() => setFase("config")} color="#334155">Cambiar tema</Boton>
+            {!refuerzo && <Boton onClick={empezar}>🔄 Practicar de nuevo</Boton>}
+            {!refuerzo && <Boton onClick={() => setFase("config")} color="#334155">Cambiar tema</Boton>}
             <Boton onClick={onVolver} color="#334155">← Volver</Boton>
           </div>
         </div>
@@ -174,7 +180,7 @@ export default function Unit4Vocabulario({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
-      <Volver onClick={() => setFase("config")} texto="← Salir de la práctica" />
+      <Volver onClick={refuerzo ? onVolver : () => setFase("config")} texto="← Salir de la práctica" />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={{ color: "#94a3b8", fontSize: 13 }}>Pregunta {actual + 1} de {preguntas.length}</div>
         <div style={{ display: "flex", gap: 4 }}>

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { VOCAB } from "./unit4Data.js";
 import { FRASES, INICIO } from "./unit4Oraciones.js";
+import { usePermisos } from "../permisos.js";
+import { registrarRespuesta } from "../registro.js";
 
 const verde = "#22c55e", rojo = "#ef4444", azul = "#3b82f6", amarillo = "#f59e0b";
 const card = "#1e293b", border = "#334155";
@@ -28,14 +30,17 @@ const hablar = (texto) => {
 
 const buscar = (en) => VOCAB.find(v => v.en === en) || { en, es: "" };
 
-const crearPreguntas = () =>
-  barajar(FRASES).slice(0, TOTAL).map(([animal, tipo, correcta, incorrectas]) => ({
+const claveFrase = ([animal, tipo, correcta]) => `o:${animal}|${tipo}|${correcta}`;
+
+const crearPreguntas = (keys) =>
+  barajar(keys ? FRASES.filter(f => keys.includes(claveFrase(f))) : FRASES).slice(0, TOTAL).map(f => { const [animal, tipo, correcta, incorrectas] = f; return ({
+    key: claveFrase(f),
     animal: buscar(animal),
     inicio: INICIO[tipo],
     correcta,
     es: buscar(correcta).es,
     opciones: barajar([correcta, ...incorrectas]),
-  }));
+  }); });
 
 const Boton = ({ children, onClick, color = azul, style }) => (
   <button onClick={onClick}
@@ -50,15 +55,17 @@ const Volver = ({ onClick, texto }) => (
   </button>
 );
 
-export default function Unit4Oraciones({ onVolver }) {
-  const [preguntas, setPreguntas] = useState(crearPreguntas);
+export default function Unit4Oraciones({ onVolver, refuerzoKeys }) {
+  const { alumId } = usePermisos();
+  const refuerzo = !!refuerzoKeys; // modo "Reforzar mis errores": solo las oraciones indicadas
+  const [preguntas, setPreguntas] = useState(() => crearPreguntas(refuerzoKeys));
   const [actual, setActual] = useState(0);
   const [elegida, setElegida] = useState(null);
   const [aciertos, setAciertos] = useState([]);
   const [terminado, setTerminado] = useState(false);
 
   const reiniciar = () => {
-    setPreguntas(crearPreguntas());
+    setPreguntas(crearPreguntas(refuerzoKeys));
     setActual(0); setElegida(null); setAciertos([]); setTerminado(false);
   };
 
@@ -67,6 +74,7 @@ export default function Unit4Oraciones({ onVolver }) {
     const q = preguntas[actual];
     setElegida(op);
     setAciertos(a => [...a, op === q.correcta]);
+    registrarRespuesta({ actividad: "ingles.unit4oraciones", item: q.key, etiqueta: `${q.animal.en}: ${q.inicio} ${q.correcta}.`, correcta: op === q.correcta, elegida: op, refuerzo, alumId });
     hablar(`${q.inicio} ${q.correcta}.`);
   };
 
@@ -104,7 +112,7 @@ export default function Unit4Oraciones({ onVolver }) {
           )}
 
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <Boton onClick={reiniciar}>🔄 Practicar de nuevo</Boton>
+            {!refuerzo && <Boton onClick={reiniciar}>🔄 Practicar de nuevo</Boton>}
             <Boton onClick={onVolver} color="#334155">← Volver</Boton>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Unit4Vocabulario from "./Unit4Vocabulario.jsx";
 import Unit4Oraciones from "./Unit4Oraciones.jsx";
+import Unit4Refuerzo from "./Unit4Refuerzo.jsx";
 import { usePermisos } from "../permisos.js";
 
 const ACTIVIDADES = [
@@ -18,6 +19,13 @@ const ACTIVIDADES = [
     desc: "It is… It has… It can… Completa la oración",
     color: "#3b82f6",
   },
+  {
+    id: "refuerzo",
+    label: "Reforzar mis errores",
+    emoji: "🎯",
+    desc: "Practica solo lo que más te cuesta",
+    color: "#f59e0b",
+  },
 ];
 
 export default function Ingles({ onVolver }) {
@@ -27,6 +35,7 @@ export default function Ingles({ onVolver }) {
 
   if (actividad === "unit4") return <Unit4Vocabulario onVolver={() => setActividad(null)} />;
   if (actividad === "unit4oraciones") return <Unit4Oraciones onVolver={() => setActividad(null)} />;
+  if (actividad === "refuerzo") return <Unit4Refuerzo onVolver={() => setActividad(null)} />;
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>

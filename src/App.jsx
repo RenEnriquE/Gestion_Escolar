@@ -2652,7 +2652,7 @@ export default function App() {
       case "tipos":         return <TiposActividad {...props} />;
       case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
-      case "aprendo":       return <PermisosContext.Provider value={{ puede: crearPuede(user.rol, user.grupos, gruposCfg) }}><Aprendo /></PermisosContext.Provider>;
+      case "aprendo":       return <PermisosContext.Provider value={{ puede: crearPuede(user.rol, user.grupos, gruposCfg), email: user.email, alumId: user.alumId, esAdmin: isAdmin, alumnos }}><Aprendo /></PermisosContext.Provider>;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} miEmail={user.email} gruposCfg={gruposCfg} setGruposCfg={setGruposCfg} />;
       default: return null;
     }
