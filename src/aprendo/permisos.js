@@ -16,6 +16,7 @@ export const CATALOGO = [
     actividades: [
       { id: "ingles.unit4",          label: "Unit 4: Vocabulario" },
       { id: "ingles.unit4oraciones", label: "Unit 4: Complete the sentence" },
+      { id: "ingles.refuerzo",       label: "Reforzar mis errores" },
     ],
   },
 ];
@@ -33,5 +34,6 @@ export function crearPuede(rol, gruposUsuario, cfg) {
   };
 }
 
-export const PermisosContext = createContext({ puede: () => true });
+// puede: función de permisos · email/alumId: cuenta actual · esAdmin · alumnos: lista (para el reporte)
+export const PermisosContext = createContext({ puede: () => true, email: null, alumId: null, esAdmin: false, alumnos: [] });
 export const usePermisos = () => useContext(PermisosContext);

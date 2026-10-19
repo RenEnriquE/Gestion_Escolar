@@ -2,6 +2,7 @@ import { useState } from "react";
 import Matematicas from "./matematicas/Matematicas.jsx";
 import Ingles from "./ingles/Ingles.jsx";
 import { usePermisos } from "./permisos.js";
+import Reporte from "./Reporte.jsx";
 
 const ASIGNATURAS = [
   { id: "matematicas", label: "Matemáticas",            emoji: "🔢", color: "#3b82f6", activo: true  },
@@ -13,10 +14,11 @@ const ASIGNATURAS = [
 
 export default function Aprendo() {
   const [asignatura, setAsignatura] = useState(null);
-  const { puede } = usePermisos();
+  const { puede, esAdmin } = usePermisos();
 
   if (asignatura === "matematicas") return <Matematicas onVolver={() => setAsignatura(null)} />;
   if (asignatura === "ingles") return <Ingles onVolver={() => setAsignatura(null)} />;
+  if (asignatura === "reporte" && esAdmin) return <Reporte onVolver={() => setAsignatura(null)} />;
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0" }}>
@@ -42,6 +44,12 @@ export default function Aprendo() {
           </button>
         ))}
       </div>
+      {esAdmin && (
+        <button onClick={() => setAsignatura("reporte")}
+          style={{ display: "block", width: "100%", marginTop: 18, background: "#0f172a", border: "2px dashed #f59e0b", borderRadius: 14, padding: "14px 16px", cursor: "pointer", color: "#f59e0b", fontSize: 14, fontWeight: 700 }}>
+          📊 Reporte de errores (solo administradores)
+        </button>
+      )}
     </div>
   );
 }
