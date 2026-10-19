@@ -1,10 +1,11 @@
 import { useState } from "react";
 import Matematicas from "./matematicas/Matematicas.jsx";
+import Ingles from "./ingles/Ingles.jsx";
 
 const ASIGNATURAS = [
   { id: "matematicas", label: "Matemáticas",            emoji: "🔢", color: "#3b82f6", activo: true  },
   { id: "lenguaje",    label: "Lenguaje y Comunicación", emoji: "📖", color: "#8b5cf6", activo: false },
-  { id: "ingles",      label: "Inglés",                  emoji: "🌎", color: "#10b981", activo: false },
+  { id: "ingles",      label: "Inglés",                  emoji: "🌎", color: "#10b981", activo: true  },
   { id: "historia",    label: "Historia",                emoji: "🏛️", color: "#f59e0b", activo: false },
   { id: "tecnologia",  label: "Tecnología",              emoji: "💻", color: "#ef4444", activo: false },
 ];
@@ -13,6 +14,7 @@ export default function Aprendo() {
   const [asignatura, setAsignatura] = useState(null);
 
   if (asignatura === "matematicas") return <Matematicas onVolver={() => setAsignatura(null)} />;
+  if (asignatura === "ingles") return <Ingles onVolver={() => setAsignatura(null)} />;
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0" }}>
