@@ -1513,8 +1513,15 @@ const NAV_ITEMS = [
   { id: "ficha",        label: "Fichas",             icon: "users"         },
   { id: "colaboraciones", label: "Colaboraciones",   icon: "tag"           },
   { id: "aprendo",      label: "¡Aprendo!",          icon: "stats"         },
+  { id: "presupuestos", label: "Presupuestos",       icon: "tag", externo: "https://presupuestos-olive.vercel.app" }, // app aparte: se abre en otra pestaña
   { id: "usuarios",     label: "Usuarios",           icon: "shield"        },
 ];
+
+// Secciones que se pueden mostrar/ocultar a los apoderados
+const NAV_SECCIONES = NAV_ITEMS.filter(n => !["usuarios", "presupuestos"].includes(n.id));
+
+// Página con la que entra cada perfil
+const paginaInicial = (rol) => rol === "collab" ? "colaboraciones" : rol === "alumno" ? "aprendo" : rol === "directivo" ? "actividades" : "dashboard";
 
 const SEED_VISIBILITY = {
   dashboard: true, alumnos: true, actividades: true,
@@ -1596,8 +1603,8 @@ const PantallaAcceso = ({ acceso, error, email, onRefresh, onLogout }) => {
 };
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
-const ROL_LABEL = { admin: "Administrador", viewer: "Solo vista", collab: "Colaboraciones", alumno: "Alumno" };
-const ROL_COLOR = { admin: PALETTE.accent, viewer: PALETTE.green, collab: PALETTE.orange, alumno: PALETTE.green };
+const ROL_LABEL = { admin: "Administrador", viewer: "Solo vista", collab: "Colaboraciones", alumno: "Alumno", directivo: "Directivo" };
+const ROL_COLOR = { admin: PALETTE.accent, viewer: PALETTE.green, collab: PALETTE.orange, alumno: PALETTE.green, directivo: PALETTE.purple };
 const ESTADO_COLOR = { pendiente: PALETTE.orange, aprobado: PALETTE.green, rechazado: PALETTE.red, bloqueado: PALETTE.red };
 
 const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setGruposCfg }) => {
@@ -1632,7 +1639,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
     if (!ok) return;
     // Grupos: solo si hay grupos creados o la persona ya tenía alguno
     if (grupos.length > 0 || (editando.grupos || []).length > 0) {
-      const ids = editando.rol === "admin" ? [] : (editando.grupos || []).filter(id => grupos.some(g => g.id === id));
+      const ids = ["admin", "directivo"].includes(editando.rol) ? [] : (editando.grupos || []).filter(id => grupos.some(g => g.id === id));
       setGuardando(true);
       const { error } = await supabase.rpc("asignar_grupos", { p_email: editando.email, p_grupos: ids });
       setGuardando(false);
@@ -1733,7 +1740,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
               </Select>
             </Field>
           )}
-          {grupos.length > 0 && editando.rol !== "admin" && (
+          {grupos.length > 0 && !["admin", "directivo"].includes(editando.rol) && (
             <Field label="Grupos (definen qué ramos y actividades ve)">
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {grupos.map(g => {
@@ -1831,7 +1838,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
 
           <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Contenidos de ¡Aprendo!</h3>
           <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>
-            Marca qué grupos pueden ver cada ramo o actividad. Sin ningún grupo marcado, lo ven todos. Un ramo restringido oculta también sus actividades. Los administradores siempre ven todo.
+            Marca qué grupos pueden ver cada ramo o actividad. Sin ningún grupo marcado, lo ven todos. Un ramo restringido oculta también sus actividades. Los administradores y directivos siempre ven todo.
           </p>
           {grupos.length === 0 ? (
             <div style={{ ...caja, padding: 20, color: PALETTE.muted, fontSize: 13 }}>Crea al menos un grupo para configurar los contenidos.</div>
@@ -1869,10 +1876,10 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
           <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Secciones visibles para Apoderados</h3>
           <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Controla qué secciones del menú pueden ver los apoderados al iniciar sesión.</p>
           <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-            {NAV_ITEMS.filter(n => n.id !== "usuarios").map((item, i) => {
+            {NAV_SECCIONES.map((item, i) => {
               const visible = visibility[item.id] ?? true;
               return (
-                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < NAV_ITEMS.length - 2 ? `1px solid ${PALETTE.border}` : "none" }}>
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < NAV_SECCIONES.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Icon name={item.icon} size={16} color={PALETTE.muted} />
                     <span style={{ color: PALETTE.text, fontSize: 14 }}>{item.label}</span>
@@ -2472,8 +2479,11 @@ export default function App() {
   const [acceso, setAcceso] = useState(null);
   const [accesoError, setAccesoError] = useState("");
   const userOk = acceso?.estado === "aprobado";
-  const user = userOk ? { email: acceso.email, nombre: acceso.nombre || acceso.email, rol: acceso.rol, alumId: acceso.alum_id, grupos: acceso.grupos || [] } : null;
-  const puedeEscribir = user?.rol === "admin";
+  const userReal = userOk ? { email: acceso.email, nombre: acceso.nombre || acceso.email, rol: acceso.rol, alumId: acceso.alum_id, grupos: acceso.grupos || [] } : null;
+  const puedeEscribir = userReal?.rol === "admin"; // guardar datos depende de la sesión real, no de la vista previa
+  const [verComo, setVerComo] = useState(null);           // vista previa de otro perfil (solo administradores)
+  const [verComoModal, setVerComoModal] = useState(null);
+  const user = userReal && verComo && userReal.rol === "admin" ? { ...userReal, rol: verComo.rol, grupos: verComo.grupos } : userReal;
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -2514,7 +2524,7 @@ export default function App() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (userOk) setPage(acceso.rol === "collab" ? "colaboraciones" : acceso.rol === "alumno" ? "aprendo" : "dashboard");
+    if (userOk) setPage(paginaInicial(acceso.rol));
   }, [userOk]);
 
   // ── Cargar datos solo cuando el acceso está aprobado ──────────────────────
@@ -2626,19 +2636,26 @@ export default function App() {
 
   // Nav visible según rol
   const isCollab = user.rol === "collab";
+  const isDirectivo = user.rol === "directivo";
   const nav = NAV_ITEMS.filter(item => {
     if (isAdmin) return true;
     if (isCollab) return item.id === "colaboraciones"; // collab only sees colaboraciones
-    if (item.id === "usuarios" || item.id === "tipos") return false;
+    // Directivo: actividades (solo lectura), ¡Aprendo! (como un alumno) y acceso a Presupuestos
+    if (isDirectivo) return ["actividades", "aprendo", "presupuestos"].includes(item.id);
+    if (item.id === "usuarios" || item.id === "tipos" || item.id === "presupuestos") return false;
     if (user.rol === "alumno") return item.id === "aprendo";
     if (item.id === "aprendo") return true;
     return visibility[item.id] !== false;
   });
 
   // Si la página actual ya no es visible, ir al dashboard
-  const validPage = nav.find(n => n.id === page) ? page : "dashboard";
+  const validPage = nav.find(n => n.id === page) ? page : (nav.find(n => !n.externo)?.id || "dashboard");
 
-  const goTo = (id) => { setPage(id); setSidebarOpen(false); };
+  const goTo = (id) => {
+    const item = NAV_ITEMS.find(n => n.id === id);
+    if (item?.externo) { window.open(item.externo, "_blank", "noopener"); setSidebarOpen(false); return; }
+    setPage(id); setSidebarOpen(false);
+  };
   const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
 
   const renderPage = () => {
@@ -2660,6 +2677,41 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: PALETTE.bg, fontFamily: "'Segoe UI', system-ui, sans-serif", color: PALETTE.text }}>
+      {/* Vista previa de perfiles (solo administradores) */}
+      {verComoModal && (
+        <Modal title="Ver la app como…" onClose={() => setVerComoModal(null)}>
+          <p style={{ color: PALETTE.muted, fontSize: 13, marginTop: 0 }}>Muestra la app tal como la ve ese perfil, en solo lectura. No cambia tus datos ni tu sesión.</p>
+          <Field label="Perfil">
+            <Select value={verComoModal.rol} onChange={e => setVerComoModal(m => ({ ...m, rol: e.target.value }))}>
+              {Object.entries(ROL_LABEL).filter(([k]) => k !== "admin").map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </Select>
+          </Field>
+          {gruposCfg.grupos.length > 0 && ["alumno", "viewer", "collab"].includes(verComoModal.rol) && (
+            <Field label="Grupo (define qué ramos y actividades ve)">
+              <Select value={verComoModal.grupo} onChange={e => setVerComoModal(m => ({ ...m, grupo: e.target.value }))}>
+                <option value="">— Sin grupo —</option>
+                {gruposCfg.grupos.map(g => <option key={g.id} value={g.id}>{g.nombre}</option>)}
+              </Select>
+            </Field>
+          )}
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <Btn variant="ghost" onClick={() => setVerComoModal(null)}>Cancelar</Btn>
+            <Btn onClick={() => {
+              const grupos = verComoModal.grupo && ["alumno", "viewer", "collab"].includes(verComoModal.rol) ? [verComoModal.grupo] : [];
+              setVerComo({ rol: verComoModal.rol, grupos });
+              setPage(paginaInicial(verComoModal.rol));
+              setVerComoModal(null);
+            }}>Ver</Btn>
+          </div>
+        </Modal>
+      )}
+      {verComo && (
+        <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 900, background: PALETTE.purple, color: "white", borderRadius: 24, padding: "8px 8px 8px 18px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontSize: 13, fontWeight: 600, maxWidth: "94vw" }}>
+          <span>👁 Vista previa: {ROL_LABEL[verComo.rol]}{verComo.grupos[0] ? ` · ${gruposCfg.grupos.find(g => g.id === verComo.grupos[0])?.nombre || ""}` : ""}</span>
+          <button onClick={() => { setVerComo(null); setPage("dashboard"); }} style={{ background: "white", color: PALETTE.purple, border: "none", borderRadius: 16, padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" }}>Salir de la vista previa</button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 56, background: PALETTE.card, borderBottom: `1px solid ${PALETTE.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2673,9 +2725,15 @@ export default function App() {
         </div>
         {/* User info + logout */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {userReal.rol === "admin" && !verComo && (
+            <button onClick={() => setVerComoModal({ rol: "alumno", grupo: "" })} title="Ver la app como otro perfil"
+              style={{ background: PALETTE.purple + "22", border: `1px solid ${PALETTE.purple}66`, borderRadius: 8, cursor: "pointer", color: PALETTE.purple, padding: "6px 10px", fontSize: 12, fontWeight: 700 }}>
+              👁 Ver como
+            </button>
+          )}
           <div style={{ textAlign: "right" }}>
             <div style={{ color: PALETTE.text, fontSize: 12, fontWeight: 700 }}>{user.nombre}</div>
-            <div style={{ color: isAdmin ? PALETTE.accent : PALETTE.green, fontSize: 10 }}>{isAdmin ? "Administrador" : "Solo vista"}</div>
+            <div style={{ color: isAdmin ? PALETTE.accent : PALETTE.green, fontSize: 10 }}>{isAdmin ? "Administrador" : (ROL_LABEL[user.rol] || "Solo vista")}</div>
           </div>
           <button onClick={handleLogout} title="Cerrar sesión" style={{ background: PALETTE.red + "22", border: `1px solid ${PALETTE.red}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.red, padding: "6px 10px", fontSize: 12, fontWeight: 600 }}>
             Salir
