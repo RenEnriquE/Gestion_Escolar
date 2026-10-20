@@ -166,6 +166,7 @@ const pctColor = (p) => p === 100 ? PALETTE.green : p >= 50 ? PALETTE.orange : p
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const Icon = ({ name, size = 18, color = "currentColor" }) => {
   const paths = {
+    graduacion: <><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></>,
     dashboard: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
     users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
     activity: <><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>,
@@ -1514,7 +1515,7 @@ const NAV_ITEMS = [
   { id: "ficha",        label: "Fichas",             icon: "users"         },
   { id: "colaboraciones", label: "Colaboraciones",   icon: "tag"           },
   { id: "aprendo",      label: "¡Aprendo!",          icon: "stats"         },
-  { id: "presupuestos", label: "Presupuestos",       icon: "tag", externo: "https://presupuestos-olive.vercel.app" }, // app aparte: se abre en otra pestaña
+  { id: "presupuestos", label: "Presupuestos",       icon: "tag", externo: "https://presupuestos-olive.vercel.app/?desde=gestion" }, // app aparte: se abre en otra pestaña
   { id: "usuarios",     label: "Usuarios",           icon: "shield"        },
 ];
 
@@ -1542,7 +1543,7 @@ const TarjetaAcceso = ({ children }) => (
   <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
     <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 20, padding: 40, width: "100%", maxWidth: 400, textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 28 }}>
-        <div style={{ background: PALETTE.accent, borderRadius: 12, padding: 10 }}><Icon name="dashboard" size={22} color="white" /></div>
+        <div style={{ background: PALETTE.accent, borderRadius: 12, padding: 10 }}><Icon name="graduacion" size={22} color="white" /></div>
         <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 20 }}>GestiónEscolar</div>
       </div>
       {children}
@@ -2682,7 +2683,8 @@ export default function App() {
 
   const goTo = (id) => {
     const item = NAV_ITEMS.find(n => n.id === id);
-    if (item?.externo) { window.open(item.externo, "_blank", "noopener"); setSidebarOpen(false); return; }
+    // Sin "noopener" para que Presupuestos pueda cerrar su pestaña al volver
+    if (item?.externo) { window.open(item.externo, "_blank"); setSidebarOpen(false); return; }
     setPage(id); setSidebarOpen(false);
   };
   const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
@@ -2748,7 +2750,7 @@ export default function App() {
             <Icon name="menu" size={22} />
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ background: PALETTE.accent, borderRadius: 10, padding: 6 }}><Icon name="dashboard" size={16} color="white" /></div>
+            <div style={{ background: PALETTE.accent, borderRadius: 10, padding: 6 }}><Icon name="graduacion" size={16} color="white" /></div>
             <span style={{ fontWeight: 800, fontSize: 17 }}>GestiónEscolar</span>
           </div>
         </div>
@@ -2777,7 +2779,7 @@ export default function App() {
           <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 260, background: PALETTE.card, borderRight: `1px solid ${PALETTE.border}`, overflowY: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${PALETTE.border}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ background: PALETTE.accent, borderRadius: 10, padding: 8 }}><Icon name="dashboard" size={18} color="white" /></div>
+                <div style={{ background: PALETTE.accent, borderRadius: 10, padding: 8 }}><Icon name="graduacion" size={18} color="white" /></div>
                 <span style={{ fontWeight: 800, fontSize: 17 }}>GestiónEscolar</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: PALETTE.muted }}><Icon name="close" size={20} /></button>
