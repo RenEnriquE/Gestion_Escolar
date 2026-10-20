@@ -1554,6 +1554,19 @@ const LoginGoogle = () => {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
 
+  const [email, setEmail] = useState("");
+  const [clave, setClave] = useState("");
+
+  const entrarConClave = async (e) => {
+    e.preventDefault();
+    setCargando(true); setError("");
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: clave });
+    if (error) {
+      setError(error.message === "Invalid login credentials" ? "Correo o contraseña incorrectos." : "No se pudo iniciar sesión: " + error.message);
+      setCargando(false);
+    }
+  };
+
   const entrar = async () => {
     setCargando(true); setError("");
     const { error } = await supabase.auth.signInWithOAuth({
@@ -1566,7 +1579,22 @@ const LoginGoogle = () => {
   return (
     <TarjetaAcceso>
       <div style={{ color: PALETTE.muted, fontSize: 14, marginBottom: 24 }}>
-        Ingresa con tu cuenta de Google. Tu acceso debe ser aprobado por un administrador.
+        Ingresa con tu correo y contraseña, o con tu cuenta de Google. Tu acceso debe ser aprobado por un administrador.
+      </div>
+      <form onSubmit={entrarConClave} style={{ textAlign: "left" }}>
+        <Field label="Correo">
+          <Input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="nombre@correo.cl" autoComplete="email" />
+        </Field>
+        <Field label="Contraseña">
+          <Input type="password" required value={clave} onChange={e => setClave(e.target.value)} autoComplete="current-password" />
+        </Field>
+        <button type="submit" disabled={cargando}
+          style={{ width: "100%", background: PALETTE.accent, color: "white", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 15, fontWeight: 700, cursor: cargando ? "wait" : "pointer", opacity: cargando ? 0.7 : 1 }}>
+          {cargando ? "Ingresando..." : "Ingresar"}
+        </button>
+      </form>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, color: PALETTE.muted, fontSize: 13, margin: "18px 0" }}>
+        <div style={{ flex: 1, height: 1, background: PALETTE.border }} />o<div style={{ flex: 1, height: 1, background: PALETTE.border }} />
       </div>
       <button onClick={entrar} disabled={cargando}
         style={{ width: "100%", background: "white", color: "#1f2937", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 15, fontWeight: 700, cursor: cargando ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: cargando ? 0.7 : 1 }}>
