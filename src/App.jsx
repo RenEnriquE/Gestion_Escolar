@@ -2683,7 +2683,8 @@ export default function App() {
 
   const goTo = (id) => {
     const item = NAV_ITEMS.find(n => n.id === id);
-    if (item?.externo) { window.open(item.externo, "_blank"); // sin noopener: permite que Presupuestos cierre su pestaña al volver setSidebarOpen(false); return; }
+    // Sin "noopener" para que Presupuestos pueda cerrar su pestaña al volver
+    if (item?.externo) { window.open(item.externo, "_blank"); setSidebarOpen(false); return; }
     setPage(id); setSidebarOpen(false);
   };
   const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
