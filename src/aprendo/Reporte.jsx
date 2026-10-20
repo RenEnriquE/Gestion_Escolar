@@ -58,7 +58,7 @@ export default function Reporte({ onVolver }) {
   const nombre = (email) => info[email]?.nombre || email;
 
   const base = useMemo(
-    () => (rows || []).filter(r => (incluirAdmins || info[r.email]?.rol !== "admin") && (act === "todas" || r.actividad === act)),
+    () => (rows || []).filter(r => (incluirAdmins || !["admin", "directivo"].includes(info[r.email]?.rol)) && (act === "todas" || r.actividad === act)),
     [rows, info, incluirAdmins, act]
   );
   const sel = useMemo(() => (quien === "todos" ? base : base.filter(r => r.email === quien)), [base, quien]);
@@ -104,7 +104,7 @@ export default function Reporte({ onVolver }) {
             </select>
             <label style={{ color: muted, fontSize: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <input type="checkbox" checked={incluirAdmins} onChange={e => setIncluirAdmins(e.target.checked)} />
-              Incluir pruebas de administradores
+              Incluir pruebas de administradores y directivos
             </label>
           </div>
 
