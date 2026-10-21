@@ -2540,6 +2540,18 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Presupuestos (otra pestaña) pregunta con qué correo se está aquí, para usar la misma cuenta.
+  // Solo se entrega el correo, nunca la sesión.
+  useEffect(() => {
+    const ORIGEN_PRESUPUESTOS = "https://presupuestos-olive.vercel.app";
+    const responder = (e) => {
+      if (e.origin !== ORIGEN_PRESUPUESTOS || e.data?.tipo !== "pedir-usuario") return;
+      e.source?.postMessage({ tipo: "usuario", email: session?.user?.email || null }, e.origin);
+    };
+    window.addEventListener("message", responder);
+    return () => window.removeEventListener("message", responder);
+  }, [session?.user?.email]);
+
   const verificarAcceso = async () => {
     setAccesoError("");
     const nombre = session?.user?.user_metadata?.full_name || session?.user?.email || "";
@@ -2683,8 +2695,9 @@ export default function App() {
 
   const goTo = (id) => {
     const item = NAV_ITEMS.find(n => n.id === id);
-    // Sin "noopener" para que Presupuestos pueda cerrar su pestaña al volver
-    if (item?.externo) { window.open(item.externo, "_blank"); setSidebarOpen(false); return; }
+    // Pestaña con nombre fijo: se reutiliza la misma pestaña de Presupuestos.
+    // Sin "noopener" para que Presupuestos pueda volver a esta pestaña y consultar la cuenta activa.
+    if (item?.externo) { const w = window.open(item.externo, "presupuestos"); w?.focus(); setSidebarOpen(false); return; }
     setPage(id); setSidebarOpen(false);
   };
   const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
