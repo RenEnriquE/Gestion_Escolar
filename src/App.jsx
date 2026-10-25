@@ -1724,6 +1724,17 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
   const nombreAlumno = (id) => { const a = alumnos.find(x => x.id === id); return a ? `${a.apellidos || ""} ${a.nombres || ""}`.trim() : null; };
   const fecha = (f) => { try { return new Date(f).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" }); } catch { return ""; } };
 
+  const hace = (f) => {
+    if (!f) return "";
+    const m = Math.round((Date.now() - new Date(f).getTime()) / 60000);
+    if (isNaN(m)) return "";
+    if (m < 2) return "recién";
+    if (m < 60) return `hace ${m} min`;
+    if (m < 1440) return `hace ${Math.round(m / 60)} h`;
+    const d = Math.round(m / 1440);
+    return `hace ${d} ${d === 1 ? "día" : "días"}`;
+  };
+
   const Fila = ({ a, children }) => (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "14px 20px", borderBottom: `1px solid ${PALETTE.border}` }}>
       <div style={{ minWidth: 0 }}>
@@ -1731,6 +1742,9 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
         <div style={{ color: PALETTE.muted, fontSize: 12, wordBreak: "break-all" }}>{a.email}</div>
         <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>
           Solicitó: {fecha(a.solicitado_en)}{a.alum_id && nombreAlumno(a.alum_id) ? ` · Alumno: ${nombreAlumno(a.alum_id)}` : ""}{nombresGrupos(a) ? ` · Grupos: ${nombresGrupos(a)}` : ""}
+        </div>
+        <div style={{ color: a.ultima_conexion ? PALETTE.muted : "#64748b", fontSize: 11, marginTop: 2 }}>
+          🕒 Última conexión: {a.ultima_conexion ? `${fecha(a.ultima_conexion)} (${hace(a.ultima_conexion)})` : "sin registro aún"}
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{children}</div>
