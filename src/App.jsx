@@ -2528,6 +2528,14 @@ export default function App() {
   const [verComo, setVerComo] = useState(null);           // vista previa de otro perfil (solo administradores)
   const [verComoModal, setVerComoModal] = useState(null);
   const user = userReal && verComo && userReal.rol === "admin" ? { ...userReal, rol: verComo.rol, grupos: verComo.grupos } : userReal;
+  // Alumnos: sin menú de clic derecho (copiar/pegar/guardar imagen). Solo afecta ese menú; el teclado sigue igual.
+  const sinClicDerecho = user?.rol === "alumno";
+  useEffect(() => {
+    if (!sinClicDerecho) return;
+    const bloquear = (e) => e.preventDefault();
+    document.addEventListener("contextmenu", bloquear);
+    return () => document.removeEventListener("contextmenu", bloquear);
+  }, [sinClicDerecho]);
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
