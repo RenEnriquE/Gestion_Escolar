@@ -116,7 +116,7 @@ export default function EfrainVega({ onVolver }) {
           </div>
         )}
 
-        <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>¿Qué parte del libro?</div>
+        <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>1 · Elige qué parte del libro</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
           {[{ id: "todo", titulo: "Todo el libro", emoji: "📚" }, ...CAPITULOS].map(c => {
             const n = c.id === "todo" ? PREGUNTAS.length : PREGUNTAS.filter(p => p.cap === c.id).length;
@@ -129,13 +129,16 @@ export default function EfrainVega({ onVolver }) {
                   {c.id !== "todo" && c.id !== "0" ? `${c.id}. ` : ""}{c.titulo}
                 </span>
                 <span style={{ color: "#94a3b8", fontSize: 12 }}>{n} preg.</span>
+                <span style={{ width: 22, textAlign: "center", color: verde, fontWeight: 800, fontSize: 18 }}>{sel ? "✓" : ""}</span>
               </button>
             );
           })}
         </div>
 
-        <div style={{ textAlign: "center" }}>
-          <Boton onClick={() => empezar(false)} color={verde} style={{ padding: "14px 36px", fontSize: 16 }}>▶ Empezar ({Math.min(TOTAL, disponibles)} preguntas)</Boton>
+        {/* Barra fija abajo: el botón siempre está a la vista, sin importar cuánto se haya bajado */}
+        <div style={{ position: "sticky", bottom: 0, margin: "0 -4px", padding: "14px 4px 12px", background: "linear-gradient(to top, rgba(15,23,42,1) 70%, rgba(15,23,42,0))", textAlign: "center", zIndex: 5 }}>
+          <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>2 · ¡Listo! Elegiste: <b style={{ color: "white" }}>{cap === "todo" ? "Todo el libro" : tituloCap(cap).replace("Cap. ", "").replace("Libro", "Sobre el libro")}</b></div>
+          <Boton onClick={() => empezar(false)} color={verde} style={{ padding: "16px 40px", fontSize: 18, width: "100%", maxWidth: 420, boxShadow: "0 4px 18px rgba(34,197,94,.45)" }}>▶ Empezar ({Math.min(TOTAL, disponibles)} preguntas)</Boton>
         </div>
       </div>
     );
