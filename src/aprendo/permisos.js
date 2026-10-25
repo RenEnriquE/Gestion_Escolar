@@ -12,6 +12,12 @@ export const CATALOGO = [
     ],
   },
   {
+    id: "lenguaje", label: "Lenguaje y Comunicación", emoji: "📖",
+    actividades: [
+      { id: "lenguaje.efrain", label: "Efraín en La Vega" },
+    ],
+  },
+  {
     id: "ingles", label: "Inglés", emoji: "🌎",
     actividades: [
       { id: "ingles.unit4",          label: "Unit 4: Vocabulario" },

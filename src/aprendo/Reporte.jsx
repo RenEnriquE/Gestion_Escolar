@@ -10,6 +10,7 @@ const ACTIVIDADES = [
   { id: "todas", label: "Todas las actividades" },
   { id: "ingles.unit4", label: "Inglés · Unit 4: Vocabulario" },
   { id: "ingles.unit4oraciones", label: "Inglés · Unit 4: Complete the sentence" },
+  { id: "lenguaje.efrain", label: "Lenguaje · Efraín en La Vega" },
 ];
 
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
