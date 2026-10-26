@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePermisos } from "../permisos.js";
+import { registrarRespuesta } from "../registro.js";
 
 // Mapa ficticio del "Reino de Arcoiria" - cuadrícula 5x5
 // Cada cuadrante tiene un lugar fijo con nombre e emoji
@@ -43,6 +45,7 @@ const generarPreguntas = () => {
 };
 
 export default function Mapa({ onVolver }) {
+  const { alumId } = usePermisos();
   const [preguntas] = useState(generarPreguntas);
   const [respuestas, setRespuestas] = useState({});
   const [revisado, setRevisado] = useState(false);
@@ -52,7 +55,14 @@ export default function Mapa({ onVolver }) {
     setRespuestas(prev => ({ ...prev, [idx]: { ...prev[idx], [campo]: val } }));
   };
 
-  const revisar = () => setRevisado(true);
+  const revisar = () => {
+    if (revisado) return;
+    preguntas.forEach((p, i) => {
+      const r = respuestas[i];
+      registrarRespuesta({ actividad: "matematicas.mapa", item: `m:mapa:${p.col}${p.row}:${p.nombre}`, etiqueta: `Mapa: ¿dónde está ${p.nombre}?`, correcta: r?.col === p.col && r?.row === String(p.row), elegida: r?.col && r?.row ? `${r.col}${r.row}` : null, alumId });
+    });
+    setRevisado(true);
+  };
   const reiniciar = () => { setRespuestas({}); setRevisado(false); setMostrarMapa(true); };
 
   const todasRespondidas = preguntas.every((_, i) => respuestas[i]?.col && respuestas[i]?.row);

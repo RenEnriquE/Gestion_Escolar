@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePermisos } from "../permisos.js";
+import { registrarRespuesta } from "../registro.js";
 
 // Cuadrícula fija 5x5 con objetos en posiciones fijas
 // Se generan sets aleatorios de objetos y posiciones cada partida
@@ -24,6 +26,7 @@ const generarTablero = () => {
 };
 
 export default function LocalizarObjetos({ onVolver }) {
+  const { alumId } = usePermisos();
   const [objetos] = useState(generarTablero);
   const [respuestas, setRespuestas] = useState({});
   const [revisado, setRevisado] = useState(false);
@@ -32,7 +35,14 @@ export default function LocalizarObjetos({ onVolver }) {
     setRespuestas(prev => ({ ...prev, [idx]: { ...prev[idx], [campo]: val } }));
   };
 
-  const revisar = () => setRevisado(true);
+  const revisar = () => {
+    if (revisado) return;
+    objetos.forEach((o, i) => {
+      const r = respuestas[i];
+      registrarRespuesta({ actividad: "matematicas.localizar", item: `m:loc:${o.col}${o.row}:${o.nombre}`, etiqueta: `Localiza ${o.emoji} ${o.nombre}`, correcta: r?.col === o.col && r?.row === String(o.row), elegida: r?.col && r?.row ? `${r.col}${r.row}` : null, alumId });
+    });
+    setRevisado(true);
+  };
   const reiniciar = () => { setRespuestas({}); setRevisado(false); };
 
   const correctas = revisado ? objetos.filter((o,i) =>

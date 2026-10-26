@@ -10,12 +10,18 @@ export function registrarRespuesta({ actividad, item, etiqueta, correcta, elegid
 }
 
 // Respuestas más recientes primero. Con `email` solo trae las de esa persona.
-export async function cargarRespuestas({ email = null, limite = 5000 } = {}) {
-  let q = supabase.from("respuestas_aprendo").select("*");
-  if (email) q = q.eq("email", email);
-  const { data, error } = await q.order("creado_en", { ascending: false }).limit(limite);
-  if (error) throw error;
-  return data || [];
+// Supabase entrega como máximo 1000 filas por consulta, así que se pide por páginas.
+export async function cargarRespuestas({ email = null, limite = 20000 } = {}) {
+  const PAG = 1000, out = [];
+  for (let desde = 0; desde < limite; desde += PAG) {
+    let q = supabase.from("respuestas_aprendo").select("*");
+    if (email) q = q.eq("email", email);
+    const { data, error } = await q.order("creado_en", { ascending: false }).range(desde, desde + PAG - 1);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < PAG) break;
+  }
+  return out;
 }
 
 // rows: respuestas (más recientes primero). Devuelve { [item]: { intentos, errores, dominado, pendiente, confusiones } }
