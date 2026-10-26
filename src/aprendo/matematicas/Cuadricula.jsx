@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePermisos } from "../permisos.js";
+import { registrarRespuesta } from "../registro.js";
 
 const COLS = ["A","B","C","D","E","F","G","H","I","J"];
 const ROWS = [1,2,3,4,5,6,7,8,9,10];
@@ -15,6 +17,7 @@ const genPregunta = (usadas = new Set()) => {
 };
 
 export default function Cuadricula({ onVolver }) {
+  const { alumId } = usePermisos();
   const TOTAL = 8;
   const [preguntas] = useState(() => {
     const arr = []; const usadas = new Set();
@@ -36,6 +39,7 @@ export default function Cuadricula({ onVolver }) {
     setClickAnim(`${col}${row}`);
     setTimeout(() => setClickAnim(null), 600);
     setRespuestas(prev => ({ ...prev, [actual]: { col, row, correcto } }));
+    registrarRespuesta({ actividad: "matematicas.cuadricula", item: `m:cuad:${pregunta.col}${pregunta.row}`, etiqueta: `Encuentra la casilla ${pregunta.col}${pregunta.row}`, correcta: correcto, elegida: `${col}${row}`, alumId });
     if (actual < TOTAL - 1) setTimeout(() => setActual(a => a + 1), 800);
     else setTimeout(() => setFase("resultado"), 900);
   };

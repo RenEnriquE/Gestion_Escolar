@@ -11,6 +11,7 @@ const respuestaCorrecta = (item) => {
   if (item.startsWith("l:efrain:")) return PREG_EFRAIN.find(p => p.key === item)?.correcta || null;
   if (item.startsWith("v:")) { const v = VOCAB.find(x => x.en === item.slice(2)); return v ? `${v.en} = ${v.es}` : null; }
   if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
+  if (item.startsWith("m:")) { const p = item.split(":"); return p[2] || null; }
   return null;
 };
 
@@ -23,7 +24,19 @@ const ACTIVIDADES = [
   { id: "ingles.unit4", label: "Inglés · Unit 4: Vocabulario" },
   { id: "ingles.unit4oraciones", label: "Inglés · Unit 4: Complete the sentence" },
   { id: "lenguaje.efrain", label: "Lenguaje · Efraín en La Vega" },
+  { id: "matematicas.cuadricula", label: "Matemáticas · Encuentra la casilla" },
+  { id: "matematicas.localizar", label: "Matemáticas · Localiza los objetos" },
+  { id: "matematicas.mapa", label: "Matemáticas · Mapa del Reino" },
 ];
+
+const ASIGNATURAS = [
+  { id: "total", label: "Total" },
+  { id: "ingles", label: "Inglés" },
+  { id: "lenguaje", label: "Lenguaje" },
+  { id: "matematicas", label: "Matemáticas" },
+];
+const dia = (f) => { try { return new Date(f).toLocaleDateString("sv-SE"); } catch { return ""; } };
+const fechaCorta = (f) => { try { return new Date(f).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" }); } catch { return ""; } };
 
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
 const colorAcierto = (p) => (p >= 80 ? verde : p >= 50 ? amarillo : rojo);
@@ -89,6 +102,22 @@ export default function Reporte({ onVolver }) {
     }).sort((a, b) => a.p - b.p);
   }, [base, info]);
 
+  // Ranking de uso: cuenta respuestas (no tiempo) de todas las actividades, sin el filtro de actividad
+  const [rankAsig, setRankAsig] = useState("total");
+  const ranking = useMemo(() => {
+    const por = {};
+    (rows || []).filter(r => incluirAdmins || !["admin", "directivo"].includes(info[r.email]?.rol)).forEach(r => {
+      const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, matematicas: 0, dias: new Set(), ultima: r.creado_en });
+      const a = (r.actividad || "").split(".")[0];
+      x.total++; if (x[a] !== undefined) x[a]++;
+      x.dias.add(dia(r.creado_en));
+      if (r.creado_en > x.ultima) x.ultima = r.creado_en;
+    });
+    return Object.values(por).map(x => ({ ...x, nombre: nombre(x.email), nDias: x.dias.size }))
+      .filter(x => x[rankAsig] > 0).sort((a, b) => b[rankAsig] - a[rankAsig] || b.nDias - a.nDias);
+  }, [rows, info, incluirAdmins, rankAsig]);
+  const maxRank = ranking[0]?.[rankAsig] || 1;
+
   const okSel = sel.filter(r => r.correcta).length;
   const personasSel = new Set(sel.map(r => r.email)).size;
   const visibles = verTodas ? items : items.slice(0, 12);
@@ -120,6 +149,41 @@ export default function Reporte({ onVolver }) {
               Incluir pruebas de administradores y directivos
             </label>
           </div>
+
+          <Titulo>🏆 Ranking de uso · quién practica más</Titulo>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+            {ASIGNATURAS.map(a => (
+              <button key={a.id} onClick={() => setRankAsig(a.id)}
+                style={{ background: rankAsig === a.id ? azul : "#0f172a", color: "white", border: `1px solid ${rankAsig === a.id ? azul : border}`, borderRadius: 20, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+          {ranking.length === 0 ? (
+            <div style={{ color: muted, fontSize: 13, padding: 12 }}>Aún no hay actividad registrada en esta asignatura.</div>
+          ) : (
+            <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+              {ranking.map((x, i) => (
+                <div key={x.email} style={{ padding: "9px 14px", borderBottom: `1px solid ${border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: 14 }}>
+                    <span style={{ width: 28, textAlign: "center", fontWeight: 800, color: i < 3 ? amarillo : muted }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
+                    <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{x.nombre}</span>
+                    <span style={{ fontWeight: 800, color: azul, whiteSpace: "nowrap" }}>{x[rankAsig]} resp.</span>
+                  </div>
+                  <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "6px 0 3px 38px" }}>
+                    <div style={{ width: `${pct(x[rankAsig], maxRank)}%`, height: "100%", background: azul, borderRadius: 3 }} />
+                  </div>
+                  <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
+                    {rankAsig === "total"
+                      ? `Inglés ${x.ingles} · Lenguaje ${x.lenguaje} · Matemáticas ${x.matematicas} · `
+                      : ""}
+                    {x.nDias} {x.nDias === 1 ? "día" : "días"} con actividad · última vez {fechaCorta(x.ultima)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas (todas las actividades, sin el filtro de arriba). Matemáticas se registra desde esta versión.</div>
 
           {base.length === 0 ? (
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: 24, textAlign: "center", color: muted }}>
