@@ -1,7 +1,19 @@
+import { PREGUNTAS as PREG_EFRAIN } from "./lenguaje/efrainData.js";
+import { VOCAB } from "./ingles/unit4Data.js";
+import { INICIO } from "./ingles/unit4Oraciones.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase.js";
 import { usePermisos } from "./permisos.js";
 import { cargarRespuestas, analizarItems } from "./registro.js";
+
+// Respuesta correcta de un ítem registrado, según su clave (para repasar en voz alta con los alumnos)
+const respuestaCorrecta = (item) => {
+  if (item.startsWith("l:efrain:")) return PREG_EFRAIN.find(p => p.key === item)?.correcta || null;
+  if (item.startsWith("v:")) { const v = VOCAB.find(x => x.en === item.slice(2)); return v ? `${v.en} = ${v.es}` : null; }
+  if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
+  return null;
+};
+
 
 const verde = "#22c55e", rojo = "#ef4444", azul = "#3b82f6", amarillo = "#f59e0b";
 const card = "#1e293b", border = "#334155", muted = "#94a3b8";
@@ -128,7 +140,8 @@ export default function Reporte({ onVolver }) {
                 <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
                   {visibles.map(x => {
                     const p = pct(x.errores, x.intentos);
-                    const conf = Object.entries(x.confusiones).sort((a, b) => b[1] - a[1])[0];
+                    const confs = Object.entries(x.confusiones).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    const correcta = respuestaCorrecta(x.item);
                     return (
                       <div key={x.item} style={{ padding: "10px 14px", borderBottom: `1px solid ${border}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, color: "white", fontSize: 14 }}>
@@ -138,7 +151,8 @@ export default function Reporte({ onVolver }) {
                         <div style={{ height: 6, background: "#0f172a", borderRadius: 3, margin: "6px 0 2px" }}>
                           <div style={{ width: `${p}%`, height: "100%", background: rojo, borderRadius: 3 }} />
                         </div>
-                        {conf && <div style={{ color: muted, fontSize: 12 }}>Suelen marcar: <b style={{ color: "white" }}>{conf[0]}</b> ({conf[1]})</div>}
+                        {correcta && <div style={{ color: verde, fontSize: 13, fontWeight: 700, marginTop: 4 }}>✓ Respuesta correcta: {correcta}</div>}
+                        {confs.length > 0 && <div style={{ color: muted, fontSize: 12, marginTop: 2 }}>Suelen marcar: {confs.map(([t, n], i) => <span key={t}>{i > 0 ? " · " : ""}<b style={{ color: "#fca5a5" }}>{t}</b> ({n})</span>)}</div>}
                       </div>
                     );
                   })}
