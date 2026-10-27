@@ -1665,11 +1665,21 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
   };
 
   const guardarEdicion = async () => {
-    const ok = await resolver(editando.email, "aprobado", editando.rol, ["alumno", "viewer"].includes(editando.rol) ? editando.alum_id : "");
+    const ok = await resolver(editando.email, "aprobado", editando.rol, ["alumno", "viewer", "directivo"].includes(editando.rol) ? editando.alum_id : "");
     if (!ok) return;
+    // Alumno fuera del curso (solo roles que pueden tener alumno asociado y sin alumno del curso elegido)
+    const conAlumno = ["alumno", "viewer", "directivo"].includes(editando.rol) && !editando.alum_id;
+    const nuevoExt = conAlumno ? (editando.alumno_externo || "").trim() : "";
+    const previoExt = (accesos.find(a => a.email === editando.email)?.alumno_externo || "").trim();
+    if (nuevoExt !== previoExt) {
+      setGuardando(true);
+      const { error } = await supabase.rpc("asignar_alumno_externo", { p_email: editando.email, p_nombre: nuevoExt });
+      setGuardando(false);
+      if (error) { setError("No se pudo guardar el alumno fuera del curso: " + error.message + " (¿ejecutaste supabase_externo.sql?)"); return; }
+    }
     // Grupos: solo si hay grupos creados o la persona ya tenía alguno
     if (grupos.length > 0 || (editando.grupos || []).length > 0) {
-      const ids = ["admin", "directivo"].includes(editando.rol) ? [] : (editando.grupos || []).filter(id => grupos.some(g => g.id === id));
+      const ids = editando.rol === "admin" ? [] : (editando.grupos || []).filter(id => grupos.some(g => g.id === id));
       setGuardando(true);
       const { error } = await supabase.rpc("asignar_grupos", { p_email: editando.email, p_grupos: ids });
       setGuardando(false);
@@ -1741,7 +1751,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
         <div style={{ color: PALETTE.text, fontWeight: 700 }}>{a.nombre || a.email}</div>
         <div style={{ color: PALETTE.muted, fontSize: 12, wordBreak: "break-all" }}>{a.email}</div>
         <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 2 }}>
-          Solicitó: {fecha(a.solicitado_en)}{a.alum_id && nombreAlumno(a.alum_id) ? ` · Alumno: ${nombreAlumno(a.alum_id)}` : ""}{nombresGrupos(a) ? ` · Grupos: ${nombresGrupos(a)}` : ""}
+          Solicitó: {fecha(a.solicitado_en)}{a.alum_id && nombreAlumno(a.alum_id) ? ` · Alumno: ${nombreAlumno(a.alum_id)}` : a.alumno_externo ? ` · Alumno fuera del curso: ${a.alumno_externo}` : ""}{nombresGrupos(a) ? ` · Grupos: ${nombresGrupos(a)}` : ""}
         </div>
         <div style={{ color: a.ultima_conexion ? PALETTE.muted : "#64748b", fontSize: 11, marginTop: 2 }}>
           🕒 Última conexión: {a.ultima_conexion ? `${fecha(a.ultima_conexion)} (${hace(a.ultima_conexion)})` : "sin registro aún"}
@@ -1776,16 +1786,21 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
               {Object.entries(ROL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </Select>
           </Field>
-          {["alumno", "viewer"].includes(editando.rol) && (
-            <Field label="Alumno asociado (opcional)">
+          {["alumno", "viewer", "directivo"].includes(editando.rol) && (
+            <Field label={editando.rol === "directivo" ? "Alumno asociado (opcional · si tiene un hijo/a en el curso)" : "Alumno asociado (opcional)"}>
               <Select value={editando.alum_id || ""} onChange={e => setEditando(x => ({ ...x, alum_id: e.target.value }))}>
                 <option value="">— Sin alumno asociado —</option>
                 {alumnosOrd.map(a => <option key={a.id} value={a.id}>{a.apellidos} {a.nombres}</option>)}
               </Select>
             </Field>
           )}
-          {grupos.length > 0 && !["admin", "directivo"].includes(editando.rol) && (
-            <Field label="Grupos (definen qué ramos y actividades ve)">
+          {["alumno", "viewer", "directivo"].includes(editando.rol) && !editando.alum_id && (
+            <Field label="Alumno fuera del curso (opcional · nombre de su hijo/a si no es del 3° C)">
+              <Input value={editando.alumno_externo || ""} onChange={e => setEditando(x => ({ ...x, alumno_externo: e.target.value }))} placeholder="Ej.: Sofía Pérez (5° B)" />
+            </Field>
+          )}
+          {grupos.length > 0 && editando.rol !== "admin" && (
+            <Field label={editando.rol === "directivo" ? "Grupos (opcional · si no marca ninguno, ve todo)" : "Grupos (definen qué ramos y actividades ve)"}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {grupos.map(g => {
                   const on = (editando.grupos || []).includes(g.id);
@@ -1817,7 +1832,7 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
             {!cargando && pendientes.length === 0 && <div style={{ padding: 20, color: PALETTE.muted, fontSize: 13 }}>No hay solicitudes pendientes.</div>}
             {pendientes.map(a => (
               <Fila key={a.email} a={a}>
-                <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: "viewer", alum_id: "", grupos: [], aprobando: true })}>Aprobar</Btn>
+                <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: "viewer", alum_id: "", alumno_externo: "", grupos: [], aprobando: true })}>Aprobar</Btn>
                 <Btn small variant="ghost" onClick={() => resolver(a.email, "rechazado")}>Rechazar</Btn>
               </Fila>
             ))}
@@ -1838,10 +1853,10 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
                   <Badge text={a.estado} color={ESTADO_COLOR[a.estado] || PALETTE.muted} />
                   {yo ? <span style={{ color: PALETTE.muted, fontSize: 12 }}>Tú</span> : (
                     <>
-                      {a.estado === "aprobado" && <Btn small variant="ghost" onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", grupos: a.grupos || [] })}>Editar</Btn>}
+                      {a.estado === "aprobado" && <Btn small variant="ghost" onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", alumno_externo: a.alumno_externo || "", grupos: a.grupos || [] })}>Editar</Btn>}
                       {a.estado === "aprobado"
                         ? <Btn small variant="ghost" onClick={() => resolver(a.email, "bloqueado")}>🔒 Bloquear</Btn>
-                        : <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", grupos: a.grupos || [], aprobando: true })}>Reactivar</Btn>}
+                        : <Btn small onClick={() => setEditando({ email: a.email, nombre: a.nombre, rol: a.rol, alum_id: a.alum_id || "", alumno_externo: a.alumno_externo || "", grupos: a.grupos || [], aprobando: true })}>Reactivar</Btn>}
                     </>
                   )}
                 </Fila>
