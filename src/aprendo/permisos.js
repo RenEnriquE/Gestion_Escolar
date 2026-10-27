@@ -4,7 +4,18 @@ import { createContext, useContext } from "react";
 // Al agregar una asignatura o actividad nueva, súmala aquí (el id debe coincidir con el usado en su archivo).
 export const CATALOGO = [
   {
-    id: "matematicas", label: "Matemáticas", emoji: "🔢",
+    id: "mate", label: "Matemáticas", emoji: "➗",
+    actividades: [
+      { id: "mate.resta",     label: "Resta repetida" },
+      { id: "mate.reparto",   label: "Repartir en partes iguales" },
+      { id: "mate.tablas",    label: "Tablas y divisiones" },
+      { id: "mate.familias",  label: "Multiplicar y dividir" },
+      { id: "mate.problemas", label: "Problemas" },
+      { id: "mate.refuerzo",  label: "Reforzar mis errores" },
+    ],
+  },
+  {
+    id: "matematicas", label: "Habilidades Matemáticas", emoji: "🧩",
     actividades: [
       { id: "matematicas.cuadricula", label: "Encuentra la casilla" },
       { id: "matematicas.localizar",  label: "Localiza los objetos" },
