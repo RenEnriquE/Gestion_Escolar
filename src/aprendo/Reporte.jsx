@@ -75,7 +75,7 @@ export default function Reporte({ onVolver }) {
   useEffect(() => {
     (async () => {
       try {
-        const [r, a] = await Promise.all([cargarRespuestas(), supabase.from("accesos").select("email,nombre,rol,alum_id")]);
+        const [r, a] = await Promise.all([cargarRespuestas(), supabase.from("accesos").select("*")]);
         setRows(r); setAccesos(a.data || []);
       } catch (e) { setError(e?.message || "No se pudo cargar el reporte"); }
     })();
@@ -85,14 +85,14 @@ export default function Reporte({ onVolver }) {
     const m = {};
     accesos.forEach(a => {
       const al = (alumnos || []).find(x => x.id === a.alum_id);
-      m[a.email] = { nombre: al ? `${al.nombres || ""} ${al.apellidos || ""}`.trim() : (a.nombre || a.email), rol: a.rol };
+      m[a.email] = { nombre: al ? `${al.nombres || ""} ${al.apellidos || ""}`.trim() : (a.alumno_externo || a.nombre || a.email), rol: a.rol, esPrueba: a.rol === "admin" || (a.rol === "directivo" && !a.alum_id && !a.alumno_externo) };
     });
     return m;
   }, [accesos, alumnos]);
   const nombre = (email) => info[email]?.nombre || email;
 
   const base = useMemo(
-    () => (rows || []).filter(r => (incluirAdmins || !["admin", "directivo"].includes(info[r.email]?.rol)) && (act === "todas" || r.actividad === act)),
+    () => (rows || []).filter(r => (incluirAdmins || !info[r.email]?.esPrueba) && (act === "todas" || r.actividad === act)),
     [rows, info, incluirAdmins, act]
   );
   const sel = useMemo(() => (quien === "todos" ? base : base.filter(r => r.email === quien)), [base, quien]);
@@ -114,7 +114,7 @@ export default function Reporte({ onVolver }) {
   const [rankAsig, setRankAsig] = useState("total");
   const ranking = useMemo(() => {
     const por = {};
-    (rows || []).filter(r => incluirAdmins || !["admin", "directivo"].includes(info[r.email]?.rol)).forEach(r => {
+    (rows || []).filter(r => incluirAdmins || !info[r.email]?.esPrueba).forEach(r => {
       const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, dias: new Set(), ultima: r.creado_en });
       const a = (r.actividad || "").split(".")[0];
       x.total++; if (x[a] !== undefined) x[a]++;
@@ -154,7 +154,7 @@ export default function Reporte({ onVolver }) {
             </select>
             <label style={{ color: muted, fontSize: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <input type="checkbox" checked={incluirAdmins} onChange={e => setIncluirAdmins(e.target.checked)} />
-              Incluir pruebas de administradores y directivos
+              Incluir pruebas de administradores y directivos (sin alumno asociado)
             </label>
           </div>
 

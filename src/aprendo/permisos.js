@@ -39,12 +39,13 @@ export const CATALOGO = [
 ];
 
 // Regla: si un contenido no tiene grupos marcados → lo ve todo el mundo.
-// Si tiene grupos marcados → solo los usuarios de esos grupos (administradores y directivos siempre lo ven).
+// Si tiene grupos marcados → solo los usuarios de esos grupos.
+// Administradores: siempre ven todo. Directivos: ven todo, salvo que tengan grupos asignados (entonces ven lo mismo que ese grupo).
 export function crearPuede(rol, gruposUsuario, cfg) {
   const permisos = cfg?.permisos || {};
   const mios = gruposUsuario || [];
   return (id) => {
-    if (rol === "admin" || rol === "directivo") return true;
+    if (rol === "admin" || (rol === "directivo" && mios.length === 0)) return true;
     const reglas = permisos[id];
     if (!reglas || reglas.length === 0) return true;
     return reglas.some(g => mios.includes(g));
