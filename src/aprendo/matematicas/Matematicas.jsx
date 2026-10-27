@@ -44,7 +44,7 @@ export default function Matematicas({ onVolver }) {
       </button>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ fontSize: 38, marginBottom: 6 }}>🔢</div>
-        <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>Matemáticas</div>
+        <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>Habilidades Matemáticas</div>
         <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Elige una actividad</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

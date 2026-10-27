@@ -1,6 +1,7 @@
 import { PREGUNTAS as PREG_EFRAIN } from "./lenguaje/efrainData.js";
 import { VOCAB } from "./ingles/unit4Data.js";
 import { INICIO } from "./ingles/unit4Oraciones.js";
+import { construir as construirDivision } from "./mate/divisionData.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase.js";
 import { usePermisos } from "./permisos.js";
@@ -11,6 +12,7 @@ const respuestaCorrecta = (item) => {
   if (item.startsWith("l:efrain:")) return PREG_EFRAIN.find(p => p.key === item)?.correcta || null;
   if (item.startsWith("v:")) { const v = VOCAB.find(x => x.en === item.slice(2)); return v ? `${v.en} = ${v.es}` : null; }
   if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
+  if (item.startsWith("d:")) return construirDivision(item)?.solucion || null;
   if (item.startsWith("m:")) { const p = item.split(":"); return p[2] || null; }
   return null;
 };
@@ -24,16 +26,22 @@ const ACTIVIDADES = [
   { id: "ingles.unit4", label: "Inglés · Unit 4: Vocabulario" },
   { id: "ingles.unit4oraciones", label: "Inglés · Unit 4: Complete the sentence" },
   { id: "lenguaje.efrain", label: "Lenguaje · Efraín en La Vega" },
-  { id: "matematicas.cuadricula", label: "Matemáticas · Encuentra la casilla" },
-  { id: "matematicas.localizar", label: "Matemáticas · Localiza los objetos" },
-  { id: "matematicas.mapa", label: "Matemáticas · Mapa del Reino" },
+  { id: "matematicas.cuadricula", label: "Hab. Matemáticas · Encuentra la casilla" },
+  { id: "matematicas.localizar", label: "Hab. Matemáticas · Localiza los objetos" },
+  { id: "matematicas.mapa", label: "Hab. Matemáticas · Mapa del Reino" },
+  { id: "mate.resta", label: "Matemáticas · Resta repetida" },
+  { id: "mate.reparto", label: "Matemáticas · Repartir en partes iguales" },
+  { id: "mate.tablas", label: "Matemáticas · Tablas y divisiones" },
+  { id: "mate.familias", label: "Matemáticas · Multiplicar y dividir" },
+  { id: "mate.problemas", label: "Matemáticas · Problemas" },
 ];
 
 const ASIGNATURAS = [
   { id: "total", label: "Total" },
   { id: "ingles", label: "Inglés" },
   { id: "lenguaje", label: "Lenguaje" },
-  { id: "matematicas", label: "Matemáticas" },
+  { id: "mate", label: "Matemáticas" },
+  { id: "matematicas", label: "Hab. Matemáticas" },
 ];
 const dia = (f) => { try { return new Date(f).toLocaleDateString("sv-SE"); } catch { return ""; } };
 const fechaCorta = (f) => { try { return new Date(f).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" }); } catch { return ""; } };
@@ -107,7 +115,7 @@ export default function Reporte({ onVolver }) {
   const ranking = useMemo(() => {
     const por = {};
     (rows || []).filter(r => incluirAdmins || !["admin", "directivo"].includes(info[r.email]?.rol)).forEach(r => {
-      const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, matematicas: 0, dias: new Set(), ultima: r.creado_en });
+      const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, dias: new Set(), ultima: r.creado_en });
       const a = (r.actividad || "").split(".")[0];
       x.total++; if (x[a] !== undefined) x[a]++;
       x.dias.add(dia(r.creado_en));
@@ -175,7 +183,7 @@ export default function Reporte({ onVolver }) {
                   </div>
                   <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
                     {rankAsig === "total"
-                      ? `Inglés ${x.ingles} · Lenguaje ${x.lenguaje} · Matemáticas ${x.matematicas} · `
+                      ? `Inglés ${x.ingles} · Lenguaje ${x.lenguaje} · Matemáticas ${x.mate} · Hab. Mat. ${x.matematicas} · `
                       : ""}
                     {x.nDias} {x.nDias === 1 ? "día" : "días"} con actividad · última vez {fechaCorta(x.ultima)}
                   </div>
@@ -183,7 +191,7 @@ export default function Reporte({ onVolver }) {
               ))}
             </div>
           )}
-          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas (todas las actividades, sin el filtro de arriba). Matemáticas se registra desde esta versión.</div>
+          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas (todas las actividades, sin el filtro de arriba). Matemáticas y Habilidades Matemáticas se registran desde esta versión.</div>
 
           {base.length === 0 ? (
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: 24, textAlign: "center", color: muted }}>
