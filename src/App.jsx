@@ -2245,6 +2245,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
   ];
   const [selCols, setSelCols] = useState(new Set(["id","nombre_completo","apod1_nombre","apod2_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
+  const estrecho = typeof window !== "undefined" && window.innerWidth < 700; // celular
   const [sort1, setSort1] = useState("nombres");
   const [sort2, setSort2] = useState("apellidos");
   const [sort3, setSort3] = useState("");
@@ -2341,7 +2342,12 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
               <Icon name="tag" size={13} /> Columnas ({selCols.size})
             </Btn>
             {showColPicker && (
-              <div style={{ position: "absolute", right: 0, top: "110%", background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 12, padding: 16, zIndex: 100, minWidth: 260, maxHeight: 400, overflowY: "auto" }}>
+              <>
+              {/* En celular: hoja fija abajo (no se sale de la pantalla); en computador: menú bajo el botón */}
+              {estrecho && <div onClick={() => setShowColPicker(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 99 }} />}
+              <div style={estrecho
+                ? { position: "fixed", left: 12, right: 12, bottom: 12, background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 16, zIndex: 100, maxHeight: "75vh", overflowY: "auto", boxShadow: "0 8px 30px rgba(0,0,0,0.3)" }
+                : { position: "absolute", right: 0, top: "110%", background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 12, padding: 16, zIndex: 100, minWidth: 260, maxHeight: 400, overflowY: "auto" }}>
                 <div style={{ color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>Seleccionar columnas</div>
                 {ALL_COLS.map(c => (
                   <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", cursor: "pointer" }}>
@@ -2349,7 +2355,9 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                     <span style={{ color: PALETTE.text, fontSize: 13 }}>{c.label}</span>
                   </label>
                 ))}
+                {estrecho && <div style={{ marginTop: 12 }}><Btn small onClick={() => setShowColPicker(false)}>Listo</Btn></div>}
               </div>
+              </>
             )}
           </div>
           <Btn variant="ghost" small onClick={exportExcel}>
@@ -2358,7 +2366,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selected ? "230px 1fr" : "1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: selected && !estrecho ? "230px 1fr" : "1fr", gap: 16 }}>
         {/* Lista */}
         <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
           <div style={{ padding: "10px 14px", borderBottom: `1px solid ${PALETTE.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2825,15 +2833,15 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {userReal.rol === "admin" && !verComo && (
             <button onClick={() => setVerComoModal({ rol: "alumno", grupo: "" })} title="Ver la app como otro perfil"
-              style={{ background: PALETTE.purple + "22", border: `1px solid ${PALETTE.purple}66`, borderRadius: 8, cursor: "pointer", color: PALETTE.purple, padding: "6px 10px", fontSize: 12, fontWeight: 700 }}>
-              👁 Ver como
+              style={{ background: PALETTE.purple + "22", border: `1px solid ${PALETTE.purple}66`, borderRadius: 8, cursor: "pointer", color: PALETTE.purple, padding: "6px 10px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>
+              {typeof window !== "undefined" && window.innerWidth < 700 ? "👁" : "👁 Ver como"}
             </button>
           )}
           <div style={{ textAlign: "right" }}>
             <div style={{ color: PALETTE.text, fontSize: 12, fontWeight: 700 }}>{user.nombre}</div>
             <div style={{ color: isAdmin ? PALETTE.accent : PALETTE.green, fontSize: 10 }}>{isAdmin ? "Administrador" : (ROL_LABEL[user.rol] || "Solo vista")}</div>
           </div>
-          <button onClick={handleLogout} title="Cerrar sesión" style={{ background: PALETTE.red + "22", border: `1px solid ${PALETTE.red}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.red, padding: "6px 10px", fontSize: 12, fontWeight: 600 }}>
+          <button onClick={handleLogout} title="Cerrar sesión" style={{ background: PALETTE.red + "22", border: `1px solid ${PALETTE.red}44`, borderRadius: 8, cursor: "pointer", color: PALETTE.red, padding: "6px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>
             Salir
           </button>
         </div>
