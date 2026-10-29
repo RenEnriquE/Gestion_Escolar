@@ -2243,7 +2243,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
     { id: "apod2_email",  label: "Apod. suplente Email",         get: a => a.apod2_email||"" },
     { id: "apod2_fnac",   label: "Apod. suplente F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
   ];
-  const [selCols, setSelCols] = useState(new Set(["rut","nombre_completo","apod1_rut","apod1_nombre","apod1_cel","apod2_nombre","apod2_rut","apod2_cel"]));
+  const [selCols, setSelCols] = useState(new Set(["id","nombre_completo","apod1_nombre","apod2_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
   const [sort1, setSort1] = useState("nombres");
   const [sort2, setSort2] = useState("apellidos");
