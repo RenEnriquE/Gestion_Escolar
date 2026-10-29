@@ -546,7 +546,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           {/* Apoderado 1 */}
           <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado titular</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Nombre completo"><Input value={form.apod1_nombre||""} onChange={e => setForm(f => ({ ...f, apod1_nombre: e.target.value }))} placeholder="Nombre del apoderado" /></Field>
+            <Field label="Nombre completo"><Input value={form.apod1_nombre||""} onChange={e => setForm(f => ({ ...f, apod1_nombre: e.target.value.toUpperCase() }))} placeholder="Nombre del apoderado" /></Field>
             <Field label="RUT"><Input value={form.apod1_rut||""} onChange={e => setForm(f => ({ ...f, apod1_rut: e.target.value }))} placeholder="12345678-9" /></Field>
             <Field label="Teléfono"><Input value={form.apod1_cel||""} onChange={e => setForm(f => ({ ...f, apod1_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
             <Field label="Email"><Input type="email" value={form.apod1_email||""} onChange={e => setForm(f => ({ ...f, apod1_email: e.target.value }))} placeholder="correo@email.com" /></Field>
@@ -555,7 +555,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           {/* Apoderado 2 */}
           <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado suplente (opcional)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Nombre completo"><Input value={form.apod2_nombre||""} onChange={e => setForm(f => ({ ...f, apod2_nombre: e.target.value }))} placeholder="Opcional" /></Field>
+            <Field label="Nombre completo"><Input value={form.apod2_nombre||""} onChange={e => setForm(f => ({ ...f, apod2_nombre: e.target.value.toUpperCase() }))} placeholder="Opcional" /></Field>
             <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" /></Field>
             <Field label="Teléfono"><Input value={form.apod2_cel||""} onChange={e => setForm(f => ({ ...f, apod2_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
             <Field label="Email"><Input type="email" value={form.apod2_email||""} onChange={e => setForm(f => ({ ...f, apod2_email: e.target.value }))} placeholder="correo@email.com" /></Field>
@@ -2490,7 +2490,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             </div>
             <SecTitle t="Apoderado titular" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
-              <Field label="Nombre"><Input value={form.apod1_nombre} onChange={e => setForm(f=>({...f,apod1_nombre:e.target.value}))} /></Field>
+              <Field label="Nombre"><Input value={form.apod1_nombre} onChange={e => setForm(f=>({...f,apod1_nombre:e.target.value.toUpperCase()}))} /></Field>
               <Field label="RUT"><Input value={form.apod1_rut} onChange={e => setForm(f=>({...f,apod1_rut:e.target.value}))} placeholder="12345678-9" /></Field>
               <Field label="Teléfono"><Input value={form.apod1_cel} onChange={e => setForm(f=>({...f,apod1_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod1_email} onChange={e => setForm(f=>({...f,apod1_email:e.target.value}))} /></Field>
@@ -2498,7 +2498,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             </div>
             <SecTitle t="Apoderado suplente" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <Field label="Nombre"><Input value={form.apod2_nombre} onChange={e => setForm(f=>({...f,apod2_nombre:e.target.value}))} /></Field>
+              <Field label="Nombre"><Input value={form.apod2_nombre} onChange={e => setForm(f=>({...f,apod2_nombre:e.target.value.toUpperCase()}))} /></Field>
               <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" /></Field>
               <Field label="Teléfono"><Input value={form.apod2_cel} onChange={e => setForm(f=>({...f,apod2_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod2_email} onChange={e => setForm(f=>({...f,apod2_email:e.target.value}))} /></Field>
