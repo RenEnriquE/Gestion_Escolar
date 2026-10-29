@@ -1531,6 +1531,9 @@ const SEED_VISIBILITY = {
   tipos: false, usuarios: false,
 };
 
+// Secciones que ve un directivo si el administrador no ha configurado otra cosa
+const DIRECTIVO_POR_DEFECTO = { actividades: true, aprendo: true, presupuestos: true };
+
 const Cargando = ({ texto = "Cargando..." }) => (
   <div style={{ minHeight: "100vh", background: PALETTE.bg, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
     <div style={{ width: 40, height: 40, border: `4px solid ${PALETTE.border}`, borderTop: `4px solid ${PALETTE.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
@@ -1930,31 +1933,45 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
         </div>
       )}
 
-      {tabU === "secciones" && (
-        <div>
-          <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Secciones visibles para Apoderados</h3>
-          <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Controla qué secciones del menú pueden ver los apoderados al iniciar sesión.</p>
-          <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
-            {NAV_SECCIONES.map((item, i) => {
-              const visible = visibility[item.id] ?? true;
-              return (
-                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < NAV_SECCIONES.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <Icon name={item.icon} size={16} color={PALETTE.muted} />
-                    <span style={{ color: PALETTE.text, fontSize: 14 }}>{item.label}</span>
+      {tabU === "secciones" && (() => {
+        const filas = NAV_ITEMS.filter(n => n.id !== "usuarios");
+        const dirOn = (id) => visibility.directivo?.[id] ?? DIRECTIVO_POR_DEFECTO[id] ?? false;
+        const Interruptor = ({ on, onClick }) => (
+          <button onClick={onClick} style={{ width: 44, height: 24, borderRadius: 12, background: on ? PALETTE.accent : PALETTE.border, border: "none", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
+            <span style={{ position: "absolute", top: 3, left: on ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+          </button>
+        );
+        const Fijo = ({ texto }) => <span style={{ color: PALETTE.muted, fontSize: 11 }}>{texto}</span>;
+        return (
+          <div>
+            <h3 style={{ color: PALETTE.muted, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Secciones visibles por perfil</h3>
+            <p style={{ color: PALETTE.muted, fontSize: 12, marginBottom: 16 }}>Elige qué secciones del menú ve cada perfil. Los administradores ven todo; Alumno solo ve ¡Aprendo! y Colaboraciones solo su sección. Solo administradores pueden editar datos: los demás perfiles ven y descargan en modo lectura.</p>
+            <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px", gap: 8, padding: "10px 20px", borderBottom: `1px solid ${PALETTE.border}`, color: PALETTE.muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+                <span>Sección</span><span style={{ textAlign: "center" }}>Solo vista</span><span style={{ textAlign: "center" }}>Directivo</span>
+              </div>
+              {filas.map((item, i) => {
+                const vVisible = visibility[item.id] ?? true;
+                const vFijo = item.id === "presupuestos" ? "No aplica" : item.id === "tipos" ? "No aplica" : item.id === "aprendo" ? "Siempre" : null;
+                return (
+                  <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px", gap: 8, alignItems: "center", padding: "12px 20px", borderBottom: i < filas.length - 1 ? `1px solid ${PALETTE.border}` : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <Icon name={item.icon} size={16} color={PALETTE.muted} />
+                      <span style={{ color: PALETTE.text, fontSize: 14 }}>{item.label}</span>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      {vFijo ? <Fijo texto={vFijo} /> : <Interruptor on={vVisible} onClick={() => setVisibility(v => ({ ...v, [item.id]: !vVisible }))} />}
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <Interruptor on={dirOn(item.id)} onClick={() => setVisibility(v => ({ ...v, directivo: { ...(v.directivo || {}), [item.id]: !dirOn(item.id) } }))} />
+                    </div>
                   </div>
-                  <button onClick={() => setVisibility(v => ({ ...v, [item.id]: !visible }))} style={{
-                    width: 44, height: 24, borderRadius: 12, background: visible ? PALETTE.accent : PALETTE.border,
-                    border: "none", cursor: "pointer", position: "relative", transition: "background 0.2s"
-                  }}>
-                    <span style={{ position: "absolute", top: 3, left: visible ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
@@ -2719,8 +2736,8 @@ export default function App() {
   const nav = NAV_ITEMS.filter(item => {
     if (isAdmin) return true;
     if (isCollab) return item.id === "colaboraciones"; // collab only sees colaboraciones
-    // Directivo: actividades (solo lectura), ¡Aprendo! (como un alumno) y acceso a Presupuestos
-    if (isDirectivo) return ["actividades", "aprendo", "presupuestos"].includes(item.id);
+    // Directivo: solo lectura; las secciones las define el administrador en Usuarios → Secciones visibles
+    if (isDirectivo) return item.id !== "usuarios" && (visibility.directivo?.[item.id] ?? DIRECTIVO_POR_DEFECTO[item.id] ?? false);
     if (item.id === "usuarios" || item.id === "tipos" || item.id === "presupuestos") return false;
     if (user.rol === "alumno") return item.id === "aprendo";
     if (item.id === "aprendo") return true;
