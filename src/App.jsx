@@ -464,7 +464,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <div><span style={{ color: PALETTE.muted }}>Curso: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>3ro C</span></div>
             <div><span style={{ color: PALETTE.muted }}>Apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado || "—"}</span></div>
             <div><span style={{ color: PALETTE.muted }}>Teléfono: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.telefono || "—"}</span></div>
-            {viewAlumno.apoderado2 && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>2do apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado2}</span></div>}
+            {viewAlumno.apoderado2 && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Apoderado suplente: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado2}</span></div>}
             {viewAlumno.email && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Email: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.email}</span></div>}
             {viewAlumno.observaciones && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Obs: </span><span style={{ color: PALETTE.text }}>{viewAlumno.observaciones}</span></div>}
           </div>
@@ -544,7 +544,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             </Field>
           </div>
           {/* Apoderado 1 */}
-          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado principal</div>
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado titular</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Nombre completo"><Input value={form.apod1_nombre||""} onChange={e => setForm(f => ({ ...f, apod1_nombre: e.target.value }))} placeholder="Nombre del apoderado" /></Field>
             <Field label="RUT"><Input value={form.apod1_rut||""} onChange={e => setForm(f => ({ ...f, apod1_rut: e.target.value }))} placeholder="12345678-9" /></Field>
@@ -553,7 +553,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <Field label="Fecha de nacimiento"><DateInput value={form.apod1_fnac||""} onChange={v => setForm(f => ({ ...f, apod1_fnac: v }))} /></Field>
           </div>
           {/* Apoderado 2 */}
-          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Segundo apoderado (opcional)</div>
+          <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado suplente (opcional)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Nombre completo"><Input value={form.apod2_nombre||""} onChange={e => setForm(f => ({ ...f, apod2_nombre: e.target.value }))} placeholder="Opcional" /></Field>
             <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" /></Field>
@@ -2215,16 +2215,16 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
     { id: "nombre2",      label: "Segundo Nombre",       get: a => a.nombre2||"" },
     { id: "fechaNac",     label: "Fecha Nacimiento",     get: a => toDisplay(a.fechaNac)||"" },
     { id: "sexo",         label: "Sexo",                 get: a => a.sexo==="M"?"Masculino":"Femenino" },
-    { id: "apod1_nombre", label: "Apod.1 Nombre",        get: a => a.apod1_nombre||a.apoderado||"" },
-    { id: "apod1_rut",    label: "Apod.1 RUT",           get: a => a.apod1_rut||"" },
-    { id: "apod1_cel",    label: "Apod.1 Teléfono",      get: a => a.apod1_cel||a.telefono||"" },
-    { id: "apod1_email",  label: "Apod.1 Email",         get: a => a.apod1_email||a.email||"" },
-    { id: "apod1_fnac",   label: "Apod.1 F.Nacimiento",  get: a => toDisplay(a.apod1_fnac)||"" },
-    { id: "apod2_nombre", label: "Apod.2 Nombre",        get: a => a.apod2_nombre||a.apoderado2||"" },
-    { id: "apod2_rut",    label: "Apod.2 RUT",           get: a => a.apod2_rut||"" },
-    { id: "apod2_cel",    label: "Apod.2 Teléfono",      get: a => a.apod2_cel||"" },
-    { id: "apod2_email",  label: "Apod.2 Email",         get: a => a.apod2_email||"" },
-    { id: "apod2_fnac",   label: "Apod.2 F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
+    { id: "apod1_nombre", label: "Apod. titular Nombre",        get: a => a.apod1_nombre||a.apoderado||"" },
+    { id: "apod1_rut",    label: "Apod. titular RUT",           get: a => a.apod1_rut||"" },
+    { id: "apod1_cel",    label: "Apod. titular Teléfono",      get: a => a.apod1_cel||a.telefono||"" },
+    { id: "apod1_email",  label: "Apod. titular Email",         get: a => a.apod1_email||a.email||"" },
+    { id: "apod1_fnac",   label: "Apod. titular F.Nacimiento",  get: a => toDisplay(a.apod1_fnac)||"" },
+    { id: "apod2_nombre", label: "Apod. suplente Nombre",        get: a => a.apod2_nombre||a.apoderado2||"" },
+    { id: "apod2_rut",    label: "Apod. suplente RUT",           get: a => a.apod2_rut||"" },
+    { id: "apod2_cel",    label: "Apod. suplente Teléfono",      get: a => a.apod2_cel||"" },
+    { id: "apod2_email",  label: "Apod. suplente Email",         get: a => a.apod2_email||"" },
+    { id: "apod2_fnac",   label: "Apod. suplente F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
   ];
   const [selCols, setSelCols] = useState(new Set(["rut","nombre_completo","apod1_rut","apod1_nombre","apod1_cel","apod2_nombre","apod2_rut","apod2_cel"]));
   const [showColPicker, setShowColPicker] = useState(false);
@@ -2438,12 +2438,12 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             <InfoRow label="RUT" value={selected.rut} />
             <InfoRow label="Fecha de nacimiento" value={toDisplay(selected.fechaNac)} />
             <InfoRow label="Sexo" value={selected.sexo === "M" ? "Masculino" : "Femenino"} />
-            <SecTitle t="Apoderado principal" />
+            <SecTitle t="Apoderado titular" />
             <InfoRow label="Nombre" value={selected.apod1_nombre || selected.apoderado} />
             <InfoRow label="RUT" value={selected.apod1_rut} />
             <InfoRow label="Teléfono" value={selected.apod1_cel || selected.telefono} />
             {(selected.apod2_nombre || selected.apoderado2) && <>
-              <SecTitle t="Segundo apoderado" />
+              <SecTitle t="Apoderado suplente" />
               <InfoRow label="Nombre" value={selected.apod2_nombre || selected.apoderado2} />
               <InfoRow label="RUT" value={selected.apod2_rut} />
               <InfoRow label="Teléfono" value={selected.apod2_cel} />
@@ -2471,7 +2471,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
               <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.fechaNac} onChange={v => setForm(f=>({...f,fechaNac:v}))} /></Field>
               <Field label="Sexo"><Select value={form.sexo} onChange={e => setForm(f=>({...f,sexo:e.target.value}))}><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
             </div>
-            <SecTitle t="Apoderado principal" />
+            <SecTitle t="Apoderado titular" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
               <Field label="Nombre"><Input value={form.apod1_nombre} onChange={e => setForm(f=>({...f,apod1_nombre:e.target.value}))} /></Field>
               <Field label="RUT"><Input value={form.apod1_rut} onChange={e => setForm(f=>({...f,apod1_rut:e.target.value}))} placeholder="12345678-9" /></Field>
@@ -2479,7 +2479,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
               <Field label="Email"><Input type="email" value={form.apod1_email} onChange={e => setForm(f=>({...f,apod1_email:e.target.value}))} /></Field>
               <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod1_fnac} onChange={v => setForm(f=>({...f,apod1_fnac:v}))} /></Field>
             </div>
-            <SecTitle t="Segundo apoderado" />
+            <SecTitle t="Apoderado suplente" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Nombre"><Input value={form.apod2_nombre} onChange={e => setForm(f=>({...f,apod2_nombre:e.target.value}))} /></Field>
               <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" /></Field>
