@@ -2222,8 +2222,10 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
   const [search, setSearch] = useState("");
 
   // Columnas exportables
+  // ID para mostrar/exportar: a1 → A01, a15 → A15 (el id interno en la base no cambia)
+  const idVisible = id => { const m = /^a(\d+)$/i.exec(String(id||"")); return m ? "A" + m[1].padStart(2,"0") : (id||""); };
   const ALL_COLS = [
-    { id: "id",           label: "ID Alumno",           get: a => a.id },
+    { id: "id",           label: "ID Alumno",           get: a => idVisible(a.id) },
     { id: "rut",          label: "RUT Alumno",           get: a => a.rut||"" },
     { id: "nombre_completo", label: "Nombre Completo",  get: a => [a.nombres,a.nombre2,a.apellidos,a.apellido2].filter(Boolean).join(" ") },
     { id: "apellidos",    label: "Apellido Paterno",     get: a => a.apellidos||"" },
