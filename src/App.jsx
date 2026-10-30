@@ -2270,10 +2270,11 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
           || (a.apod2_nombre||a.apoderado2||"").toLowerCase().includes(q);
     })
     .sort((a,b) => {
-      const v1 = getVal(a,sort1).localeCompare(getVal(b,sort1),"es"); if (v1 !== 0) return v1;
-      const v2 = getVal(a,sort2).localeCompare(getVal(b,sort2),"es"); if (v2 !== 0) return v2;
+      const cmp = (x,y) => String(x||"").localeCompare(String(y||""),"es",{numeric:true});
+      const v1 = cmp(getVal(a,sort1),getVal(b,sort1)); if (v1 !== 0) return v1;
+      const v2 = cmp(getVal(a,sort2),getVal(b,sort2)); if (v2 !== 0) return v2;
       if (!sort3) return 0;
-      return getVal(a,sort3).localeCompare(getVal(b,sort3),"es");
+      return cmp(getVal(a,sort3),getVal(b,sort3));
     });
 
   const openEdit = (al) => {
@@ -2380,7 +2381,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                   <span style={{ color: PALETTE.muted, fontSize: 10, minWidth: 16 }}>{lbl}</span>
                   <select value={val} onChange={e => setter(e.target.value)} style={{ flex: 1, background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 6, padding: "3px 6px", color: PALETTE.text, fontSize: 11, outline: "none" }}>
                     {lbl !== "1°" && <option value="">— ninguno —</option>}
-                    {ALL_COLS.filter(c => c.id !== "id").map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                    {ALL_COLS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
                 </div>
               ))}
