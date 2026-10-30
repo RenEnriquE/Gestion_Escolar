@@ -335,12 +335,12 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       apod1_rut: al.apod1_rut || "",
       apod1_cel: al.apod1_cel || al.telefono || "",
       apod1_email: al.apod1_email || al.email || "",
-      apod1_fnac: al.apod1_fnac || "",
+      apod1_fnac: al.apod1_fnac || "", apod1_sexo: al.apod1_sexo || "",
       apod2_nombre: al.apod2_nombre || al.apoderado2 || "",
       apod2_rut: al.apod2_rut || "",
       apod2_cel: al.apod2_cel || "",
       apod2_email: al.apod2_email || "",
-      apod2_fnac: al.apod2_fnac || "",
+      apod2_fnac: al.apod2_fnac || "", apod2_sexo: al.apod2_sexo || "",
     });
     setEditAlumno(al); setModalOpen(true);
   };
@@ -551,6 +551,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <Field label="Teléfono"><Input value={form.apod1_cel||""} onChange={e => setForm(f => ({ ...f, apod1_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
             <Field label="Email"><Input type="email" value={form.apod1_email||""} onChange={e => setForm(f => ({ ...f, apod1_email: e.target.value }))} placeholder="correo@email.com" /></Field>
             <Field label="Fecha de nacimiento"><DateInput value={form.apod1_fnac||""} onChange={v => setForm(f => ({ ...f, apod1_fnac: v }))} /></Field>
+            <Field label="Sexo"><Select value={form.apod1_sexo||""} onChange={e => setForm(f => ({ ...f, apod1_sexo: e.target.value }))}><option value="">— sin indicar —</option><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
           </div>
           {/* Apoderado 2 */}
           <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado suplente (opcional)</div>
@@ -560,6 +561,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
             <Field label="Teléfono"><Input value={form.apod2_cel||""} onChange={e => setForm(f => ({ ...f, apod2_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
             <Field label="Email"><Input type="email" value={form.apod2_email||""} onChange={e => setForm(f => ({ ...f, apod2_email: e.target.value }))} placeholder="correo@email.com" /></Field>
             <Field label="Fecha de nacimiento"><DateInput value={form.apod2_fnac||""} onChange={v => setForm(f => ({ ...f, apod2_fnac: v }))} /></Field>
+            <Field label="Sexo"><Select value={form.apod2_sexo||""} onChange={e => setForm(f => ({ ...f, apod2_sexo: e.target.value }))}><option value="">— sin indicar —</option><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
           </div>
           {/* Socio y observaciones */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "14px 0 8px" }}>
@@ -2261,6 +2263,20 @@ const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
   );
 };
 
+// Selector de sexo (M / F / sin indicar)
+const SexoSel = ({ value, onSave, readOnly }) => {
+  const vacio = !value;
+  const txt = value === "M" ? "Masculino" : value === "F" ? "Femenino" : "—";
+  if (readOnly) return <span style={{ fontSize: 12, color: vacio ? "#f59e0b" : PALETTE.text }}>{txt}</span>;
+  return (
+    <select value={value || ""} onChange={e => onSave(e.target.value)}
+      style={{ width: "100%", boxSizing: "border-box", background: PALETTE.bg, color: PALETTE.text, fontSize: 12, padding: "6px 6px",
+               border: `1px solid ${vacio ? "#f59e0b" : PALETTE.border}`, borderRadius: 6, outline: "none" }}>
+      <option value="">— elegir —</option><option value="M">Masculino</option><option value="F">Femenino</option>
+    </select>
+  );
+};
+
 // ── Vista "Datos pendientes" (apoderados y suplentes) ────────────────────────
 const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
   const [soloPend, setSoloPend] = useState(true);
@@ -2274,7 +2290,9 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
     const f = [];
     if (!t1(a).trim()) f.push("Apoderado");
     if (!rutLimpio(a.apod1_rut)) f.push("RUT apoderado");
+    if (!a.apod1_sexo) f.push("Sexo apoderado");
     if (t2(a).trim() && !rutLimpio(a.apod2_rut)) f.push("RUT suplente");
+    if (t2(a).trim() && !a.apod2_sexo) f.push("Sexo suplente");
     return f;
   };
   const todos = [...alumnos].sort((a,b) => num(a.id) - num(b.id) || String(a.id).localeCompare(String(b.id)));
@@ -2305,10 +2323,10 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
         {" "}Naranja = falta el dato · Rojo = RUT con dígito verificador inválido.
       </div>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", minWidth: estrecho ? 860 : 0, borderCollapse: "collapse", fontSize: 12 }}>
+        <table style={{ width: "100%", minWidth: estrecho ? 1100 : 0, borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ textAlign: "left", color: PALETTE.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: .5 }}>
-              {["ID","Alumno","Apoderado","RUT apoderado","Apoderado suplente","RUT suplente"].map(h => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${PALETTE.border}`, whiteSpace: "nowrap" }}>{h}</th>)}
+              {["ID","Alumno","Apoderado","RUT apoderado","Sexo","Apoderado suplente","RUT suplente","Sexo"].map(h => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${PALETTE.border}`, whiteSpace: "nowrap" }}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -2318,11 +2336,13 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
                 <td style={{ padding: "5px 6px", color: PALETTE.text, minWidth: 150 }}>{nombreAl(a)}</td>
                 <td style={{ padding: "4px 6px", minWidth: 190 }}><CeldaEdit upper readOnly={!puedeEditar} value={t1(a)} onSave={v => upd(a.id, { apod1_nombre: v, apoderado: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar} value={a.apod1_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod1_rut: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 110 }}><SexoSel readOnly={!puedeEditar} value={a.apod1_sexo} onSave={v => upd(a.id, { apod1_sexo: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 190 }}><CeldaEdit upper readOnly={!puedeEditar} value={t2(a)} placeholder="(sin suplente)" onSave={v => upd(a.id, { apod2_nombre: v, apoderado2: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod2_rut: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 110 }}><SexoSel readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_sexo} onSave={v => upd(a.id, { apod2_sexo: v })} /></td>
               </tr>
             ))}
-            {filas.length === 0 && <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", color: PALETTE.muted }}>{soloPend ? "No hay datos pendientes 🎉" : "Sin resultados"}</td></tr>}
+            {filas.length === 0 && <tr><td colSpan={8} style={{ padding: 20, textAlign: "center", color: PALETTE.muted }}>{soloPend ? "No hay datos pendientes 🎉" : "Sin resultados"}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -2353,11 +2373,13 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
     { id: "apod1_cel",    label: "Apod. titular Teléfono",      get: a => a.apod1_cel||a.telefono||"" },
     { id: "apod1_email",  label: "Apod. titular Email",         get: a => a.apod1_email||a.email||"" },
     { id: "apod1_fnac",   label: "Apod. titular F.Nacimiento",  get: a => toDisplay(a.apod1_fnac)||"" },
+    { id: "apod1_sexo",   label: "Apod. titular Sexo",  get: a => a.apod1_sexo==="M"?"Masculino":a.apod1_sexo==="F"?"Femenino":"" },
     { id: "apod2_nombre", label: "Apod. suplente Nombre",        get: a => a.apod2_nombre||a.apoderado2||"" },
     { id: "apod2_rut",    label: "Apod. suplente RUT",           get: a => rutMostrar(a.apod2_rut) },
     { id: "apod2_cel",    label: "Apod. suplente Teléfono",      get: a => a.apod2_cel||"" },
     { id: "apod2_email",  label: "Apod. suplente Email",         get: a => a.apod2_email||"" },
     { id: "apod2_fnac",   label: "Apod. suplente F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
+    { id: "apod2_sexo",   label: "Apod. suplente Sexo",  get: a => a.apod2_sexo==="M"?"Masculino":a.apod2_sexo==="F"?"Femenino":"" },
   ];
   const [selCols, setSelCols] = useState(new Set(["id","nombre_completo","apod1_nombre","apod2_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
@@ -2399,10 +2421,10 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
       rut: al.rut||"", fechaNac: al.fechaNac||"", sexo: al.sexo||"M",
       apod1_nombre: al.apod1_nombre||al.apoderado||"",
       apod1_rut: al.apod1_rut||"", apod1_cel: al.apod1_cel||al.telefono||"",
-      apod1_email: al.apod1_email||al.email||"", apod1_fnac: al.apod1_fnac||"",
+      apod1_email: al.apod1_email||al.email||"", apod1_fnac: al.apod1_fnac||"", apod1_sexo: al.apod1_sexo||"",
       apod2_nombre: al.apod2_nombre||al.apoderado2||"",
       apod2_rut: al.apod2_rut||"", apod2_cel: al.apod2_cel||"",
-      apod2_email: al.apod2_email||"", apod2_fnac: al.apod2_fnac||"",
+      apod2_email: al.apod2_email||"", apod2_fnac: al.apod2_fnac||"", apod2_sexo: al.apod2_sexo||"",
     });
     setEditMode(true);
   };
@@ -2416,9 +2438,9 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
       apoderado: form.apod1_nombre, apoderado2: form.apod2_nombre,
       telefono: form.apod1_cel, email: form.apod1_email,
       apod1_nombre: form.apod1_nombre, apod1_rut: form.apod1_rut,
-      apod1_cel: form.apod1_cel, apod1_email: form.apod1_email, apod1_fnac: form.apod1_fnac,
+      apod1_cel: form.apod1_cel, apod1_email: form.apod1_email, apod1_fnac: form.apod1_fnac, apod1_sexo: form.apod1_sexo,
       apod2_nombre: form.apod2_nombre, apod2_rut: form.apod2_rut,
-      apod2_cel: form.apod2_cel, apod2_email: form.apod2_email, apod2_fnac: form.apod2_fnac,
+      apod2_cel: form.apod2_cel, apod2_email: form.apod2_email, apod2_fnac: form.apod2_fnac, apod2_sexo: form.apod2_sexo,
     } : a));
     setSelected(prev => ({ ...prev, ...form, nombre: nombreFull,
       nombres: form.nombre.toUpperCase(), apellidos: form.apellidos.toUpperCase() }));
@@ -2520,11 +2542,17 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                   <span style={{ color: PALETTE.muted, fontSize: 11, whiteSpace: "nowrap", marginLeft: "auto" }}>{rutMostrar(al.rut) || "Sin RUT"}</span>
                 </div>
                 <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 3 }}>
-                  <span style={{ opacity: .7 }}>Apoderado: </span><span style={{ color: PALETTE.text }}>{al.apod1_nombre || al.apoderado || "—"}</span>
+                  <span style={{ opacity: .7 }}>Apoderado: </span>
+                  <span style={{ marginRight: 6 }}>{rutMostrar(al.apod1_rut) || "Sin RUT"}</span>
+                  <span style={{ color: PALETTE.text }}>{al.apod1_nombre || al.apoderado || "—"}</span>
                 </div>
-                <div style={{ color: PALETTE.muted, fontSize: 11 }}>
-                  <span style={{ opacity: .7 }}>Apod. suplente: </span><span style={{ color: PALETTE.text }}>{al.apod2_nombre || al.apoderado2 || "—"}</span>
-                </div>
+                {(al.apod2_nombre || al.apoderado2) && (
+                  <div style={{ color: PALETTE.muted, fontSize: 11 }}>
+                    <span style={{ opacity: .7 }}>Apod. suplente: </span>
+                    <span style={{ marginRight: 6 }}>{rutMostrar(al.apod2_rut) || "Sin RUT"}</span>
+                    <span style={{ color: PALETTE.text }}>{al.apod2_nombre || al.apoderado2}</span>
+                  </div>
+                )}
                 <div style={{ color: PALETTE.muted, fontSize: 11 }}>
                   <span style={{ opacity: .7 }}>🎂 </span>{toDisplay(al.fechaNac) || "—"}
                 </div>
@@ -2602,11 +2630,13 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             <SecTitle t="Apoderado titular" />
             <InfoRow label="Nombre" value={selected.apod1_nombre || selected.apoderado} />
             <InfoRow label="RUT" value={rutMostrar(selected.apod1_rut)} />
+            <InfoRow label="Sexo" value={selected.apod1_sexo === "M" ? "Masculino" : selected.apod1_sexo === "F" ? "Femenino" : ""} />
             <InfoRow label="Teléfono" value={selected.apod1_cel || selected.telefono} />
             {(selected.apod2_nombre || selected.apoderado2) && <>
               <SecTitle t="Apoderado suplente" />
               <InfoRow label="Nombre" value={selected.apod2_nombre || selected.apoderado2} />
               <InfoRow label="RUT" value={rutMostrar(selected.apod2_rut)} />
+              <InfoRow label="Sexo" value={selected.apod2_sexo === "M" ? "Masculino" : selected.apod2_sexo === "F" ? "Femenino" : ""} />
               <InfoRow label="Teléfono" value={selected.apod2_cel} />
             </>}
           </div>
@@ -2639,6 +2669,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
               <Field label="Teléfono"><Input value={form.apod1_cel} onChange={e => setForm(f=>({...f,apod1_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod1_email} onChange={e => setForm(f=>({...f,apod1_email:e.target.value}))} /></Field>
               <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod1_fnac} onChange={v => setForm(f=>({...f,apod1_fnac:v}))} /></Field>
+              <Field label="Sexo"><Select value={form.apod1_sexo||""} onChange={e => setForm(f=>({...f,apod1_sexo:e.target.value}))}><option value="">— sin indicar —</option><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
             </div>
             <SecTitle t="Apoderado suplente" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -2647,6 +2678,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
               <Field label="Teléfono"><Input value={form.apod2_cel} onChange={e => setForm(f=>({...f,apod2_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod2_email} onChange={e => setForm(f=>({...f,apod2_email:e.target.value}))} /></Field>
               <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod2_fnac} onChange={v => setForm(f=>({...f,apod2_fnac:v}))} /></Field>
+              <Field label="Sexo"><Select value={form.apod2_sexo||""} onChange={e => setForm(f=>({...f,apod2_sexo:e.target.value}))}><option value="">— sin indicar —</option><option value="M">Masculino</option><option value="F">Femenino</option></Select></Field>
             </div>
           </div>
         )}
@@ -2672,9 +2704,9 @@ const dbToAlumno = r => ({
   telefono: r.telefono || "", email: r.email || "",
   observaciones: r.observaciones || "", socioAprendilandia: r.socio_aprendilandia || false,
   apod1_nombre: r.apod1_nombre || "", apod1_rut: r.apod1_rut || "",
-  apod1_cel: r.apod1_cel || "", apod1_email: r.apod1_email || "", apod1_fnac: r.apod1_fnac || "",
+  apod1_cel: r.apod1_cel || "", apod1_email: r.apod1_email || "", apod1_fnac: r.apod1_fnac || "", apod1_sexo: r.apod1_sexo || "",
   apod2_nombre: r.apod2_nombre || "", apod2_rut: r.apod2_rut || "",
-  apod2_cel: r.apod2_cel || "", apod2_email: r.apod2_email || "", apod2_fnac: r.apod2_fnac || "",
+  apod2_cel: r.apod2_cel || "", apod2_email: r.apod2_email || "", apod2_fnac: r.apod2_fnac || "", apod2_sexo: r.apod2_sexo || "",
 });
 const alumnoToDB = a => ({
   id: a.id, nombres: a.nombres, nombre2: a.nombre2 || "",
@@ -2685,9 +2717,9 @@ const alumnoToDB = a => ({
   telefono: a.telefono, email: a.email,
   observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia,
   apod1_nombre: a.apod1_nombre || "", apod1_rut: rutGuardar(a.apod1_rut || ""),
-  apod1_cel: a.apod1_cel || "", apod1_email: a.apod1_email || "", apod1_fnac: a.apod1_fnac || "",
+  apod1_cel: a.apod1_cel || "", apod1_email: a.apod1_email || "", apod1_fnac: a.apod1_fnac || "", apod1_sexo: a.apod1_sexo || "",
   apod2_nombre: a.apod2_nombre || "", apod2_rut: rutGuardar(a.apod2_rut || ""),
-  apod2_cel: a.apod2_cel || "", apod2_email: a.apod2_email || "", apod2_fnac: a.apod2_fnac || "",
+  apod2_cel: a.apod2_cel || "", apod2_email: a.apod2_email || "", apod2_fnac: a.apod2_fnac || "", apod2_sexo: a.apod2_sexo || "",
 });
 const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null, subactividades: r.subactividades || [], acumulaCreditos: r.acumula_creditos || false, valorCredito: r.valor_credito || 0, labelCredito: r.label_credito || "unidad" });
 const actToDB = a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, tipos: a.tipos, recurrencia: a.recurrencia, estado: a.estado, descripcion: a.descripcion || "", encuesta_id: a._encuestaId || null, subactividades: a.subactividades || [], acumula_creditos: a.acumulaCreditos || false, valor_credito: a.valorCredito || 0, label_credito: a.labelCredito || "unidad" });
