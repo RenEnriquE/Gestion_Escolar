@@ -2214,6 +2214,117 @@ const ManualCreditForm = ({ alumId, creditosManuales, setCreditosManuales }) => 
   );
 };
 
+// ID para mostrar/exportar: a1 → A01, a15 → A15 (el id interno en la base no cambia)
+const idVisible = id => { const m = /^a(\d{1,3})$/i.exec(String(id||"")); return m ? "A" + m[1].padStart(2,"0") : (id||""); };
+
+// ── RUT: limpiar, validar (módulo 11) y formatear ────────────────────────────
+const rutLimpio = v => String(v||"").replace(/[^0-9kK]/g,"").toUpperCase();
+const rutValido = v => {
+  const r = rutLimpio(v); if (r.length < 7) return false;
+  const cuerpo = r.slice(0,-1), dv = r.slice(-1);
+  let suma = 0, mul = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) { suma += Number(cuerpo[i]) * mul; mul = mul === 7 ? 2 : mul + 1; }
+  const res = 11 - (suma % 11);
+  return dv === (res === 11 ? "0" : res === 10 ? "K" : String(res));
+};
+const rutFormato = v => {
+  const r = rutLimpio(v); if (r.length < 2) return String(v||"").trim();
+  return r.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,".") + "-" + r.slice(-1);
+};
+
+// Celda editable: guarda al salir del campo (blur) o con Enter
+const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
+  const [v, setV] = useState(value || "");
+  useEffect(() => { setV(value || ""); }, [value]);
+  const vacio = !String(value||"").trim();
+  const malo = rut && !vacio && !rutValido(value);
+  const borde = malo ? PALETTE.red || "#ef4444" : vacio ? "#f59e0b" : PALETTE.border;
+  if (readOnly) return <span style={{ fontSize: 12, color: vacio ? "#f59e0b" : PALETTE.text }}>{value || "—"}</span>;
+  const commit = () => {
+    let n = v.trim();
+    if (upper) n = n.toUpperCase();
+    if (rut && n) n = rutFormato(n);
+    if (n !== (value || "")) onSave(n);
+    setV(n);
+  };
+  return (
+    <input value={v} placeholder={placeholder || ""}
+      onChange={e => setV(e.target.value)} onBlur={commit}
+      onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+      style={{ width: "100%", boxSizing: "border-box", background: PALETTE.bg, color: PALETTE.text, fontSize: 12, padding: "6px 8px",
+               border: `1px solid ${borde}`, borderRadius: 6, outline: "none" }} />
+  );
+};
+
+// ── Vista "Datos pendientes" (apoderados y suplentes) ────────────────────────
+const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
+  const [soloPend, setSoloPend] = useState(true);
+  const [q, setQ] = useState("");
+  const num = id => { const m = /(\d+)/.exec(String(id)); return m ? Number(m[1]) : 0; };
+  const nombreAl = a => [a.nombres, a.nombre2, a.apellidos, a.apellido2].filter(Boolean).join(" ") || a.nombre || "";
+  const t1 = a => a.apod1_nombre || a.apoderado || "";
+  const t2 = a => a.apod2_nombre || a.apoderado2 || "";
+  // Pendiente: falta apoderado, falta su RUT, o hay suplente sin RUT
+  const faltas = a => {
+    const f = [];
+    if (!t1(a).trim()) f.push("Apoderado");
+    if (!rutLimpio(a.apod1_rut)) f.push("RUT apoderado");
+    if (t2(a).trim() && !rutLimpio(a.apod2_rut)) f.push("RUT suplente");
+    return f;
+  };
+  const todos = [...alumnos].sort((a,b) => num(a.id) - num(b.id) || String(a.id).localeCompare(String(b.id)));
+  const conSupl = todos.filter(a => t2(a).trim());
+  const rut1ok = todos.filter(a => rutLimpio(a.apod1_rut)).length;
+  const rut2ok = conSupl.filter(a => rutLimpio(a.apod2_rut)).length;
+  const pend = todos.filter(a => faltas(a).length > 0).length;
+  const ql = q.trim().toLowerCase();
+  const filas = todos.filter(a => (!soloPend || faltas(a).length > 0) &&
+    (!ql || (nombreAl(a) + " " + t1(a) + " " + t2(a) + " " + idVisible(a.id)).toLowerCase().includes(ql)));
+  const upd = (id, patch) => setAlumnos(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+  const chip = (on) => ({ cursor: "pointer", fontSize: 12, padding: "5px 12px", borderRadius: 999, border: `1px solid ${on ? PALETTE.accent : PALETTE.border}`,
+    background: on ? PALETTE.accent + "22" : "transparent", color: on ? PALETTE.accent : PALETTE.muted, fontWeight: 600 });
+  return (
+    <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, padding: 16 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 12, fontSize: 12, color: PALETTE.muted }}>
+        <span><b style={{ color: PALETTE.text }}>{pend}</b> de {todos.length} alumnos con datos pendientes</span>
+        <span>RUT apoderado: <b style={{ color: PALETTE.text }}>{rut1ok}/{todos.length}</b></span>
+        <span>RUT suplente: <b style={{ color: PALETTE.text }}>{rut2ok}/{conSupl.length}</b></span>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 12 }}>
+        <button onClick={() => setSoloPend(true)} style={chip(soloPend)}>Solo pendientes</button>
+        <button onClick={() => setSoloPend(false)} style={chip(!soloPend)}>Todos</button>
+        <div style={{ flex: 1, minWidth: 160 }}><Input placeholder="Buscar alumno o apoderado..." value={q} onChange={e => setQ(e.target.value)} style={{ fontSize: 12 }} /></div>
+      </div>
+      <div style={{ fontSize: 11, color: PALETTE.muted, marginBottom: 8 }}>
+        {puedeEditar ? "Escribe directamente en las celdas; se guarda al salir del campo o con Enter. Los nombres se pasan a mayúsculas y el RUT se formatea solo." : "Vista de solo lectura."}
+        {" "}Naranja = falta el dato · Rojo = RUT con dígito verificador inválido.
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: estrecho ? 860 : 0, borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ textAlign: "left", color: PALETTE.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: .5 }}>
+              {["ID","Alumno","Apoderado","RUT apoderado","Apoderado suplente","RUT suplente"].map(h => <th key={h} style={{ padding: "6px 6px", borderBottom: `1px solid ${PALETTE.border}`, whiteSpace: "nowrap" }}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map(a => (
+              <tr key={a.id} style={{ borderBottom: `1px solid ${PALETTE.border}55` }}>
+                <td style={{ padding: "5px 6px", color: PALETTE.muted, fontWeight: 700, whiteSpace: "nowrap" }}>{idVisible(a.id)}</td>
+                <td style={{ padding: "5px 6px", color: PALETTE.text, minWidth: 150 }}>{nombreAl(a)}</td>
+                <td style={{ padding: "4px 6px", minWidth: 190 }}><CeldaEdit upper readOnly={!puedeEditar} value={t1(a)} onSave={v => upd(a.id, { apod1_nombre: v, apoderado: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar} value={a.apod1_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod1_rut: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 190 }}><CeldaEdit upper readOnly={!puedeEditar} value={t2(a)} placeholder="(sin suplente)" onSave={v => upd(a.id, { apod2_nombre: v, apoderado2: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod2_rut: v })} /></td>
+              </tr>
+            ))}
+            {filas.length === 0 && <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", color: PALETTE.muted }}>{soloPend ? "No hay datos pendientes 🎉" : "Sin resultados"}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 // ── Fichas de Alumnos ─────────────────────────────────────────────────────────
 const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, creditosManuales, setCreditosManuales }) => {
   const [selected, setSelected] = useState(null);
@@ -2222,8 +2333,6 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
   const [search, setSearch] = useState("");
 
   // Columnas exportables
-  // ID para mostrar/exportar: a1 → A01, a15 → A15 (el id interno en la base no cambia)
-  const idVisible = id => { const m = /^a(\d+)$/i.exec(String(id||"")); return m ? "A" + m[1].padStart(2,"0") : (id||""); };
   const ALL_COLS = [
     { id: "id",           label: "ID Alumno",           get: a => idVisible(a.id) },
     { id: "rut",          label: "RUT Alumno",           get: a => a.rut||"" },
@@ -2248,6 +2357,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
   const [selCols, setSelCols] = useState(new Set(["id","nombre_completo","apod1_nombre","apod2_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
   const estrecho = typeof window !== "undefined" && window.innerWidth < 700; // celular
+  const [vista, setVista] = useState("lista");
   const [sort1, setSort1] = useState("nombres");
   const [sort2, setSort2] = useState("apellidos");
   const [sort3, setSort3] = useState("");
@@ -2340,6 +2450,9 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Fichas</h1>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn variant={vista === "pendientes" ? "primary" : "ghost"} small onClick={() => setVista(v => v === "pendientes" ? "lista" : "pendientes")}>
+            {vista === "pendientes" ? "← Volver a fichas" : "Datos pendientes"}
+          </Btn>
           <div style={{ position: "relative" }}>
             <Btn variant="ghost" small onClick={() => setShowColPicker(s => !s)}>
               <Icon name="tag" size={13} /> Columnas ({selCols.size})
@@ -2369,6 +2482,9 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
         </div>
       </div>
 
+      {vista === "pendientes" ? (
+        <DatosPendientes alumnos={alumnos} setAlumnos={setAlumnos} puedeEditar={isAdmin} estrecho={estrecho} />
+      ) : (
       <div style={{ display: "grid", gridTemplateColumns: selected && !estrecho ? "230px 1fr" : "1fr", gap: 16 }}>
         {/* Lista */}
         <div style={{ background: PALETTE.card, border: `1px solid ${PALETTE.border}`, borderRadius: 14, overflow: "hidden" }}>
@@ -2530,6 +2646,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
