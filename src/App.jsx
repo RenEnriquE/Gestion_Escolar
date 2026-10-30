@@ -2390,10 +2390,22 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             {alumnosOrdenados.map(al => (
               <div key={al.id} onClick={() => { setSelected(al); setEditMode(false); }}
                 style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}`, background: selected?.id === al.id ? PALETTE.accent + "22" : "transparent" }}>
-                <div style={{ color: selected?.id === al.id ? PALETTE.accent : PALETTE.text, fontSize: 13, fontWeight: 600 }}>
-                  {[al.nombres, al.nombre2, al.apellidos, al.apellido2].filter(Boolean).join(" ") || al.nombre}
+                <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "2px 8px" }}>
+                  <span style={{ color: PALETTE.muted, fontSize: 10, fontWeight: 700, background: PALETTE.border + "55", borderRadius: 4, padding: "1px 5px" }}>{idVisible(al.id)}</span>
+                  <span style={{ flex: 1, minWidth: 120, color: selected?.id === al.id ? PALETTE.accent : PALETTE.text, fontSize: 13, fontWeight: 600 }}>
+                    {[al.nombres, al.nombre2, al.apellidos, al.apellido2].filter(Boolean).join(" ") || al.nombre}
+                  </span>
+                  <span style={{ color: PALETTE.muted, fontSize: 11, whiteSpace: "nowrap", marginLeft: "auto" }}>{al.rut || "Sin RUT"}</span>
                 </div>
-                <div style={{ color: PALETTE.muted, fontSize: 11 }}>{al.rut || "Sin RUT"}</div>
+                <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 3 }}>
+                  <span style={{ opacity: .7 }}>Apoderado: </span><span style={{ color: PALETTE.text }}>{al.apod1_nombre || al.apoderado || "—"}</span>
+                </div>
+                <div style={{ color: PALETTE.muted, fontSize: 11 }}>
+                  <span style={{ opacity: .7 }}>Apod. suplente: </span><span style={{ color: PALETTE.text }}>{al.apod2_nombre || al.apoderado2 || "—"}</span>
+                </div>
+                <div style={{ color: PALETTE.muted, fontSize: 11 }}>
+                  <span style={{ opacity: .7 }}>🎂 </span>{toDisplay(al.fechaNac) || "—"}
+                </div>
               </div>
             ))}
           </div>
@@ -2407,7 +2419,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                 <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 18 }}>
                   {[selected.nombres, selected.nombre2, selected.apellidos, selected.apellido2].filter(Boolean).join(" ")}
                 </div>
-                <div style={{ color: PALETTE.muted, fontSize: 13 }}>{selected.rut || "Sin RUT"} · {selected.id}</div>
+                <div style={{ color: PALETTE.muted, fontSize: 13 }}>{selected.rut || "Sin RUT"} · {idVisible(selected.id)}</div>
               </div>
               {isAdmin && <Btn small onClick={() => openEdit(selected)}><Icon name="edit" size={13} />Editar</Btn>}
             </div>
