@@ -2227,25 +2227,30 @@ const rutValido = v => {
   const res = 11 - (suma % 11);
   return dv === (res === 11 ? "0" : res === 10 ? "K" : String(res));
 };
+// Guardar: sin puntos y con guion (00000000-0). Mostrar: con puntos (00.000.000-0).
+const rutGuardar = v => { const r = rutLimpio(v); return r.length < 2 ? String(v||"").trim() : r.slice(0,-1) + "-" + r.slice(-1); };
 const rutFormato = v => {
   const r = rutLimpio(v); if (r.length < 2) return String(v||"").trim();
   return r.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,".") + "-" + r.slice(-1);
 };
 
+const rutMostrar = rutFormato;
+
 // Celda editable: guarda al salir del campo (blur) o con Enter
 const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
-  const [v, setV] = useState(value || "");
-  useEffect(() => { setV(value || ""); }, [value]);
+  const ver = x => rut ? rutMostrar(x) : (x || "");
+  const [v, setV] = useState(ver(value));
+  useEffect(() => { setV(ver(value)); }, [value]);
   const vacio = !String(value||"").trim();
   const malo = rut && !vacio && !rutValido(value);
   const borde = malo ? PALETTE.red || "#ef4444" : vacio ? "#f59e0b" : PALETTE.border;
-  if (readOnly) return <span style={{ fontSize: 12, color: vacio ? "#f59e0b" : PALETTE.text }}>{value || "—"}</span>;
+  if (readOnly) return <span style={{ fontSize: 12, color: vacio ? "#f59e0b" : PALETTE.text }}>{ver(value) || "—"}</span>;
   const commit = () => {
     let n = v.trim();
     if (upper) n = n.toUpperCase();
-    if (rut && n) n = rutFormato(n);
+    if (rut && n) n = rutGuardar(n);
     if (n !== (value || "")) onSave(n);
-    setV(n);
+    setV(ver(n));
   };
   return (
     <input value={v} placeholder={placeholder || ""}
@@ -2335,7 +2340,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
   // Columnas exportables
   const ALL_COLS = [
     { id: "id",           label: "ID Alumno",           get: a => idVisible(a.id) },
-    { id: "rut",          label: "RUT Alumno",           get: a => a.rut||"" },
+    { id: "rut",          label: "RUT Alumno",           get: a => rutMostrar(a.rut) },
     { id: "nombre_completo", label: "Nombre Completo",  get: a => [a.nombres,a.nombre2,a.apellidos,a.apellido2].filter(Boolean).join(" ") },
     { id: "apellidos",    label: "Apellido Paterno",     get: a => a.apellidos||"" },
     { id: "apellido2",    label: "Apellido Materno",     get: a => a.apellido2||"" },
@@ -2344,12 +2349,12 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
     { id: "fechaNac",     label: "Fecha Nacimiento",     get: a => toDisplay(a.fechaNac)||"" },
     { id: "sexo",         label: "Sexo",                 get: a => a.sexo==="M"?"Masculino":"Femenino" },
     { id: "apod1_nombre", label: "Apod. titular Nombre",        get: a => a.apod1_nombre||a.apoderado||"" },
-    { id: "apod1_rut",    label: "Apod. titular RUT",           get: a => a.apod1_rut||"" },
+    { id: "apod1_rut",    label: "Apod. titular RUT",           get: a => rutMostrar(a.apod1_rut) },
     { id: "apod1_cel",    label: "Apod. titular Teléfono",      get: a => a.apod1_cel||a.telefono||"" },
     { id: "apod1_email",  label: "Apod. titular Email",         get: a => a.apod1_email||a.email||"" },
     { id: "apod1_fnac",   label: "Apod. titular F.Nacimiento",  get: a => toDisplay(a.apod1_fnac)||"" },
     { id: "apod2_nombre", label: "Apod. suplente Nombre",        get: a => a.apod2_nombre||a.apoderado2||"" },
-    { id: "apod2_rut",    label: "Apod. suplente RUT",           get: a => a.apod2_rut||"" },
+    { id: "apod2_rut",    label: "Apod. suplente RUT",           get: a => rutMostrar(a.apod2_rut) },
     { id: "apod2_cel",    label: "Apod. suplente Teléfono",      get: a => a.apod2_cel||"" },
     { id: "apod2_email",  label: "Apod. suplente Email",         get: a => a.apod2_email||"" },
     { id: "apod2_fnac",   label: "Apod. suplente F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
@@ -2512,7 +2517,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                   <span style={{ flex: 1, minWidth: 120, color: selected?.id === al.id ? PALETTE.accent : PALETTE.text, fontSize: 13, fontWeight: 600 }}>
                     {[al.nombres, al.nombre2, al.apellidos, al.apellido2].filter(Boolean).join(" ") || al.nombre}
                   </span>
-                  <span style={{ color: PALETTE.muted, fontSize: 11, whiteSpace: "nowrap", marginLeft: "auto" }}>{al.rut || "Sin RUT"}</span>
+                  <span style={{ color: PALETTE.muted, fontSize: 11, whiteSpace: "nowrap", marginLeft: "auto" }}>{rutMostrar(al.rut) || "Sin RUT"}</span>
                 </div>
                 <div style={{ color: PALETTE.muted, fontSize: 11, marginTop: 3 }}>
                   <span style={{ opacity: .7 }}>Apoderado: </span><span style={{ color: PALETTE.text }}>{al.apod1_nombre || al.apoderado || "—"}</span>
@@ -2536,7 +2541,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                 <div style={{ color: PALETTE.text, fontWeight: 800, fontSize: 18 }}>
                   {[selected.nombres, selected.nombre2, selected.apellidos, selected.apellido2].filter(Boolean).join(" ")}
                 </div>
-                <div style={{ color: PALETTE.muted, fontSize: 13 }}>{selected.rut || "Sin RUT"} · {idVisible(selected.id)}</div>
+                <div style={{ color: PALETTE.muted, fontSize: 13 }}>{rutMostrar(selected.rut) || "Sin RUT"} · {idVisible(selected.id)}</div>
               </div>
               {isAdmin && <Btn small onClick={() => openEdit(selected)}><Icon name="edit" size={13} />Editar</Btn>}
             </div>
@@ -2591,17 +2596,17 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             <InfoRow label="Segundo nombre" value={selected.nombre2} />
             <InfoRow label="Apellido paterno" value={selected.apellidos} />
             <InfoRow label="Apellido materno" value={selected.apellido2} />
-            <InfoRow label="RUT" value={selected.rut} />
+            <InfoRow label="RUT" value={rutMostrar(selected.rut)} />
             <InfoRow label="Fecha de nacimiento" value={toDisplay(selected.fechaNac)} />
             <InfoRow label="Sexo" value={selected.sexo === "M" ? "Masculino" : "Femenino"} />
             <SecTitle t="Apoderado titular" />
             <InfoRow label="Nombre" value={selected.apod1_nombre || selected.apoderado} />
-            <InfoRow label="RUT" value={selected.apod1_rut} />
+            <InfoRow label="RUT" value={rutMostrar(selected.apod1_rut)} />
             <InfoRow label="Teléfono" value={selected.apod1_cel || selected.telefono} />
             {(selected.apod2_nombre || selected.apoderado2) && <>
               <SecTitle t="Apoderado suplente" />
               <InfoRow label="Nombre" value={selected.apod2_nombre || selected.apoderado2} />
-              <InfoRow label="RUT" value={selected.apod2_rut} />
+              <InfoRow label="RUT" value={rutMostrar(selected.apod2_rut)} />
               <InfoRow label="Teléfono" value={selected.apod2_cel} />
             </>}
           </div>
@@ -2674,14 +2679,14 @@ const dbToAlumno = r => ({
 const alumnoToDB = a => ({
   id: a.id, nombres: a.nombres, nombre2: a.nombre2 || "",
   apellidos: a.apellidos, apellido2: a.apellido2 || "",
-  nombre: a.nombre, rut: a.rut || "",
+  nombre: a.nombre, rut: rutGuardar(a.rut || ""),
   fecha_nac: a.fechaNac, sexo: a.sexo,
   apoderado: a.apoderado, apoderado2: a.apoderado2,
   telefono: a.telefono, email: a.email,
   observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia,
-  apod1_nombre: a.apod1_nombre || "", apod1_rut: a.apod1_rut || "",
+  apod1_nombre: a.apod1_nombre || "", apod1_rut: rutGuardar(a.apod1_rut || ""),
   apod1_cel: a.apod1_cel || "", apod1_email: a.apod1_email || "", apod1_fnac: a.apod1_fnac || "",
-  apod2_nombre: a.apod2_nombre || "", apod2_rut: a.apod2_rut || "",
+  apod2_nombre: a.apod2_nombre || "", apod2_rut: rutGuardar(a.apod2_rut || ""),
   apod2_cel: a.apod2_cel || "", apod2_email: a.apod2_email || "", apod2_fnac: a.apod2_fnac || "",
 });
 const dbToAct = r => ({ id: r.id, nombre: r.nombre, fecha: r.fecha || "", tipos: r.tipos || [], recurrencia: r.recurrencia || "Anual", estado: r.estado || "No activada", descripcion: r.descripcion || "", _encuestaId: r.encuesta_id || null, subactividades: r.subactividades || [], acumulaCreditos: r.acumula_creditos || false, valorCredito: r.valor_credito || 0, labelCredito: r.label_credito || "unidad" });
