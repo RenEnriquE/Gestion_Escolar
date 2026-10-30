@@ -8,11 +8,12 @@ select id, rut, apod1_rut, apod2_rut,
 from alumnos
 order by id;
 
--- 2) CORREGIR: quita puntos, espacios y cualquier símbolo; K en mayúscula; deja cuerpo-DV
+-- 2) CORREGIR: quita puntos y espacios, K en mayúscula, deja cuerpo-DV.
+--    Los valores que son solo números sin guion (RUT incompleto, sin dígito verificador) NO se tocan: hay que revisarlos a mano.
 update alumnos set
-  rut       = case when coalesce(rut,'')       = '' then rut       else regexp_replace(upper(regexp_replace(rut,       '[^0-9kK]','','g')), '^([0-9]+)([0-9K])$', '\1-\2') end,
-  apod1_rut = case when coalesce(apod1_rut,'') = '' then apod1_rut else regexp_replace(upper(regexp_replace(apod1_rut, '[^0-9kK]','','g')), '^([0-9]+)([0-9K])$', '\1-\2') end,
-  apod2_rut = case when coalesce(apod2_rut,'') = '' then apod2_rut else regexp_replace(upper(regexp_replace(apod2_rut, '[^0-9kK]','','g')), '^([0-9]+)([0-9K])$', '\1-\2') end;
+  rut       = case when coalesce(rut,'')       = '' or rut       ~ '^[0-9]+$' then rut       else regexp_replace(upper(regexp_replace(rut,       '[^0-9kK]','','g')), '^([0-9]+)([0-9K])$', '\1-\2') end,
+  apod1_rut = case when coalesce(apod1_rut,'') = '' or apod1_rut ~ '^[0-9]+$' then apod1_rut else regexp_replace(upper(regexp_replace(apod1_rut, '[^0-9kK]','','g')), '^([0-9]+)([0-9K])$', '\1-\2') end,
+  apod2_rut = case when coalesce(apod2_rut,'') = '' or apod2_rut ~ '^[0-9]+$' then apod2_rut else regexp_replace(upper(regexp_replace(apod2_rut, '[^0-9kK]','','g')), '^([0-9]+)([0-9K])$', '\1-\2') end;
 
 -- 3) VERIFICAR: no debería salir ninguna fila (todo lo que no sea vacío o 12345678-9)
 select id, rut, apod1_rut, apod2_rut
