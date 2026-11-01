@@ -3,6 +3,7 @@ import Matematicas from "./matematicas/Matematicas.jsx";
 import Mate from "./mate/Mate.jsx";
 import Ingles from "./ingles/Ingles.jsx";
 import Lenguaje from "./lenguaje/Lenguaje.jsx";
+import Ciencias from "./ciencias/Ciencias.jsx";
 import { usePermisos } from "./permisos.js";
 import Reporte from "./Reporte.jsx";
 
@@ -11,6 +12,7 @@ const ASIGNATURAS = [
   { id: "matematicas", label: "Habilidades Matemáticas", emoji: "🧩", color: "#3b82f6", activo: true  },
   { id: "lenguaje",    label: "Lenguaje y Comunicación", emoji: "📖", color: "#8b5cf6", activo: true  },
   { id: "ingles",      label: "Inglés",                  emoji: "🌎", color: "#10b981", activo: true  },
+  { id: "ciencias",    label: "Ciencias Naturales",      emoji: "🔬", color: "#84cc16", activo: true  },
   { id: "historia",    label: "Historia",                emoji: "🏛️", color: "#f59e0b", activo: false },
   { id: "tecnologia",  label: "Tecnología",              emoji: "💻", color: "#ef4444", activo: false },
 ];
@@ -22,6 +24,7 @@ export default function Aprendo() {
   if (asignatura === "mate") return <Mate onVolver={() => setAsignatura(null)} />;
   if (asignatura === "matematicas") return <Matematicas onVolver={() => setAsignatura(null)} />;
   if (asignatura === "ingles") return <Ingles onVolver={() => setAsignatura(null)} />;
+  if (asignatura === "ciencias") return <Ciencias onVolver={() => setAsignatura(null)} />;
   if (asignatura === "lenguaje") return <Lenguaje onVolver={() => setAsignatura(null)} />;
   if (asignatura === "reporte" && esAdmin) return <Reporte onVolver={() => setAsignatura(null)} />;
 
