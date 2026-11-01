@@ -62,6 +62,41 @@ const Titulo = ({ children }) => (
 
 const selectStyle = { background: "#0f172a", color: "white", border: `1px solid ${border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, maxWidth: "100%" };
 
+
+// ── Control de actividad ─────────────────────────────────────────────────────
+// Una "sesión" = bloque de respuestas seguidas en una misma actividad; se corta tras 30 min sin responder.
+const GAP_SESION = 30 * 60 * 1000;
+const NOMBRE_ASIG = { ingles: "Inglés", lenguaje: "Lenguaje", mate: "Matemáticas", matematicas: "Hab. Matemáticas" };
+const ASIGS = ["ingles", "lenguaje", "mate", "matematicas"];
+const DIAS_SEM = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const asigDe = (actividad) => (actividad || "").split(".")[0];
+const fechaHora = (f) => { try { return new Date(f).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }); } catch { return ""; } };
+const fechaDia = (iso) => { try { return new Date(iso + "T12:00:00").toLocaleDateString("es-CL", { weekday: "short", day: "2-digit", month: "2-digit" }); } catch { return iso; } };
+
+// rs: respuestas de UNA persona (cualquier orden). Devuelve datos por actividad y por asignatura.
+function resumenPersona(rs) {
+  const act = {}, asig = {};
+  ASIGS.forEach(a => { asig[a] = { ses: 0, resp: 0, ok: 0, ultima: null, dias: {}, sem: [0,0,0,0,0,0,0] }; });
+  const orden = [...rs].sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+  const prev = {};
+  orden.forEach(r => {
+    const a = (act[r.actividad] = act[r.actividad] || { ses: 0, resp: 0, ok: 0, ultima: null });
+    const t = new Date(r.creado_en).getTime();
+    if (prev[r.actividad] === undefined || t - prev[r.actividad] > GAP_SESION) a.ses++;
+    prev[r.actividad] = t;
+    a.resp++; if (r.correcta) a.ok++; a.ultima = r.creado_en;
+    const g = asig[asigDe(r.actividad)];
+    if (g) {
+      g.resp++; if (r.correcta) g.ok++; g.ultima = r.creado_en;
+      const d = dia(r.creado_en); g.dias[d] = (g.dias[d] || 0) + 1;
+      g.sem[new Date(r.creado_en).getDay()]++;
+    }
+  });
+  Object.keys(act).forEach(k => { const g = asig[asigDe(k)]; if (g) g.ses += act[k].ses; });
+  const dias = new Set(rs.map(r => dia(r.creado_en)));
+  return { act, asig, nDias: dias.size, ses: Object.values(act).reduce((n, x) => n + x.ses, 0), ultima: orden.length ? orden[orden.length - 1].creado_en : null, total: rs.length };
+}
+
 export default function Reporte({ onVolver }) {
   const { alumnos } = usePermisos();
   const [rows, setRows] = useState(null);
@@ -85,7 +120,7 @@ export default function Reporte({ onVolver }) {
     const m = {};
     accesos.forEach(a => {
       const al = (alumnos || []).find(x => x.id === a.alum_id);
-      m[a.email] = { nombre: al ? `${al.nombres || ""} ${al.apellidos || ""}`.trim() : (a.alumno_externo || a.nombre || a.email), rol: a.rol, esPrueba: a.rol === "admin" || (a.rol === "directivo" && !a.alum_id && !a.alumno_externo) };
+      m[a.email] = { nombre: al ? `${al.nombres || ""} ${al.apellidos || ""}`.trim() : (a.alumno_externo || a.nombre || a.email), rol: a.rol, estado: a.estado, esPrueba: a.rol === "admin" || (a.rol === "directivo" && !a.alum_id && !a.alumno_externo) };
     });
     return m;
   }, [accesos, alumnos]);
@@ -125,6 +160,26 @@ export default function Reporte({ onVolver }) {
       .filter(x => x[rankAsig] > 0).sort((a, b) => b[rankAsig] - a[rankAsig] || b.nDias - a.nDias);
   }, [rows, info, incluirAdmins, rankAsig]);
   const maxRank = ranking[0]?.[rankAsig] || 1;
+
+
+  // Control de actividad por persona (sin el filtro de actividad). Incluye a quienes tienen acceso y aún no registran nada.
+  const [ordenCtl, setOrdenCtl] = useState("ultima");
+  const control = useMemo(() => {
+    const por = {};
+    (rows || []).filter(r => incluirAdmins || !info[r.email]?.esPrueba).forEach(r => { (por[r.email] = por[r.email] || []).push(r); });
+    Object.entries(info).forEach(([email, i]) => {
+      if (i.estado === "aprobado" && !i.esPrueba && i.rol !== "admin" && !por[email]) por[email] = [];
+    });
+    const lista = Object.entries(por).map(([email, rs]) => ({ email, nombre: nombre(email), ...resumenPersona(rs) }));
+    const f = {
+      ultima: (a, b) => (b.ultima ? new Date(b.ultima).getTime() : -1) - (a.ultima ? new Date(a.ultima).getTime() : -1),
+      sesiones: (a, b) => b.ses - a.ses || b.nDias - a.nDias,
+      nombre: (a, b) => a.nombre.localeCompare(b.nombre, "es"),
+      sinActividad: (a, b) => (a.ses - b.ses) || a.nombre.localeCompare(b.nombre, "es"),
+    }[ordenCtl];
+    return lista.sort(f);
+  }, [rows, info, incluirAdmins, ordenCtl]);
+  const detalle = useMemo(() => (quien === "todos" ? null : control.find(x => x.email === quien) || null), [control, quien]);
 
   const okSel = sel.filter(r => r.correcta).length;
   const personasSel = new Set(sel.map(r => r.email)).size;
@@ -192,6 +247,103 @@ export default function Reporte({ onVolver }) {
             </div>
           )}
           <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas (todas las actividades, sin el filtro de arriba). Matemáticas y Habilidades Matemáticas se registran desde esta versión.</div>
+
+          <Titulo>📅 Control de actividad · cuántas veces y cuándo</Titulo>
+          <div style={{ color: "#64748b", fontSize: 11, margin: "0 2px 8px" }}>
+            Una <b>sesión</b> es un bloque de respuestas seguidas en una actividad (se corta tras 30 min sin responder). Se deduce de las respuestas registradas: si alguien abre una actividad y no responde nada, no queda registro. Elige un alumno para ver su detalle.
+          </div>
+          {quien === "todos" ? (
+            <>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
+                <span style={{ color: muted, fontSize: 12 }}>Ordenar por:</span>
+                {[["ultima", "Última actividad"], ["sesiones", "Más sesiones"], ["sinActividad", "Menos sesiones"], ["nombre", "Nombre"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setOrdenCtl(k)} style={{ background: ordenCtl === k ? azul : "#0f172a", color: "white", border: `1px solid ${ordenCtl === k ? azul : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+                ))}
+              </div>
+              <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                {control.length === 0 && <div style={{ color: muted, padding: 14, fontSize: 13 }}>Aún no hay actividad registrada.</div>}
+                {control.map(x => (
+                  <button key={x.email} onClick={() => setQuien(x.email)}
+                    style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "10px 14px", cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                      <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{x.nombre}</span>
+                      <span style={{ color: x.ses ? azul : amarillo, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {x.ses ? `${x.ses} ${x.ses === 1 ? "sesión" : "sesiones"} · ${x.nDias} ${x.nDias === 1 ? "día" : "días"}` : "Sin actividad registrada"}
+                      </span>
+                    </div>
+                    {x.ses > 0 && (
+                      <div style={{ color: muted, fontSize: 11, marginTop: 3, display: "flex", flexWrap: "wrap", gap: "2px 12px" }}>
+                        <span>Última: <b style={{ color: "#cbd5e1" }}>{fechaHora(x.ultima)}</b></span>
+                        {ASIGS.filter(a => x.asig[a].ses > 0).map(a => (
+                          <span key={a}>{NOMBRE_ASIG[a]}: <b style={{ color: "#cbd5e1" }}>{x.asig[a].ses} ses.</b> · {fechaCorta(x.asig[a].ultima)}</span>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : detalle ? (
+            <>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Tile valor={detalle.ses} label={detalle.ses === 1 ? "sesión" : "sesiones"} color={azul} />
+                <Tile valor={detalle.nDias} label={detalle.nDias === 1 ? "día con actividad" : "días con actividad"} />
+                <Tile valor={detalle.ultima ? fechaHora(detalle.ultima) : "—"} label="última actividad" />
+              </div>
+              <div style={{ color: "white", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>{detalle.nombre} · por actividad</div>
+              <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                {ACTIVIDADES.filter(a => a.id !== "todas").map(a => {
+                  const d = detalle.act[a.id];
+                  return (
+                    <div key={a.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${border}`, opacity: d ? 1 : 0.5 }}>
+                      <span style={{ color: "white", fontSize: 13, flex: 1, minWidth: 0 }}>{a.label}</span>
+                      <span style={{ color: muted, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>
+                        {d ? <><b style={{ color: azul }}>{d.ses} {d.ses === 1 ? "vez" : "veces"}</b> · {d.resp} resp. · <span style={{ color: colorAcierto(pct(d.ok, d.resp)) }}>{pct(d.ok, d.resp)}%</span> · {fechaHora(d.ultima)}</> : "Sin actividad"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ color: "white", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>Días de mayor actividad por asignatura</div>
+              <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                {ASIGS.map(a => {
+                  const g = detalle.asig[a];
+                  if (!g.resp) return (
+                    <div key={a} style={{ padding: "10px 14px", borderBottom: `1px solid ${border}`, opacity: 0.5, color: muted, fontSize: 13 }}>{NOMBRE_ASIG[a]} · sin actividad</div>
+                  );
+                  const top = Object.entries(g.dias).sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? 1 : -1)).slice(0, 3);
+                  const maxSem = Math.max(...g.sem);
+                  const mejor = g.sem.indexOf(maxSem);
+                  return (
+                    <div key={a} style={{ padding: "10px 14px", borderBottom: `1px solid ${border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, color: "white", fontSize: 14 }}>
+                        <span style={{ fontWeight: 700 }}>{NOMBRE_ASIG[a]}</span>
+                        <span style={{ color: muted, fontSize: 12 }}>{g.ses} {g.ses === 1 ? "sesión" : "sesiones"} · {g.resp} resp. · {Object.keys(g.dias).length} {Object.keys(g.dias).length === 1 ? "día" : "días"}</span>
+                      </div>
+                      <div style={{ color: muted, fontSize: 12, marginTop: 4 }}>
+                        Más activo: {top.map(([d, n], i) => <span key={d}>{i > 0 ? " · " : ""}<b style={{ color: "#cbd5e1" }}>{fechaDia(d)}</b> ({n})</span>)}
+                      </div>
+                      <div style={{ color: muted, fontSize: 12, marginTop: 2 }}>Suele practicar los <b style={{ color: "#cbd5e1" }}>{/s$/.test(DIAS_SEM[mejor]) ? DIAS_SEM[mejor] : DIAS_SEM[mejor] + "s"}</b></div>
+                      <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 36, marginTop: 6 }}>
+                        {[1, 2, 3, 4, 5, 6, 0].map(i => (
+                          <div key={i} title={`${DIAS_SEM[i]}: ${g.sem[i]} resp.`} style={{ flex: 1, textAlign: "center" }}>
+                            <div style={{ height: Math.max(2, Math.round((g.sem[i] / (maxSem || 1)) * 24)), background: i === mejor ? azul : "#475569", borderRadius: 2 }} />
+                            <div style={{ color: muted, fontSize: 9, marginTop: 1 }}>{DIAS_SEM[i].slice(0, 1).toUpperCase()}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ textAlign: "center", marginTop: 10 }}>
+                <button onClick={() => setQuien("todos")} style={{ background: "none", border: "none", color: azul, cursor: "pointer", fontWeight: 600 }}>← Volver a todo el curso</button>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: muted, fontSize: 13, padding: 12 }}>Sin actividad registrada para esta persona.</div>
+          )}
+
 
           {base.length === 0 ? (
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: 24, textAlign: "center", color: muted }}>
