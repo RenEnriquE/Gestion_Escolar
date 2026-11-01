@@ -55,7 +55,7 @@ export default function Aprendo() {
       {esAdmin && (
         <button onClick={() => setAsignatura("reporte")}
           style={{ display: "block", width: "100%", marginTop: 18, background: "#0f172a", border: "2px dashed #f59e0b", borderRadius: 14, padding: "14px 16px", cursor: "pointer", color: "#f59e0b", fontSize: 14, fontWeight: 700 }}>
-          📊 Reporte de errores (solo administradores)
+          📊 Reporte (solo administradores)
         </button>
       )}
     </div>

@@ -55,6 +55,13 @@ const ASIGNATURAS = [
 const dia = (f) => { try { return new Date(f).toLocaleDateString("sv-SE"); } catch { return ""; } };
 const fechaCorta = (f) => { try { return new Date(f).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" }); } catch { return ""; } };
 
+const TABS = [
+  { id: "resumen", emoji: "📌", label: "Resumen" },
+  { id: "aciertos", emoji: "🎯", label: "Aciertos" },
+  { id: "actividad", emoji: "📅", label: "Actividad" },
+  { id: "errores", emoji: "❗", label: "Errores" },
+  { id: "ranking", emoji: "🏆", label: "Ranking" },
+];
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
 const colorAcierto = (p) => (p >= 80 ? verde : p >= 50 ? amarillo : rojo);
 
@@ -111,6 +118,7 @@ export default function Reporte({ onVolver }) {
   const [rows, setRows] = useState(null);
   const [accesos, setAccesos] = useState([]);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState("resumen");
   const [act, setAct] = useState("todas");
   const [quien, setQuien] = useState("todos");
   const [incluirAdmins, setIncluirAdmins] = useState(false);
@@ -198,7 +206,33 @@ export default function Reporte({ onVolver }) {
     });
     return t;
   }, [control]);
-  const tablaAciertos = useMemo(() => control.filter(x => x.total > 0).slice().sort((a, b) => pct(a.ok, a.total) - pct(b.ok, b.total) || a.nombre.localeCompare(b.nombre, "es")), [control]);
+  // Resumen: quiénes practicaron en los últimos 7 días y quiénes no
+  const resumen = useMemo(() => {
+    const ahora = Date.now(), SEMANA = 7 * 24 * 3600 * 1000;
+    const activos7 = control.filter(x => x.ultima && ahora - new Date(x.ultima).getTime() <= SEMANA);
+    const conRegistro = control.filter(x => x.total > 0);
+    const inactivos = control.filter(x => !x.ultima || ahora - new Date(x.ultima).getTime() > SEMANA)
+      .sort((a, b) => (a.ultima ? new Date(a.ultima).getTime() : 0) - (b.ultima ? new Date(b.ultima).getTime() : 0));
+    const apoyo = conRegistro.filter(x => x.total >= 5).slice().sort((a, b) => pct(a.ok, a.total) - pct(b.ok, b.total)).slice(0, 5);
+    return { activos7, conRegistro, inactivos, apoyo };
+  }, [control]);
+  const [ordAc, setOrdAc] = useState("desc");   // desc = mayor a menor tasa total
+  const [celda, setCelda] = useState(null);       // { quien: email | "curso", asig: "total" | asignatura }
+  const tablaAciertos = useMemo(() => control.filter(x => x.total > 0).slice().sort((a, b) =>
+    (ordAc === "desc" ? -1 : 1) * (pct(a.ok, a.total) - pct(b.ok, b.total)) || b.total - a.total || a.nombre.localeCompare(b.nombre, "es")), [control, ordAc]);
+  // Aciertos por actividad para la celda elegida (alumno o curso, de una asignatura o del total)
+  const detalleCelda = useMemo(() => {
+    if (!celda) return null;
+    const fuente = celda.quien === "curso" ? control : control.filter(x => x.email === celda.quien);
+    if (!fuente.length) return null;
+    const filas = ACTIVIDADES.filter(a => a.id !== "todas" && (celda.asig === "total" || asigDe(a.id) === celda.asig)).map(a => {
+      const t = { ...a, ses: 0, resp: 0, ok: 0, ultima: null };
+      fuente.forEach(x => { const d = x.act[a.id]; if (d) { t.ses += d.ses; t.resp += d.resp; t.ok += d.ok; if (!t.ultima || d.ultima > t.ultima) t.ultima = d.ultima; } });
+      return t;
+    });
+    const resp = filas.reduce((n, f) => n + f.resp, 0), ok = filas.reduce((n, f) => n + f.ok, 0);
+    return { nombre: celda.quien === "curso" ? "Todo el curso" : fuente[0].nombre, asigNombre: celda.asig === "total" ? "todas las asignaturas" : NOMBRE_ASIG[celda.asig], filas, resp, ok };
+  }, [celda, control]);
   const detalle = useMemo(() => (quien === "todos" ? null : control.find(x => x.email === quien) || null), [control, quien]);
 
   const okSel = sel.filter(r => r.correcta).length;
@@ -210,8 +244,8 @@ export default function Reporte({ onVolver }) {
       <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a asignaturas</button>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <div style={{ fontSize: 38, marginBottom: 6 }}>📊</div>
-        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>Reporte de errores</div>
-        <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Qué cuesta más al curso y a cada alumno · solo administradores</div>
+        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>Reporte</div>
+        <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Uso, aciertos y errores del curso y de cada alumno · solo administradores</div>
       </div>
 
       {error && <div style={{ color: rojo, textAlign: "center", padding: 16 }}>{error}. ¿Ya ejecutaste supabase_respuestas.sql?</div>}
@@ -219,20 +253,95 @@ export default function Reporte({ onVolver }) {
 
       {rows !== null && !error && (
         <>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
-            <select value={act} onChange={e => setAct(e.target.value)} style={selectStyle}>
-              {ACTIVIDADES.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-            </select>
-            <select value={quien} onChange={e => setQuien(e.target.value)} style={selectStyle}>
-              <option value="todos">Todo el curso</option>
-              {alumnosTabla.map(a => <option key={a.email} value={a.email}>{a.nombre}</option>)}
-            </select>
+          <div style={{ padding: "4px 0 6px" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  style={{ flex: "0 0 auto", background: tab === t.id ? azul : "#0f172a", color: "white", border: `1px solid ${tab === t.id ? azul : border}`, borderRadius: 20, padding: "7px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {t.emoji} {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "6px 0 12px" }}>
+            {tab === "errores" && (
+              <select value={act} onChange={e => setAct(e.target.value)} style={selectStyle}>
+                {ACTIVIDADES.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+              </select>
+            )}
+            {(tab === "errores" || tab === "actividad") && (
+              <select value={quien} onChange={e => setQuien(e.target.value)} style={selectStyle}>
+                <option value="todos">Todo el curso</option>
+                {alumnosTabla.map(a => <option key={a.email} value={a.email}>{a.nombre}</option>)}
+              </select>
+            )}
             <label style={{ color: "#475569", fontSize: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <input type="checkbox" checked={incluirAdmins} onChange={e => setIncluirAdmins(e.target.checked)} />
               Incluir pruebas de administradores y directivos (sin alumno asociado)
             </label>
           </div>
 
+          {tab === "resumen" && (
+            <>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Tile valor={`${resumen.conRegistro.length}/${control.length}`} label="alumnos con actividad" color={azul} />
+                <Tile valor={resumen.activos7.length} label="activos esta semana" color={resumen.activos7.length ? verde : amarillo} />
+                <Tile valor={tasaCurso.total.resp} label="respuestas" />
+                <Tile valor={tasaCurso.total.resp ? `${pct(tasaCurso.total.ok, tasaCurso.total.resp)}%` : "—"} label="aciertos del curso" color={tasaCurso.total.resp ? colorAcierto(pct(tasaCurso.total.ok, tasaCurso.total.resp)) : "white"} />
+              </div>
+
+              <Titulo>Aciertos del curso por asignatura</Titulo>
+              <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                {ASIGS.map(a => {
+                  const c = tasaCurso[a];
+                  return (
+                    <button key={a} onClick={() => { if (c.resp) { setCelda({ quien: "curso", asig: a }); setTab("aciertos"); } }}
+                      style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: c.resp ? "pointer" : "default", opacity: c.resp ? 1 : 0.5 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", color: "white", fontSize: 14 }}>
+                        <span style={{ fontWeight: 600 }}>{NOMBRE_ASIG[a]}</span>
+                        <span style={{ fontWeight: 800, color: c.resp ? colorAcierto(pct(c.ok, c.resp)) : muted }}>{c.resp ? `${pct(c.ok, c.resp)}%` : "Sin actividad"} <span style={{ color: muted, fontSize: 11, fontWeight: 500 }}>{c.resp ? `(${c.resp} resp.)` : ""}</span></span>
+                      </div>
+                      {c.resp > 0 && <div style={{ height: 5, background: "#0f172a", borderRadius: 3, marginTop: 5 }}><div style={{ width: `${pct(c.ok, c.resp)}%`, height: "100%", background: colorAcierto(pct(c.ok, c.resp)), borderRadius: 3 }} /></div>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Titulo>⚠️ Sin practicar en los últimos 7 días</Titulo>
+              {resumen.inactivos.length === 0 ? (
+                <div style={{ color: verde, fontSize: 13, padding: 8 }}>Todos practicaron esta semana 🎉</div>
+              ) : (
+                <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                  {resumen.inactivos.map(x => (
+                    <button key={x.email} onClick={() => { setQuien(x.email); setTab("actividad"); }}
+                      style={{ width: "100%", display: "flex", justifyContent: "space-between", gap: 10, background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{x.nombre}</span>
+                      <span style={{ color: x.ultima ? muted : amarillo, fontSize: 12, whiteSpace: "nowrap" }}>{x.ultima ? `última vez ${fechaCorta(x.ultima)}` : "nunca ha practicado"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <Titulo>🤝 Quiénes necesitan más apoyo</Titulo>
+              {resumen.apoyo.length === 0 ? (
+                <div style={{ color: "#475569", fontSize: 13, padding: 8 }}>Aún no hay suficientes respuestas (mínimo 5 por alumno).</div>
+              ) : (
+                <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                  {resumen.apoyo.map(x => (
+                    <button key={x.email} onClick={() => { setCelda({ quien: x.email, asig: "total" }); setTab("aciertos"); }}
+                      style={{ width: "100%", display: "flex", justifyContent: "space-between", gap: 10, background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{x.nombre}</span>
+                      <span style={{ fontSize: 13, whiteSpace: "nowrap" }}><b style={{ color: colorAcierto(pct(x.ok, x.total)) }}>{pct(x.ok, x.total)}%</b> <span style={{ color: muted }}>({x.total} resp.)</span></span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ color: "#64748b", fontSize: 11, margin: "8px 2px 0" }}>Toca cualquier fila para ir al detalle.</div>
+            </>
+          )}
+
+          {tab === "ranking" && (
+          <>
           <Titulo>🏆 Ranking de uso · quién practica más</Titulo>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             {ASIGNATURAS.map(a => (
@@ -266,11 +375,21 @@ export default function Reporte({ onVolver }) {
               ))}
             </div>
           )}
-          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas (todas las actividades, sin el filtro de arriba). Matemáticas y Habilidades Matemáticas se registran desde esta versión.</div>
+          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas de todas las actividades. Matemáticas y Habilidades Matemáticas se registran desde esta versión.</div>
+          </>
+          )}
 
+          {tab === "aciertos" && (
+          <>
           <Titulo>🎯 Tasa de aciertos · por alumno y por asignatura</Titulo>
           <div style={{ color: "#64748b", fontSize: 11, margin: "0 2px 8px" }}>
-            Aciertos ÷ respuestas registradas (cada intento cuenta). Entre paréntesis, el número de respuestas. Ordenado de menor a mayor tasa total, para ver primero a quien más apoyo necesita.
+            Aciertos ÷ respuestas registradas (cada intento cuenta). Entre paréntesis, el número de respuestas. <b>Toca un porcentaje</b> para ver la tasa por actividad, o el nombre para ver el detalle del alumno.
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
+            <span style={{ color: "#475569", fontSize: 12 }}>Orden por tasa total:</span>
+            {[["desc", "Mayor a menor"], ["asc", "Menor a mayor"]].map(([k, l]) => (
+              <button key={k} onClick={() => setOrdAc(k)} style={{ background: ordAc === k ? azul : "#0f172a", color: "white", border: `1px solid ${ordAc === k ? azul : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+            ))}
           </div>
           {tablaAciertos.length === 0 ? (
             <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Aún no hay respuestas registradas.</div>
@@ -289,16 +408,18 @@ export default function Reporte({ onVolver }) {
                     <td style={{ padding: "8px 12px" }}>Todo el curso</td>
                     {["total", ...ASIGS].map(k => {
                       const c = tasaCurso[k];
-                      return <td key={k} style={{ textAlign: "center", padding: "8px 6px", color: c.resp ? colorAcierto(pct(c.ok, c.resp)) : muted }}>{c.resp ? `${pct(c.ok, c.resp)}%` : "—"}<div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({c.resp})</div></td>;
+                      const sel = celda && celda.quien === "curso" && celda.asig === k;
+                      return <td key={k} onClick={() => c.resp && setCelda(sel ? null : { quien: "curso", asig: k })} style={{ textAlign: "center", padding: "8px 6px", cursor: c.resp ? "pointer" : "default", outline: sel ? `2px solid ${azul}` : "none", outlineOffset: -2, color: c.resp ? colorAcierto(pct(c.ok, c.resp)) : muted }}>{c.resp ? `${pct(c.ok, c.resp)}%` : "—"}<div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({c.resp})</div></td>;
                     })}
                   </tr>
                   {tablaAciertos.map(x => (
-                    <tr key={x.email} onClick={() => setQuien(x.email)} style={{ borderTop: `1px solid ${border}`, cursor: "pointer" }}>
-                      <td style={{ padding: "7px 12px", fontWeight: 600 }}>{x.nombre}</td>
-                      <td style={{ textAlign: "center", padding: "7px 6px", fontWeight: 800, color: colorAcierto(pct(x.ok, x.total)) }}>{pct(x.ok, x.total)}%<div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({x.total})</div></td>
+                    <tr key={x.email} style={{ borderTop: `1px solid ${border}` }}>
+                      <td onClick={() => setQuien(x.email)} style={{ padding: "7px 12px", fontWeight: 600, cursor: "pointer" }}>{x.nombre}</td>
+                      <td onClick={() => setCelda(celda && celda.quien === x.email && celda.asig === "total" ? null : { quien: x.email, asig: "total" })} style={{ textAlign: "center", padding: "7px 6px", fontWeight: 800, cursor: "pointer", outline: celda && celda.quien === x.email && celda.asig === "total" ? `2px solid ${azul}` : "none", outlineOffset: -2, color: colorAcierto(pct(x.ok, x.total)) }}>{pct(x.ok, x.total)}%<div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({x.total})</div></td>
                       {ASIGS.map(a => {
                         const g = x.asig[a];
-                        return <td key={a} style={{ textAlign: "center", padding: "7px 6px", color: g.resp ? colorAcierto(pct(g.ok, g.resp)) : "#475569", fontWeight: 700 }}>{g.resp ? `${pct(g.ok, g.resp)}%` : "—"}{g.resp > 0 && <div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({g.resp})</div>}</td>;
+                        const sel = celda && celda.quien === x.email && celda.asig === a;
+                        return <td key={a} onClick={() => g.resp && setCelda(sel ? null : { quien: x.email, asig: a })} style={{ textAlign: "center", padding: "7px 6px", cursor: g.resp ? "pointer" : "default", outline: sel ? `2px solid ${azul}` : "none", outlineOffset: -2, color: g.resp ? colorAcierto(pct(g.ok, g.resp)) : "#475569", fontWeight: 700 }}>{g.resp ? `${pct(g.ok, g.resp)}%` : "—"}{g.resp > 0 && <div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({g.resp})</div>}</td>;
                       })}
                     </tr>
                   ))}
@@ -306,7 +427,42 @@ export default function Reporte({ onVolver }) {
               </table>
             </div>
           )}
+          {detalleCelda && (
+            <div style={{ background: card, border: `2px solid ${azul}`, borderRadius: 12, marginTop: 10, overflow: "hidden" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${border}` }}>
+                <div>
+                  <div style={{ color: "white", fontSize: 14, fontWeight: 800 }}>{detalleCelda.nombre}</div>
+                  <div style={{ color: muted, fontSize: 12 }}>Aciertos por actividad · {detalleCelda.asigNombre}</div>
+                </div>
+                <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <div style={{ color: colorAcierto(pct(detalleCelda.ok, detalleCelda.resp)), fontSize: 20, fontWeight: 900 }}>{pct(detalleCelda.ok, detalleCelda.resp)}%</div>
+                  <div style={{ color: muted, fontSize: 11 }}>{detalleCelda.ok}/{detalleCelda.resp} resp.</div>
+                </div>
+                <button onClick={() => setCelda(null)} aria-label="Cerrar" style={{ background: "none", border: "none", color: muted, fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>✕</button>
+              </div>
+              {detalleCelda.filas.map(f => (
+                <div key={f.id} style={{ padding: "8px 14px", borderBottom: `1px solid ${border}`, opacity: f.resp ? 1 : 0.45 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                    <span style={{ color: "white", fontSize: 13, flex: 1, minWidth: 0 }}>{f.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", color: f.resp ? colorAcierto(pct(f.ok, f.resp)) : muted }}>{f.resp ? `${pct(f.ok, f.resp)}%` : "Sin actividad"}</span>
+                  </div>
+                  {f.resp > 0 && (
+                    <>
+                      <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "5px 0 3px" }}>
+                        <div style={{ width: `${pct(f.ok, f.resp)}%`, height: "100%", background: colorAcierto(pct(f.ok, f.resp)), borderRadius: 3 }} />
+                      </div>
+                      <div style={{ color: muted, fontSize: 11 }}>{f.ok}/{f.resp} resp. · {f.ses} {f.ses === 1 ? "sesión" : "sesiones"} · última {fechaHora(f.ultima)}</div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          </>
+          )}
 
+          {tab === "actividad" && (
+          <>
           <Titulo>📅 Control de actividad · cuántas veces y cuándo</Titulo>
           <div style={{ color: "#64748b", fontSize: 11, margin: "0 2px 8px" }}>
             Una <b>sesión</b> es un bloque de respuestas seguidas en una actividad (se corta tras 30 min sin responder). Se deduce de las respuestas registradas: si alguien abre una actividad y no responde nada, no queda registro. Elige un alumno para ver su detalle.
@@ -404,8 +560,11 @@ export default function Reporte({ onVolver }) {
           ) : (
             <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Sin actividad registrada para esta persona.</div>
           )}
+          </>
+          )}
 
-
+          {tab === "errores" && (
+          <>
           {base.length === 0 ? (
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: 24, textAlign: "center", color: muted }}>
               Aún no hay respuestas registradas. Los datos se guardan desde que se publicó esta versión, cada vez que un alumno responde una actividad.
@@ -469,6 +628,8 @@ export default function Reporte({ onVolver }) {
                 </div>
               )}
             </>
+          )}
+          </>
           )}
         </>
       )}
