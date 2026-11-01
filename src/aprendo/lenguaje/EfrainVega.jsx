@@ -34,7 +34,7 @@ const Boton = ({ children, onClick, color = azul, disabled, style }) => (
 );
 
 const Volver = ({ onClick, texto }) => (
-  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0 }}>{texto}</button>
+  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0 }}>{texto}</button>
 );
 
 export default function EfrainVega({ onVolver }) {
@@ -102,8 +102,8 @@ export default function EfrainVega({ onVolver }) {
         <Volver onClick={onVolver} texto="← Volver a actividades" />
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 40, marginBottom: 6 }}>👻</div>
-          <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>Efraín en La Vega</div>
-          <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Elige una alternativa y pasarás solo a la siguiente</div>
+          <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>Efraín en La Vega</div>
+          <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Elige una alternativa y pasarás solo a la siguiente</div>
         </div>
 
         {nPend > 0 && (
@@ -116,14 +116,14 @@ export default function EfrainVega({ onVolver }) {
           </div>
         )}
 
-        <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>1 · Elige qué parte del libro</div>
+        <div style={{ color: "#475569", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>1 · Elige qué parte del libro</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
           {[{ id: "todo", titulo: "Todo el libro", emoji: "📚" }, ...CAPITULOS].map(c => {
             const n = c.id === "todo" ? PREGUNTAS.length : PREGUNTAS.filter(p => p.cap === c.id).length;
             const sel = cap === c.id;
             return (
               <button key={c.id} onClick={() => setCap(c.id)}
-                style={{ background: sel ? azul + "33" : card, border: `2px solid ${sel ? azul : border}`, borderRadius: 12, padding: "10px 14px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 12 }}>
+                style={{ background: sel ? "#1e3a8a" : card, border: `2px solid ${sel ? azul : border}`, borderRadius: 12, padding: "10px 14px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 22, width: 28, textAlign: "center" }}>{c.emoji}</span>
                 <span style={{ color: "white", fontSize: 15, fontWeight: 700, flex: 1 }}>
                   {c.id !== "todo" && c.id !== "0" ? `${c.id}. ` : ""}{c.titulo}
@@ -136,8 +136,8 @@ export default function EfrainVega({ onVolver }) {
         </div>
 
         {/* Barra fija abajo: el botón siempre está a la vista, sin importar cuánto se haya bajado */}
-        <div style={{ position: "sticky", bottom: 0, margin: "0 -4px", padding: "14px 4px 12px", background: "linear-gradient(to top, rgba(15,23,42,1) 70%, rgba(15,23,42,0))", textAlign: "center", zIndex: 5 }}>
-          <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>2 · ¡Listo! Elegiste: <b style={{ color: "white" }}>{cap === "todo" ? "Todo el libro" : tituloCap(cap).replace("Cap. ", "").replace("Libro", "Sobre el libro")}</b></div>
+        <div style={{ position: "sticky", bottom: 0, margin: "0 -4px", padding: "14px 4px 12px", background: "linear-gradient(to top, rgba(244,246,249,1) 70%, rgba(244,246,249,0))", textAlign: "center", zIndex: 5 }}>
+          <div style={{ color: "#475569", fontSize: 12, marginBottom: 6 }}>2 · ¡Listo! Elegiste: <b style={{ color: "#0f172a" }}>{cap === "todo" ? "Todo el libro" : tituloCap(cap).replace("Cap. ", "").replace("Libro", "Sobre el libro")}</b></div>
           <Boton onClick={() => empezar(false)} color={verde} style={{ padding: "16px 40px", fontSize: 18, width: "100%", maxWidth: 420, boxShadow: "0 4px 18px rgba(34,197,94,.45)" }}>▶ Empezar ({Math.min(TOTAL, disponibles)} preguntas)</Boton>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function EfrainVega({ onVolver }) {
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
       <Volver onClick={() => setFase("config")} texto="← Salir de la práctica" />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ color: "#94a3b8", fontSize: 13 }}>{modoRefuerzo ? "🎯 " : ""}Pregunta {actual + 1} de {preguntas.length}</div>
+        <div style={{ color: "#475569", fontSize: 13 }}>{modoRefuerzo ? "🎯 " : ""}Pregunta {actual + 1} de {preguntas.length}</div>
         <div style={{ display: "flex", gap: 4 }}>
           {preguntas.map((_, i) => (
             <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: aciertos[i] === true ? verde : aciertos[i] === false ? rojo : i === actual ? azul : border }} />
@@ -210,8 +210,8 @@ export default function EfrainVega({ onVolver }) {
           const esCorrecta = op === p.correcta;
           const esElegida = op === elegida;
           let bg = card, bd = border;
-          if (respondida && esCorrecta) { bg = verde + "33"; bd = verde; }
-          else if (respondida && esElegida) { bg = rojo + "33"; bd = rojo; }
+          if (respondida && esCorrecta) { bg = "#14532d"; bd = verde; }
+          else if (respondida && esElegida) { bg = "#7f1d1d"; bd = rojo; }
           return (
             <button key={op} onClick={() => responder(op)} disabled={respondida}
               style={{ background: bg, border: `2px solid ${bd}`, borderRadius: 12, padding: "14px 16px", color: "white", fontSize: 16, fontWeight: 600, textAlign: "left", cursor: respondida ? "default" : "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>

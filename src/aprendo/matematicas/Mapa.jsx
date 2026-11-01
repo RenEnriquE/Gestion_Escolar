@@ -80,13 +80,13 @@ export default function Mapa({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "4px 0" }}>
-      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
         ← Volver a actividades
       </button>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <div>
-          <div style={{ color: "white", fontSize: 17, fontWeight: 800 }}>Mapa del Reino de Arcoiria</div>
-          <div style={{ color: "#94a3b8", fontSize: 12 }}>Usa el mapa para encontrar las coordenadas de cada lugar</div>
+          <div style={{ color: "#0f172a", fontSize: 17, fontWeight: 800 }}>Mapa del Reino de Arcoiria</div>
+          <div style={{ color: "#475569", fontSize: 12 }}>Usa el mapa para encontrar las coordenadas de cada lugar</div>
         </div>
         <button onClick={() => setMostrarMapa(m=>!m)}
           style={{ background: azul+"33", border: `1px solid ${azul}`, borderRadius: 8, color: azul, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>

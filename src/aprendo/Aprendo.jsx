@@ -32,8 +32,8 @@ export default function Aprendo() {
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 0" }}>
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{ fontSize: 42, marginBottom: 8 }}>🎓</div>
-        <div style={{ color: "white", fontSize: 22, fontWeight: 800 }}>¡Aprendo!</div>
-        <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 4 }}>Elige una asignatura para practicar</div>
+        <div style={{ color: "#0f172a", fontSize: 22, fontWeight: 800 }}>¡Aprendo!</div>
+        <div style={{ color: "#475569", fontSize: 14, marginTop: 4 }}>Elige una asignatura para practicar</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         {ASIGNATURAS.filter(a => puede(a.id)).map(a => (

@@ -50,7 +50,7 @@ const Boton = ({ children, onClick, color = azul, style }) => (
 );
 
 const Volver = ({ onClick, texto }) => (
-  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
     {texto}
   </button>
 );
@@ -128,7 +128,7 @@ export default function Unit4Oraciones({ onVolver, refuerzoKeys }) {
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
       <Volver onClick={onVolver} texto="← Volver a actividades" />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ color: "#94a3b8", fontSize: 13 }}>Pregunta {actual + 1} de {preguntas.length}</div>
+        <div style={{ color: "#475569", fontSize: 13 }}>Pregunta {actual + 1} de {preguntas.length}</div>
         <div style={{ display: "flex", gap: 4 }}>
           {preguntas.map((_, i) => (
             <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: aciertos[i] === true ? verde : aciertos[i] === false ? rojo : i === actual ? azul : border }} />
@@ -156,8 +156,8 @@ export default function Unit4Oraciones({ onVolver, refuerzoKeys }) {
           const esCorrecta = op === q.correcta;
           const esElegida = op === elegida;
           let bg = card, bd = border;
-          if (respondida && esCorrecta) { bg = verde + "33"; bd = verde; }
-          else if (respondida && esElegida) { bg = rojo + "33"; bd = rojo; }
+          if (respondida && esCorrecta) { bg = "#14532d"; bd = verde; }
+          else if (respondida && esElegida) { bg = "#7f1d1d"; bd = rojo; }
           return (
             <button key={op} onClick={() => responder(op)} disabled={respondida}
               style={{ background: bg, border: `2px solid ${bd}`, borderRadius: 12, padding: "14px 16px", color: "white", fontSize: 18, fontWeight: 600, textAlign: "left", cursor: respondida ? "default" : "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -174,7 +174,7 @@ export default function Unit4Oraciones({ onVolver, refuerzoKeys }) {
           <div style={{ color: aciertos[actual] ? verde : rojo, fontWeight: 700, marginBottom: 4 }}>
             {aciertos[actual] ? "¡Correcto! 🎉" : `Era: ${q.inicio} ${q.correcta}.`}
           </div>
-          {q.es && <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 10 }}>{q.correcta} = {q.es}</div>}
+          {q.es && <div style={{ color: "#475569", fontSize: 13, marginBottom: 10 }}>{q.correcta} = {q.es}</div>}
           <Boton onClick={siguiente}>{actual < preguntas.length - 1 ? "Siguiente →" : "Ver resultado"}</Boton>
         </div>
       )}

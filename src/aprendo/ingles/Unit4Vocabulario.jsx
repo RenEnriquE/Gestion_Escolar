@@ -58,7 +58,7 @@ const Boton = ({ children, onClick, color = azul, style }) => (
 );
 
 const Volver = ({ onClick, texto }) => (
-  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
     {texto}
   </button>
 );
@@ -101,11 +101,11 @@ export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
         <Volver onClick={onVolver} texto="← Volver a actividades" />
         <div style={{ textAlign: "center", marginBottom: 22 }}>
           <div style={{ fontSize: 40, marginBottom: 6 }}>🦁</div>
-          <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>Unit 4: Wild Animals</div>
-          <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Elige qué quieres practicar</div>
+          <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>Unit 4: Wild Animals</div>
+          <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Elige qué quieres practicar</div>
         </div>
 
-        <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Tema</div>
+        <div style={{ color: "#475569", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Tema</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
           {CATEGORIAS.map(c => (
             <button key={c.id} onClick={() => setCat(c.id)}
@@ -115,11 +115,11 @@ export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
           ))}
         </div>
 
-        <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Tipo de pregunta</div>
+        <div style={{ color: "#475569", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Tipo de pregunta</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
           {DIRECCIONES.map(d => (
             <button key={d.id} onClick={() => setDir(d.id)}
-              style={{ background: dir === d.id ? azul + "33" : card, border: `2px solid ${dir === d.id ? azul : border}`, borderRadius: 12, padding: "12px 16px", cursor: "pointer", textAlign: "left" }}>
+              style={{ background: dir === d.id ? "#1e3a8a" : card, border: `2px solid ${dir === d.id ? azul : border}`, borderRadius: 12, padding: "12px 16px", cursor: "pointer", textAlign: "left" }}>
               <div style={{ color: "white", fontSize: 15, fontWeight: 700 }}>{d.label}</div>
               <div style={{ color: "#94a3b8", fontSize: 12 }}>{d.desc}</div>
             </button>
@@ -182,7 +182,7 @@ export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
       <Volver onClick={refuerzo ? onVolver : () => setFase("config")} texto="← Salir de la práctica" />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ color: "#94a3b8", fontSize: 13 }}>Pregunta {actual + 1} de {preguntas.length}</div>
+        <div style={{ color: "#475569", fontSize: 13 }}>Pregunta {actual + 1} de {preguntas.length}</div>
         <div style={{ display: "flex", gap: 4 }}>
           {preguntas.map((_, i) => (
             <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: aciertos[i] === true ? verde : aciertos[i] === false ? rojo : i === actual ? azul : border }} />
@@ -204,8 +204,8 @@ export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
           const esCorrecta = op === p.correcta;
           const esElegida = op === elegida;
           let bg = card, bd = border;
-          if (respondida && esCorrecta) { bg = verde + "33"; bd = verde; }
-          else if (respondida && esElegida) { bg = rojo + "33"; bd = rojo; }
+          if (respondida && esCorrecta) { bg = "#14532d"; bd = verde; }
+          else if (respondida && esElegida) { bg = "#7f1d1d"; bd = rojo; }
           return (
             <button key={op} onClick={() => responder(op)} disabled={respondida}
               style={{ background: bg, border: `2px solid ${bd}`, borderRadius: 12, padding: "14px 16px", color: "white", fontSize: 17, fontWeight: 600, textAlign: "left", cursor: respondida ? "default" : "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

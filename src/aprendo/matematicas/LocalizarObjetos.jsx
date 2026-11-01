@@ -59,11 +59,11 @@ export default function LocalizarObjetos({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "4px 0" }}>
-      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
         ← Volver a actividades
       </button>
-      <div style={{ color: "white", fontSize: 17, fontWeight: 800, marginBottom: 4 }}>Localiza los objetos</div>
-      <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 16 }}>Mira la cuadrícula e indica las coordenadas de cada objeto</div>
+      <div style={{ color: "#0f172a", fontSize: 17, fontWeight: 800, marginBottom: 4 }}>Localiza los objetos</div>
+      <div style={{ color: "#475569", fontSize: 13, marginBottom: 16 }}>Mira la cuadrícula e indica las coordenadas de cada objeto</div>
 
       {/* Cuadrícula con objetos */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
@@ -71,13 +71,13 @@ export default function LocalizarObjetos({ onVolver }) {
           <thead>
             <tr>
               <th style={{ width: 28 }}></th>
-              {COLS.map(c => <th key={c} style={{ width: celdaSize, color: "#94a3b8", fontSize: 13, fontWeight: 700, textAlign: "center", paddingBottom: 4 }}>{c}</th>)}
+              {COLS.map(c => <th key={c} style={{ width: celdaSize, color: "#475569", fontSize: 13, fontWeight: 700, textAlign: "center", paddingBottom: 4 }}>{c}</th>)}
             </tr>
           </thead>
           <tbody>
             {ROWS.map(row => (
               <tr key={row}>
-                <td style={{ color: "#94a3b8", fontSize: 13, fontWeight: 700, textAlign: "right", paddingRight: 6 }}>{row}</td>
+                <td style={{ color: "#475569", fontSize: 13, fontWeight: 700, textAlign: "right", paddingRight: 6 }}>{row}</td>
                 {COLS.map(col => {
                   const emoji = mapa[`${col}${row}`];
                   return (
