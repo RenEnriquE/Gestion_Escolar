@@ -103,7 +103,7 @@ function resumenPersona(rs) {
   });
   Object.keys(act).forEach(k => { const g = asig[asigDe(k)]; if (g) g.ses += act[k].ses; });
   const dias = new Set(rs.map(r => dia(r.creado_en)));
-  return { act, asig, nDias: dias.size, ses: Object.values(act).reduce((n, x) => n + x.ses, 0), ultima: orden.length ? orden[orden.length - 1].creado_en : null, total: rs.length };
+  return { act, asig, ok: rs.filter(r => r.correcta).length, nDias: dias.size, ses: Object.values(act).reduce((n, x) => n + x.ses, 0), ultima: orden.length ? orden[orden.length - 1].creado_en : null, total: rs.length };
 }
 
 export default function Reporte({ onVolver }) {
@@ -188,6 +188,17 @@ export default function Reporte({ onVolver }) {
     }[ordenCtl];
     return lista.sort(f);
   }, [rows, info, incluirAdmins, ordenCtl]);
+  // Tasa de aciertos del curso por asignatura (suma de todas las respuestas de los alumnos listados)
+  const tasaCurso = useMemo(() => {
+    const t = { total: { resp: 0, ok: 0 } };
+    ASIGS.forEach(a => { t[a] = { resp: 0, ok: 0 }; });
+    control.forEach(x => {
+      t.total.resp += x.total; t.total.ok += x.ok;
+      ASIGS.forEach(a => { t[a].resp += x.asig[a].resp; t[a].ok += x.asig[a].ok; });
+    });
+    return t;
+  }, [control]);
+  const tablaAciertos = useMemo(() => control.filter(x => x.total > 0).slice().sort((a, b) => pct(a.ok, a.total) - pct(b.ok, b.total) || a.nombre.localeCompare(b.nombre, "es")), [control]);
   const detalle = useMemo(() => (quien === "todos" ? null : control.find(x => x.email === quien) || null), [control, quien]);
 
   const okSel = sel.filter(r => r.correcta).length;
@@ -257,6 +268,45 @@ export default function Reporte({ onVolver }) {
           )}
           <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas (todas las actividades, sin el filtro de arriba). Matemáticas y Habilidades Matemáticas se registran desde esta versión.</div>
 
+          <Titulo>🎯 Tasa de aciertos · por alumno y por asignatura</Titulo>
+          <div style={{ color: "#64748b", fontSize: 11, margin: "0 2px 8px" }}>
+            Aciertos ÷ respuestas registradas (cada intento cuenta). Entre paréntesis, el número de respuestas. Ordenado de menor a mayor tasa total, para ver primero a quien más apoyo necesita.
+          </div>
+          {tablaAciertos.length === 0 ? (
+            <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Aún no hay respuestas registradas.</div>
+          ) : (
+            <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "white", minWidth: 560 }}>
+                <thead>
+                  <tr style={{ color: muted, textAlign: "center" }}>
+                    <th style={{ textAlign: "left", padding: "8px 12px", fontWeight: 700 }}>Alumno</th>
+                    <th style={{ padding: "8px 6px", fontWeight: 700 }}>Total</th>
+                    {ASIGS.map(a => <th key={a} style={{ padding: "8px 6px", fontWeight: 700 }}>{NOMBRE_ASIG[a].replace("Naturales", "").trim()}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ background: "#0f172a", fontWeight: 800 }}>
+                    <td style={{ padding: "8px 12px" }}>Todo el curso</td>
+                    {["total", ...ASIGS].map(k => {
+                      const c = tasaCurso[k];
+                      return <td key={k} style={{ textAlign: "center", padding: "8px 6px", color: c.resp ? colorAcierto(pct(c.ok, c.resp)) : muted }}>{c.resp ? `${pct(c.ok, c.resp)}%` : "—"}<div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({c.resp})</div></td>;
+                    })}
+                  </tr>
+                  {tablaAciertos.map(x => (
+                    <tr key={x.email} onClick={() => setQuien(x.email)} style={{ borderTop: `1px solid ${border}`, cursor: "pointer" }}>
+                      <td style={{ padding: "7px 12px", fontWeight: 600 }}>{x.nombre}</td>
+                      <td style={{ textAlign: "center", padding: "7px 6px", fontWeight: 800, color: colorAcierto(pct(x.ok, x.total)) }}>{pct(x.ok, x.total)}%<div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({x.total})</div></td>
+                      {ASIGS.map(a => {
+                        const g = x.asig[a];
+                        return <td key={a} style={{ textAlign: "center", padding: "7px 6px", color: g.resp ? colorAcierto(pct(g.ok, g.resp)) : "#475569", fontWeight: 700 }}>{g.resp ? `${pct(g.ok, g.resp)}%` : "—"}{g.resp > 0 && <div style={{ color: muted, fontSize: 10, fontWeight: 500 }}>({g.resp})</div>}</td>;
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <Titulo>📅 Control de actividad · cuántas veces y cuándo</Titulo>
           <div style={{ color: "#64748b", fontSize: 11, margin: "0 2px 8px" }}>
             Una <b>sesión</b> es un bloque de respuestas seguidas en una actividad (se corta tras 30 min sin responder). Se deduce de las respuestas registradas: si alguien abre una actividad y no responde nada, no queda registro. Elige un alumno para ver su detalle.
@@ -278,13 +328,14 @@ export default function Reporte({ onVolver }) {
                       <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{x.nombre}</span>
                       <span style={{ color: x.ses ? azul : amarillo, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
                         {x.ses ? `${x.ses} ${x.ses === 1 ? "sesión" : "sesiones"} · ${x.nDias} ${x.nDias === 1 ? "día" : "días"}` : "Sin actividad registrada"}
+                        {x.total > 0 && <span style={{ color: colorAcierto(pct(x.ok, x.total)) }}> · {pct(x.ok, x.total)}% aciertos</span>}
                       </span>
                     </div>
                     {x.ses > 0 && (
                       <div style={{ color: muted, fontSize: 11, marginTop: 3, display: "flex", flexWrap: "wrap", gap: "2px 12px" }}>
                         <span>Última: <b style={{ color: "#cbd5e1" }}>{fechaHora(x.ultima)}</b></span>
                         {ASIGS.filter(a => x.asig[a].ses > 0).map(a => (
-                          <span key={a}>{NOMBRE_ASIG[a]}: <b style={{ color: "#cbd5e1" }}>{x.asig[a].ses} ses.</b> · {fechaCorta(x.asig[a].ultima)}</span>
+                          <span key={a}>{NOMBRE_ASIG[a]}: <b style={{ color: "#cbd5e1" }}>{x.asig[a].ses} ses.</b> · {fechaCorta(x.asig[a].ultima)} · <span style={{ color: colorAcierto(pct(x.asig[a].ok, x.asig[a].resp)) }}>{pct(x.asig[a].ok, x.asig[a].resp)}%</span></span>
                         ))}
                       </div>
                     )}
@@ -298,6 +349,7 @@ export default function Reporte({ onVolver }) {
                 <Tile valor={detalle.ses} label={detalle.ses === 1 ? "sesión" : "sesiones"} color={azul} />
                 <Tile valor={detalle.nDias} label={detalle.nDias === 1 ? "día con actividad" : "días con actividad"} />
                 <Tile valor={detalle.ultima ? fechaHora(detalle.ultima) : "—"} label="última actividad" />
+                <Tile valor={detalle.total ? `${pct(detalle.ok, detalle.total)}%` : "—"} label={`tasa de aciertos (${detalle.ok}/${detalle.total})`} color={detalle.total ? colorAcierto(pct(detalle.ok, detalle.total)) : "white"} />
               </div>
               <div style={{ color: "#0f172a", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>{detalle.nombre} · por actividad</div>
               <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
@@ -327,7 +379,7 @@ export default function Reporte({ onVolver }) {
                     <div key={a} style={{ padding: "10px 14px", borderBottom: `1px solid ${border}` }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, color: "white", fontSize: 14 }}>
                         <span style={{ fontWeight: 700 }}>{NOMBRE_ASIG[a]}</span>
-                        <span style={{ color: muted, fontSize: 12 }}>{g.ses} {g.ses === 1 ? "sesión" : "sesiones"} · {g.resp} resp. · {Object.keys(g.dias).length} {Object.keys(g.dias).length === 1 ? "día" : "días"}</span>
+                        <span style={{ color: muted, fontSize: 12 }}>{g.ses} {g.ses === 1 ? "sesión" : "sesiones"} · {g.resp} resp. · <b style={{ color: colorAcierto(pct(g.ok, g.resp)) }}>{pct(g.ok, g.resp)}% aciertos</b> · {Object.keys(g.dias).length} {Object.keys(g.dias).length === 1 ? "día" : "días"}</span>
                       </div>
                       <div style={{ color: muted, fontSize: 12, marginTop: 4 }}>
                         Más activo: {top.map(([d, n], i) => <span key={d}>{i > 0 ? " · " : ""}<b style={{ color: "#cbd5e1" }}>{fechaDia(d)}</b> ({n})</span>)}
