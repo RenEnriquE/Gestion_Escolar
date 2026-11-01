@@ -2,6 +2,7 @@ import { PREGUNTAS as PREG_EFRAIN } from "./lenguaje/efrainData.js";
 import { VOCAB } from "./ingles/unit4Data.js";
 import { INICIO } from "./ingles/unit4Oraciones.js";
 import { construir as construirDivision } from "./mate/divisionData.js";
+import { construir as construirPlantas } from "./ciencias/plantasData.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase.js";
 import { usePermisos } from "./permisos.js";
@@ -13,6 +14,7 @@ const respuestaCorrecta = (item) => {
   if (item.startsWith("v:")) { const v = VOCAB.find(x => x.en === item.slice(2)); return v ? `${v.en} = ${v.es}` : null; }
   if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
   if (item.startsWith("d:")) return construirDivision(item)?.solucion || null;
+  if (item.startsWith("c:")) return construirPlantas(item)?.solucion || null;
   if (item.startsWith("m:")) { const p = item.split(":"); return p[2] || null; }
   return null;
 };
@@ -34,6 +36,12 @@ const ACTIVIDADES = [
   { id: "mate.tablas", label: "Matemáticas · Tablas y divisiones" },
   { id: "mate.familias", label: "Matemáticas · Multiplicar y dividir" },
   { id: "mate.problemas", label: "Matemáticas · Problemas" },
+  { id: "ciencias.partes", label: "Ciencias · Plantas: Partes de la planta" },
+  { id: "ciencias.funciones", label: "Ciencias · Plantas: ¿Qué función cumple cada parte?" },
+  { id: "ciencias.necesidades", label: "Ciencias · Plantas: Lo que necesitan" },
+  { id: "ciencias.fotosintesis", label: "Ciencias · Plantas: Fotosíntesis" },
+  { id: "ciencias.orden", label: "Ciencias · Plantas: Ordena la fotosíntesis" },
+  { id: "ciencias.ensayo", label: "Ciencias · Plantas: Ensayo de la prueba" },
 ];
 
 const ASIGNATURAS = [
@@ -42,6 +50,7 @@ const ASIGNATURAS = [
   { id: "lenguaje", label: "Lenguaje" },
   { id: "mate", label: "Matemáticas" },
   { id: "matematicas", label: "Hab. Matemáticas" },
+  { id: "ciencias", label: "Ciencias" },
 ];
 const dia = (f) => { try { return new Date(f).toLocaleDateString("sv-SE"); } catch { return ""; } };
 const fechaCorta = (f) => { try { return new Date(f).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" }); } catch { return ""; } };
@@ -66,8 +75,8 @@ const selectStyle = { background: "#0f172a", color: "white", border: `1px solid 
 // ── Control de actividad ─────────────────────────────────────────────────────
 // Una "sesión" = bloque de respuestas seguidas en una misma actividad; se corta tras 30 min sin responder.
 const GAP_SESION = 30 * 60 * 1000;
-const NOMBRE_ASIG = { ingles: "Inglés", lenguaje: "Lenguaje", mate: "Matemáticas", matematicas: "Hab. Matemáticas" };
-const ASIGS = ["ingles", "lenguaje", "mate", "matematicas"];
+const NOMBRE_ASIG = { ingles: "Inglés", lenguaje: "Lenguaje", mate: "Matemáticas", matematicas: "Hab. Matemáticas", ciencias: "Ciencias Naturales" };
+const ASIGS = ["ingles", "lenguaje", "mate", "matematicas", "ciencias"];
 const DIAS_SEM = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 const asigDe = (actividad) => (actividad || "").split(".")[0];
 const fechaHora = (f) => { try { return new Date(f).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }); } catch { return ""; } };
@@ -150,7 +159,7 @@ export default function Reporte({ onVolver }) {
   const ranking = useMemo(() => {
     const por = {};
     (rows || []).filter(r => incluirAdmins || !info[r.email]?.esPrueba).forEach(r => {
-      const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, dias: new Set(), ultima: r.creado_en });
+      const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, ciencias: 0, dias: new Set(), ultima: r.creado_en });
       const a = (r.actividad || "").split(".")[0];
       x.total++; if (x[a] !== undefined) x[a]++;
       x.dias.add(dia(r.creado_en));
@@ -238,7 +247,7 @@ export default function Reporte({ onVolver }) {
                   </div>
                   <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
                     {rankAsig === "total"
-                      ? `Inglés ${x.ingles} · Lenguaje ${x.lenguaje} · Matemáticas ${x.mate} · Hab. Mat. ${x.matematicas} · `
+                      ? `Inglés ${x.ingles} · Lenguaje ${x.lenguaje} · Matemáticas ${x.mate} · Hab. Mat. ${x.matematicas} · Ciencias ${x.ciencias} · `
                       : ""}
                     {x.nDias} {x.nDias === 1 ? "día" : "días"} con actividad · última vez {fechaCorta(x.ultima)}
                   </div>

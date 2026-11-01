@@ -29,6 +29,19 @@ export const CATALOGO = [
     ],
   },
   {
+    id: "ciencias", label: "Ciencias Naturales", emoji: "🔬",
+    actividades: [
+      { id: "ciencias.repaso",       label: "Plantas: Repasa la materia" },
+      { id: "ciencias.partes",       label: "Plantas: Partes de la planta" },
+      { id: "ciencias.funciones",    label: "Plantas: ¿Qué función cumple cada parte?" },
+      { id: "ciencias.necesidades",  label: "Plantas: Lo que necesitan las plantas" },
+      { id: "ciencias.fotosintesis", label: "Plantas: La fábrica verde (fotosíntesis)" },
+      { id: "ciencias.orden",        label: "Plantas: Ordena la fotosíntesis" },
+      { id: "ciencias.ensayo",       label: "Plantas: Ensayo de la prueba" },
+      { id: "ciencias.refuerzo",     label: "Plantas: Reforzar mis errores" },
+    ],
+  },
+  {
     id: "ingles", label: "Inglés", emoji: "🌎",
     actividades: [
       { id: "ingles.unit4",          label: "Unit 4: Vocabulario" },
