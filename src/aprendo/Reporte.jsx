@@ -66,7 +66,7 @@ const Tile = ({ valor, label, color = "white" }) => (
 );
 
 const Titulo = ({ children }) => (
-  <div style={{ color: muted, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "22px 0 8px" }}>{children}</div>
+  <div style={{ color: "#475569", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "22px 0 8px" }}>{children}</div>
 );
 
 const selectStyle = { background: "#0f172a", color: "white", border: `1px solid ${border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, maxWidth: "100%" };
@@ -196,15 +196,15 @@ export default function Reporte({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "4px 0" }}>
-      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: muted, fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a asignaturas</button>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a asignaturas</button>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <div style={{ fontSize: 38, marginBottom: 6 }}>📊</div>
-        <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>Reporte de errores</div>
-        <div style={{ color: muted, fontSize: 13, marginTop: 4 }}>Qué cuesta más al curso y a cada alumno · solo administradores</div>
+        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>Reporte de errores</div>
+        <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Qué cuesta más al curso y a cada alumno · solo administradores</div>
       </div>
 
       {error && <div style={{ color: rojo, textAlign: "center", padding: 16 }}>{error}. ¿Ya ejecutaste supabase_respuestas.sql?</div>}
-      {!error && rows === null && <div style={{ color: muted, textAlign: "center", padding: 24 }}>Cargando...</div>}
+      {!error && rows === null && <div style={{ color: "#475569", textAlign: "center", padding: 24 }}>Cargando...</div>}
 
       {rows !== null && !error && (
         <>
@@ -216,7 +216,7 @@ export default function Reporte({ onVolver }) {
               <option value="todos">Todo el curso</option>
               {alumnosTabla.map(a => <option key={a.email} value={a.email}>{a.nombre}</option>)}
             </select>
-            <label style={{ color: muted, fontSize: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <label style={{ color: "#475569", fontSize: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
               <input type="checkbox" checked={incluirAdmins} onChange={e => setIncluirAdmins(e.target.checked)} />
               Incluir pruebas de administradores y directivos (sin alumno asociado)
             </label>
@@ -232,7 +232,7 @@ export default function Reporte({ onVolver }) {
             ))}
           </div>
           {ranking.length === 0 ? (
-            <div style={{ color: muted, fontSize: 13, padding: 12 }}>Aún no hay actividad registrada en esta asignatura.</div>
+            <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Aún no hay actividad registrada en esta asignatura.</div>
           ) : (
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
               {ranking.map((x, i) => (
@@ -264,7 +264,7 @@ export default function Reporte({ onVolver }) {
           {quien === "todos" ? (
             <>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
-                <span style={{ color: muted, fontSize: 12 }}>Ordenar por:</span>
+                <span style={{ color: "#475569", fontSize: 12 }}>Ordenar por:</span>
                 {[["ultima", "Última actividad"], ["sesiones", "Más sesiones"], ["sinActividad", "Menos sesiones"], ["nombre", "Nombre"]].map(([k, l]) => (
                   <button key={k} onClick={() => setOrdenCtl(k)} style={{ background: ordenCtl === k ? azul : "#0f172a", color: "white", border: `1px solid ${ordenCtl === k ? azul : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
                 ))}
@@ -299,7 +299,7 @@ export default function Reporte({ onVolver }) {
                 <Tile valor={detalle.nDias} label={detalle.nDias === 1 ? "día con actividad" : "días con actividad"} />
                 <Tile valor={detalle.ultima ? fechaHora(detalle.ultima) : "—"} label="última actividad" />
               </div>
-              <div style={{ color: "white", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>{detalle.nombre} · por actividad</div>
+              <div style={{ color: "#0f172a", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>{detalle.nombre} · por actividad</div>
               <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
                 {ACTIVIDADES.filter(a => a.id !== "todas").map(a => {
                   const d = detalle.act[a.id];
@@ -313,7 +313,7 @@ export default function Reporte({ onVolver }) {
                   );
                 })}
               </div>
-              <div style={{ color: "white", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>Días de mayor actividad por asignatura</div>
+              <div style={{ color: "#0f172a", fontWeight: 700, margin: "14px 0 6px", fontSize: 14 }}>Días de mayor actividad por asignatura</div>
               <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
                 {ASIGS.map(a => {
                   const g = detalle.asig[a];
@@ -350,7 +350,7 @@ export default function Reporte({ onVolver }) {
               </div>
             </>
           ) : (
-            <div style={{ color: muted, fontSize: 13, padding: 12 }}>Sin actividad registrada para esta persona.</div>
+            <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Sin actividad registrada para esta persona.</div>
           )}
 
 

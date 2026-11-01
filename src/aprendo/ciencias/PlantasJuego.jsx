@@ -30,7 +30,7 @@ const Boton = ({ children, onClick, color, disabled, style }) => (
 );
 
 const Volver = ({ onClick, texto }) => (
-  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0 }}>{texto}</button>
+  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0 }}>{texto}</button>
 );
 
 export default function PlantasJuego({ modo, onVolver }) {
@@ -105,8 +105,8 @@ export default function PlantasJuego({ modo, onVolver }) {
         <Volver onClick={onVolver} texto="← Volver a actividades" />
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           <div style={{ fontSize: 40, marginBottom: 6 }}>{info.emoji}</div>
-          <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>{info.label}</div>
-          <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Elige una alternativa y pasarás solo a la siguiente</div>
+          <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>{info.label}</div>
+          <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Elige una alternativa y pasarás solo a la siguiente</div>
         </div>
 
         <div style={{ background: card, border: `2px solid ${color}`, borderRadius: 14, padding: "14px 16px", marginBottom: 18 }}>
@@ -138,7 +138,7 @@ export default function PlantasJuego({ modo, onVolver }) {
           </div>
         )}
 
-        <div style={{ position: "sticky", bottom: 0, margin: "0 -4px", padding: "14px 4px 12px", background: "linear-gradient(to top, rgba(15,23,42,1) 70%, rgba(15,23,42,0))", textAlign: "center", zIndex: 5 }}>
+        <div style={{ position: "sticky", bottom: 0, margin: "0 -4px", padding: "14px 4px 12px", background: "linear-gradient(to top, rgba(244,246,249,1) 70%, rgba(244,246,249,0))", textAlign: "center", zIndex: 5 }}>
           <Boton color={verde} disabled={esRef && nPend === 0} onClick={() => empezar(false)}
             style={{ padding: "16px 40px", fontSize: 18, width: "100%", maxWidth: 420, boxShadow: nPend || !esRef ? "0 4px 18px rgba(34,197,94,.45)" : "none" }}>
             {esRef ? `▶ Reforzar (${Math.min(TOTAL, nPend)} preguntas)` : `▶ Empezar (${TOTAL} preguntas)`}
@@ -196,7 +196,7 @@ export default function PlantasJuego({ modo, onVolver }) {
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
       <Volver onClick={() => setFase("config")} texto="← Salir de la práctica" />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ color: "#94a3b8", fontSize: 13 }}>{modoRefuerzo ? "🎯 " : ""}Pregunta {actual + 1} de {preguntas.length}</div>
+        <div style={{ color: "#475569", fontSize: 13 }}>{modoRefuerzo ? "🎯 " : ""}Pregunta {actual + 1} de {preguntas.length}</div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {preguntas.map((_, i) => (
             <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: aciertos[i] === true ? verde : aciertos[i] === false ? rojo : i === actual ? color : border }} />
@@ -220,8 +220,8 @@ export default function PlantasJuego({ modo, onVolver }) {
           const esCorrecta = op === q.correcta;
           const esElegida = op === elegida;
           let bg = card, bd = border;
-          if (respondida && esCorrecta) { bg = verde + "33"; bd = verde; }
-          else if (respondida && esElegida) { bg = rojo + "33"; bd = rojo; }
+          if (respondida && esCorrecta) { bg = "#14532d"; bd = verde; }
+          else if (respondida && esElegida) { bg = "#7f1d1d"; bd = rojo; }
           return (
             <button key={op} onClick={() => responder(op)} disabled={respondida}
               style={{ background: bg, border: `2px solid ${bd}`, borderRadius: 12, padding: "14px 16px", color: "white", fontSize: 16, fontWeight: 700, textAlign: "left", cursor: respondida ? "default" : "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -237,10 +237,10 @@ export default function PlantasJuego({ modo, onVolver }) {
       <div style={{ minHeight: 96, textAlign: "center" }}>
         {respondida && (
           <button onClick={avanzar} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, width: "100%" }}>
-            <div style={{ color: acerto ? verde : rojo, fontWeight: 700, fontSize: 15 }}>
+            <div style={{ color: acerto ? "#15803d" : "#b91c1c", fontWeight: 700, fontSize: 15 }}>
               {acerto ? "¡Correcto! 🎉" : "Revisa la respuesta · toca para seguir →"}
             </div>
-            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>{q.explicacion}</div>
+            <div style={{ color: "#475569", fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>{q.explicacion}</div>
           </button>
         )}
       </div>

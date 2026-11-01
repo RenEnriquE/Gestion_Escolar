@@ -21,11 +21,11 @@ const Caja = ({ titulo, color, children }) => (
 export default function Repaso({ onVolver }) {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
-      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a actividades</button>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a actividades</button>
       <div style={{ textAlign: "center", marginBottom: 16 }}>
         <div style={{ fontSize: 40, marginBottom: 6 }}>📚</div>
-        <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>Repasa la materia</div>
-        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Las plantas: sus partes y funciones</div>
+        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>Repasa la materia</div>
+        <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Las plantas: sus partes y funciones</div>
       </div>
 
       <Caja titulo="🎯 Objetivo" color="#10b981">

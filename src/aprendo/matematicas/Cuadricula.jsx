@@ -86,13 +86,13 @@ export default function Cuadricula({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "4px 0" }}>
-      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
         ← Volver a actividades
       </button>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div>
-          <div style={{ color: "white", fontSize: 17, fontWeight: 800 }}>Encuentra la casilla</div>
-          <div style={{ color: "#94a3b8", fontSize: 12 }}>Pregunta {actual + 1} de {TOTAL}</div>
+          <div style={{ color: "#0f172a", fontSize: 17, fontWeight: 800 }}>Encuentra la casilla</div>
+          <div style={{ color: "#475569", fontSize: 12 }}>Pregunta {actual + 1} de {TOTAL}</div>
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {preguntas.map((_, i) => (
@@ -111,13 +111,13 @@ export default function Cuadricula({ onVolver }) {
           <thead>
             <tr>
               <th style={{ width: celdaSize }}></th>
-              {COLS.map(c => <th key={c} style={{ width: celdaSize, height: celdaSize, color: "#94a3b8", fontSize: 12, fontWeight: 700, textAlign: "center" }}>{c}</th>)}
+              {COLS.map(c => <th key={c} style={{ width: celdaSize, height: celdaSize, color: "#475569", fontSize: 12, fontWeight: 700, textAlign: "center" }}>{c}</th>)}
             </tr>
           </thead>
           <tbody>
             {ROWS.map(row => (
               <tr key={row}>
-                <td style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textAlign: "center", paddingRight: 4 }}>{row}</td>
+                <td style={{ color: "#475569", fontSize: 12, fontWeight: 700, textAlign: "center", paddingRight: 4 }}>{row}</td>
                 {COLS.map(col => {
                   const key = `${col}${row}`;
                   const resp = respuestas[actual];

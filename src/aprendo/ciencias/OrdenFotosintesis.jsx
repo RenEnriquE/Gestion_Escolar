@@ -43,11 +43,11 @@ export default function OrdenFotosintesis({ onVolver }) {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "4px 0" }}>
-      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a actividades</button>
+      <button onClick={onVolver} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 14, marginBottom: 14, padding: 0 }}>← Volver a actividades</button>
       <div style={{ textAlign: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 40, marginBottom: 6 }}>{info.emoji}</div>
-        <div style={{ color: "white", fontSize: 20, fontWeight: 800 }}>{info.label}</div>
-        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Toca los pasos en el orden en que ocurre la fotosíntesis</div>
+        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 800 }}>{info.label}</div>
+        <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Toca los pasos en el orden en que ocurre la fotosíntesis</div>
       </div>
 
       <div style={{ background: card, border: `2px solid ${info.color}`, borderRadius: 14, padding: "12px 16px", marginBottom: 14 }}>
@@ -56,7 +56,7 @@ export default function OrdenFotosintesis({ onVolver }) {
       </div>
 
       {!terminado && (
-        <div style={{ textAlign: "center", color: "white", fontWeight: 800, fontSize: 17, marginBottom: 10 }}>
+        <div style={{ textAlign: "center", color: "#0f172a", fontWeight: 800, fontSize: 17, marginBottom: 10 }}>
           ¿Cuál es el paso <span style={{ color: info.color, fontSize: 24 }}>{paso + 1}</span>?
         </div>
       )}
@@ -65,7 +65,7 @@ export default function OrdenFotosintesis({ onVolver }) {
       {puestas.length > 0 && (
         <div style={{ marginBottom: 10 }}>
           {puestas.map((id, i) => (
-            <div key={id} style={{ display: "flex", gap: 10, alignItems: "center", background: verde + "22", border: `2px solid ${verde}`, borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
+            <div key={id} style={{ display: "flex", gap: 10, alignItems: "center", background: "#14532d", border: `2px solid ${verde}`, borderRadius: 12, padding: "10px 12px", marginBottom: 6 }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: verde, color: "white", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
               <span style={{ fontSize: 22 }}>{ICONO[id]}</span>
               <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{PASOS[id]}</span>
@@ -79,7 +79,7 @@ export default function OrdenFotosintesis({ onVolver }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {tarjetas.filter(t => !puestas.includes(t.id)).map(t => (
             <button key={t.id} onClick={() => tocar(t)}
-              style={{ display: "flex", gap: 10, alignItems: "center", textAlign: "left", background: malo === t.id ? rojo + "33" : card, border: `2px solid ${malo === t.id ? rojo : border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", color: "white" }}>
+              style={{ display: "flex", gap: 10, alignItems: "center", textAlign: "left", background: malo === t.id ? "#7f1d1d" : card, border: `2px solid ${malo === t.id ? rojo : border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", color: "white" }}>
               <span style={{ fontSize: 24 }}>{ICONO[t.id]}</span>
               <span style={{ fontSize: 15, fontWeight: 700, flex: 1 }}>{t.texto}</span>
               {malo === t.id && <span style={{ color: rojo, fontWeight: 800, fontSize: 13 }}>No es el paso {paso + 1}</span>}
