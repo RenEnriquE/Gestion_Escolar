@@ -591,7 +591,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado suplente (opcional)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Nombre completo"><Input value={form.apod2_nombre||""} onChange={e => setForm(f => ({ ...f, apod2_nombre: e.target.value.toUpperCase() }))} placeholder="Opcional" /></Field>
-            <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" /></Field>
+            <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" />{rutRepetido(form.apod1_rut, form.apod2_rut) && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4 }}>⚠ Es el mismo RUT del apoderado titular. Corrígelo o déjalo vacío.</div>}</Field>
             <Field label="Teléfono"><Input value={form.apod2_cel||""} onChange={e => setForm(f => ({ ...f, apod2_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
             <Field label="Email"><Input type="email" value={form.apod2_email||""} onChange={e => setForm(f => ({ ...f, apod2_email: e.target.value }))} placeholder="correo@email.com" /></Field>
             <Field label="Fecha de nacimiento"><DateInput value={form.apod2_fnac||""} onChange={v => setForm(f => ({ ...f, apod2_fnac: v }))} /></Field>
@@ -2272,15 +2272,18 @@ const rutFormato = v => {
 
 const rutMostrar = rutFormato;
 
+// ¿El RUT del suplente es igual al del titular? (dato mal copiado)
+const rutRepetido = (rut1, rut2) => { const x = rutLimpio(rut1); return !!x && x === rutLimpio(rut2); };
+
 // Celda editable: guarda al salir del campo (blur) o con Enter
-const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
+const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder, repetido }) => {
   const ver = x => rut ? rutMostrar(x) : (x || "");
   const [v, setV] = useState(ver(value));
   useEffect(() => { setV(ver(value)); }, [value]);
   const vacio = !String(value||"").trim();
   const malo = rut && !vacio && !rutValido(value);
-  const borde = malo ? PALETTE.red || "#ef4444" : vacio ? "#f59e0b" : PALETTE.border;
-  if (readOnly) return <span style={{ fontSize: 12, color: vacio ? "#f59e0b" : PALETTE.text }}>{ver(value) || "—"}</span>;
+  const borde = malo || repetido ? PALETTE.red || "#ef4444" : vacio ? "#f59e0b" : PALETTE.border;
+  if (readOnly) return <span title={repetido ? "Igual al RUT del titular" : undefined} style={{ fontSize: 12, color: repetido ? "#ef4444" : vacio ? "#f59e0b" : PALETTE.text }}>{ver(value) || "—"}</span>;
   const commit = () => {
     let n = v.trim();
     if (upper) n = n.toUpperCase();
@@ -2292,6 +2295,7 @@ const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
     <input value={v} placeholder={placeholder || ""}
       onChange={e => setV(e.target.value)} onBlur={commit}
       onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+      title={repetido ? "Igual al RUT del titular: corrígelo o déjalo vacío" : undefined}
       style={{ width: "100%", boxSizing: "border-box", background: PALETTE.bg, color: PALETTE.text, fontSize: 12, padding: "6px 8px",
                border: `1px solid ${borde}`, borderRadius: 6, outline: "none" }} />
   );
@@ -2326,6 +2330,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
     if (!rutLimpio(a.apod1_rut)) f.push("RUT apoderado");
     if (!a.apod1_sexo) f.push("Sexo apoderado");
     if (t2(a).trim() && !rutLimpio(a.apod2_rut)) f.push("RUT suplente");
+    if (t2(a).trim() && rutRepetido(a.apod1_rut, a.apod2_rut)) f.push("RUT suplente repetido");
     if (t2(a).trim() && !a.apod2_sexo) f.push("Sexo suplente");
     return f;
   };
@@ -2333,6 +2338,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
   const conSupl = todos.filter(a => t2(a).trim());
   const rut1ok = todos.filter(a => rutLimpio(a.apod1_rut)).length;
   const rut2ok = conSupl.filter(a => rutLimpio(a.apod2_rut)).length;
+  const repes = conSupl.filter(a => rutRepetido(a.apod1_rut, a.apod2_rut)).length;
   const pend = todos.filter(a => faltas(a).length > 0).length;
   const ql = q.trim().toLowerCase();
   const filas = todos.filter(a => (!soloPend || faltas(a).length > 0) &&
@@ -2346,6 +2352,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
         <span><b style={{ color: PALETTE.text }}>{pend}</b> de {todos.length} alumnos con datos pendientes</span>
         <span>RUT apoderado: <b style={{ color: PALETTE.text }}>{rut1ok}/{todos.length}</b></span>
         <span>RUT suplente: <b style={{ color: PALETTE.text }}>{rut2ok}/{conSupl.length}</b></span>
+        {repes > 0 && <span style={{ color: "#ef4444" }}>⚠ {repes} suplente{repes === 1 ? "" : "s"} con el mismo RUT que el titular</span>}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 12 }}>
         <button onClick={() => setSoloPend(true)} style={chip(soloPend)}>Solo pendientes</button>
@@ -2354,7 +2361,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
       </div>
       <div style={{ fontSize: 11, color: PALETTE.muted, marginBottom: 8 }}>
         {puedeEditar ? "Escribe directamente en las celdas; se guarda al salir del campo o con Enter. Los nombres se pasan a mayúsculas y el RUT se formatea solo." : "Vista de solo lectura."}
-        {" "}Naranja = falta el dato · Rojo = RUT con dígito verificador inválido.
+        {" "}Naranja = falta el dato · Rojo = RUT con dígito verificador inválido o RUT del suplente igual al del titular.
       </div>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: estrecho ? 1100 : 0, borderCollapse: "collapse", fontSize: 12 }}>
@@ -2372,7 +2379,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
                 <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar} value={a.apod1_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod1_rut: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 110 }}><SexoSel readOnly={!puedeEditar} value={a.apod1_sexo} onSave={v => upd(a.id, { apod1_sexo: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 190 }}><CeldaEdit upper readOnly={!puedeEditar} value={t2(a)} placeholder="(sin suplente)" onSave={v => upd(a.id, { apod2_nombre: v, apoderado2: v })} /></td>
-                <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod2_rut: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut repetido={!!t2(a).trim() && rutRepetido(a.apod1_rut, a.apod2_rut)} readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod2_rut: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 110 }}><SexoSel readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_sexo} onSave={v => upd(a.id, { apod2_sexo: v })} /></td>
               </tr>
             ))}
@@ -2583,7 +2590,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                 {(al.apod2_nombre || al.apoderado2) && (
                   <div style={{ color: PALETTE.muted, fontSize: 11 }}>
                     <span style={{ opacity: .7 }}>Apod. suplente: </span>
-                    <span style={{ marginRight: 6 }}>{rutMostrar(al.apod2_rut) || "Sin RUT"}</span>
+                    <span style={{ marginRight: 6, color: rutRepetido(al.apod1_rut, al.apod2_rut) ? "#ef4444" : undefined }} title={rutRepetido(al.apod1_rut, al.apod2_rut) ? "Igual al RUT del titular" : undefined}>{rutMostrar(al.apod2_rut) || "Sin RUT"}{rutRepetido(al.apod1_rut, al.apod2_rut) ? " ⚠" : ""}</span>
                     <span style={{ color: PALETTE.text }}>{al.apod2_nombre || al.apoderado2}</span>
                   </div>
                 )}
@@ -2708,7 +2715,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             <SecTitle t="Apoderado suplente" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Nombre"><Input value={form.apod2_nombre} onChange={e => setForm(f=>({...f,apod2_nombre:e.target.value.toUpperCase()}))} /></Field>
-              <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" /></Field>
+              <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" />{rutRepetido(form.apod1_rut, form.apod2_rut) && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4 }}>⚠ Es el mismo RUT del apoderado titular. Corrígelo o déjalo vacío.</div>}</Field>
               <Field label="Teléfono"><Input value={form.apod2_cel} onChange={e => setForm(f=>({...f,apod2_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod2_email} onChange={e => setForm(f=>({...f,apod2_email:e.target.value}))} /></Field>
               <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod2_fnac} onChange={v => setForm(f=>({...f,apod2_fnac:v}))} /></Field>
