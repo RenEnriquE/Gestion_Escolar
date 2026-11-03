@@ -22,14 +22,48 @@ const toISO = (display) => {
   if (parts[0].length === 4) return display; // already ISO
   return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
-const DateInput = ({ value, onChange, placeholder="DD-MM-AAAA" }) => (
-  <Input
-    value={toDisplay(value)}
-    onChange={e => onChange(toISO(e.target.value))}
-    placeholder={placeholder}
-    maxLength={10}
-  />
-);
+// Solo se tipean números: los guiones se agregan solos (DD-MM-AAAA). Al completar 10 caracteres y ser una fecha real, se guarda como YYYY-MM-DD.
+const fmtFecha = (txt) => {
+  let t = String(txt || "").trim();
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);           // si pegan una fecha ISO
+  if (iso) t = `${iso[3]}${iso[2]}${iso[1]}`;
+  const d = t.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}-${d.slice(2)}`;
+  return `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4)}`;
+};
+const fechaValida = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return false;
+  const y = +m[1], mo = +m[2], da = +m[3];
+  if (y < 1900 || y > 2100 || mo < 1 || mo > 12) return false;
+  return da >= 1 && da <= new Date(y, mo, 0).getDate();
+};
+const DateInput = ({ value, onChange, placeholder="DD-MM-AAAA" }) => {
+  const [txt, setTxt] = useState(toDisplay(value));
+  const [invalida, setInvalida] = useState(false);
+  const ultimo = useRef(value || "");
+  useEffect(() => {
+    if ((value || "") !== ultimo.current) { ultimo.current = value || ""; setTxt(toDisplay(value)); setInvalida(false); }
+  }, [value]);
+  const cambiar = (e) => {
+    const t = fmtFecha(e.target.value);
+    setTxt(t);
+    if (t === "") { setInvalida(false); ultimo.current = ""; onChange(""); return; }
+    if (t.length === 10) {
+      const iso = toISO(t);
+      if (fechaValida(iso)) { setInvalida(false); ultimo.current = iso; onChange(iso); }
+      else setInvalida(true);
+    } else setInvalida(false);
+  };
+  const alSalir = () => { setTxt(toDisplay(ultimo.current)); setInvalida(false); };  // si quedó incompleta, vuelve a la última fecha válida
+  return (
+    <>
+      <Input value={txt} onChange={cambiar} onBlur={alSalir} placeholder={placeholder} maxLength={10} inputMode="numeric" />
+      {invalida && <div style={{ color: "#dc2626", fontSize: 11, marginTop: 4 }}>Fecha no válida. Se mantiene la anterior.</div>}
+    </>
+  );
+};
 
 // ── localStorage fallback (session only) ─────────────────────────────────────
 const S = {
