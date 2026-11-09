@@ -44,9 +44,14 @@ export const CATALOGO = [
   {
     id: "ingles", label: "Inglés", emoji: "🌎",
     actividades: [
+      { id: "ingles.unit5ensayo",    label: "Unit 5: Ensayo de la prueba" },
+      { id: "ingles.unit5",          label: "Unit 5: Vocabulario" },
+      { id: "ingles.unit5oraciones", label: "Unit 5: Complete the sentence" },
+      { id: "ingles.unit5lectura",   label: "Unit 5: Read and answer" },
+      { id: "ingles.unit5refuerzo",  label: "Unit 5: Reforzar mis errores" },
       { id: "ingles.unit4",          label: "Unit 4: Vocabulario" },
       { id: "ingles.unit4oraciones", label: "Unit 4: Complete the sentence" },
-      { id: "ingles.refuerzo",       label: "Reforzar mis errores" },
+      { id: "ingles.refuerzo",       label: "Unit 4: Reforzar mis errores" },
     ],
   },
 ];

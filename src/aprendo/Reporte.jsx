@@ -1,6 +1,7 @@
 import { PREGUNTAS as PREG_EFRAIN } from "./lenguaje/efrainData.js";
 import { VOCAB } from "./ingles/unit4Data.js";
 import { INICIO } from "./ingles/unit4Oraciones.js";
+import { respuestaCorrecta5 } from "./ingles/unit5Data.js";
 import { construir as construirDivision } from "./mate/divisionData.js";
 import { construir as construirPlantas } from "./ciencias/plantasData.js";
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +14,7 @@ const respuestaCorrecta = (item) => {
   if (item.startsWith("l:efrain:")) return PREG_EFRAIN.find(p => p.key === item)?.correcta || null;
   if (item.startsWith("v:")) { const v = VOCAB.find(x => x.en === item.slice(2)); return v ? `${v.en} = ${v.es}` : null; }
   if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
+  if (item.startsWith("t:") || item.startsWith("s:") || item.startsWith("r:")) return respuestaCorrecta5(item);
   if (item.startsWith("d:")) return construirDivision(item)?.solucion || null;
   if (item.startsWith("c:")) return construirPlantas(item)?.solucion || null;
   if (item.startsWith("m:")) { const p = item.split(":"); return p[2] || null; }
@@ -25,6 +27,10 @@ const card = "#1e293b", border = "#334155", muted = "#94a3b8";
 
 const ACTIVIDADES = [
   { id: "todas", label: "Todas las actividades" },
+  { id: "ingles.unit5", label: "Inglés · Unit 5: Vocabulario" },
+  { id: "ingles.unit5oraciones", label: "Inglés · Unit 5: Complete the sentence" },
+  { id: "ingles.unit5lectura", label: "Inglés · Unit 5: Read and answer" },
+  { id: "ingles.unit5ensayo", label: "Inglés · Unit 5: Ensayo de la prueba" },
   { id: "ingles.unit4", label: "Inglés · Unit 4: Vocabulario" },
   { id: "ingles.unit4oraciones", label: "Inglés · Unit 4: Complete the sentence" },
   { id: "lenguaje.efrain", label: "Lenguaje · Efraín en La Vega" },
