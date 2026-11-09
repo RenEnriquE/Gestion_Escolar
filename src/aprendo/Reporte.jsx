@@ -156,38 +156,50 @@ export default function Reporte({ onVolver }) {
     accesos.forEach(a => {
       const al = (alumnos || []).find(x => x.id === a.alum_id);
       const ext = !!al?.externo || (!al && !!a.alumno_externo);
-      m[a.email] = { externo: ext, nombre: al ? `${al.nombres || ""} ${al.apellidos || ""}`.trim() + (al.externo ? ` (${al.cursoExterno || "otro curso"})` : "") : (a.alumno_externo || a.nombre || a.email), rol: a.rol, estado: a.estado, esPrueba: a.rol === "admin" || (a.rol === "directivo" && !a.alum_id && !a.alumno_externo) };
+      const norm = t => String(t || "").trim().toLowerCase().replace(/\s+/g, " ");
+      m[a.email] = { clave: a.alum_id && al ? "al:" + a.alum_id : a.alumno_externo ? "ex:" + norm(a.alumno_externo) : a.email, externo: ext, nombre: al ? `${al.nombres || ""} ${al.apellidos || ""}`.trim() + (al.externo ? ` (${al.cursoExterno || "otro curso"})` : "") : (a.alumno_externo || a.nombre || a.email), rol: a.rol, estado: a.estado, esPrueba: a.rol === "admin" || (a.rol === "directivo" && !a.alum_id && !a.alumno_externo) };
     });
     return m;
   }, [accesos, alumnos]);
-  const nombre = (email) => info[email]?.nombre || email;
+  // Persona = alumno (varios accesos de apoderados del mismo alumno cuentan como una sola persona) o el propio acceso
+  const ck = (email) => info[email]?.clave || email;
+  const personas = useMemo(() => {
+    const m = {};
+    Object.entries(info).forEach(([email, i]) => {
+      const x = m[i.clave];
+      if (!x) m[i.clave] = { nombre: i.nombre, externo: i.externo, esPrueba: i.esPrueba, estado: i.estado, rol: i.rol };
+      else { x.esPrueba = x.esPrueba && i.esPrueba; if (i.estado === "aprobado") x.estado = "aprobado"; }
+    });
+    return m;
+  }, [info]);
+  const nombre = (k) => personas[k]?.nombre || info[k]?.nombre || k;
   const vis = (email) => (incluirAdmins || !info[email]?.esPrueba) && (incluirExternos || !info[email]?.externo);
 
   const base = useMemo(
     () => (rows || []).filter(r => vis(r.email) && (act === "todas" || r.actividad === act)),
     [rows, info, incluirAdmins, incluirExternos, act]
   );
-  const sel = useMemo(() => (quien === "todos" ? base : base.filter(r => r.email === quien)), [base, quien]);
+  const sel = useMemo(() => (quien === "todos" ? base : base.filter(r => ck(r.email) === quien)), [base, quien]);
 
   const items = useMemo(() => Object.values(analizarItems(sel)).filter(x => x.errores > 0)
     .sort((a, b) => b.errores - a.errores || pct(b.errores, b.intentos) - pct(a.errores, a.intentos)), [sel]);
 
   const alumnosTabla = useMemo(() => {
     const por = {};
-    base.forEach(r => { (por[r.email] = por[r.email] || []).push(r); });
+    base.forEach(r => { (por[ck(r.email)] = por[ck(r.email)] || []).push(r); });
     return Object.entries(por).map(([email, rs]) => {
       const ok = rs.filter(r => r.correcta).length;
       const pend = Object.values(analizarItems(rs)).filter(x => x.pendiente).length;
       return { email, nombre: nombre(email), total: rs.length, ok, p: pct(ok, rs.length), pend };
     }).sort((a, b) => a.p - b.p);
-  }, [base, info]);
+  }, [base, info, personas]);
 
   // Ranking de uso: cuenta respuestas (no tiempo) de todas las actividades, sin el filtro de actividad
   const [rankAsig, setRankAsig] = useState("total");
   const ranking = useMemo(() => {
     const por = {};
     (rows || []).filter(r => vis(r.email)).forEach(r => {
-      const x = (por[r.email] = por[r.email] || { email: r.email, total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, ciencias: 0, dias: new Set(), ultima: r.creado_en });
+      const x = (por[ck(r.email)] = por[ck(r.email)] || { email: ck(r.email), total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, ciencias: 0, dias: new Set(), ultima: r.creado_en });
       const a = (r.actividad || "").split(".")[0];
       x.total++; if (x[a] !== undefined) x[a]++;
       x.dias.add(dia(r.creado_en));
@@ -195,7 +207,7 @@ export default function Reporte({ onVolver }) {
     });
     return Object.values(por).map(x => ({ ...x, nombre: nombre(x.email), nDias: x.dias.size }))
       .filter(x => x[rankAsig] > 0).sort((a, b) => b[rankAsig] - a[rankAsig] || b.nDias - a.nDias);
-  }, [rows, info, incluirAdmins, incluirExternos, rankAsig]);
+  }, [rows, info, personas, incluirAdmins, incluirExternos, rankAsig]);
   const maxRank = ranking[0]?.[rankAsig] || 1;
 
 
@@ -203,9 +215,9 @@ export default function Reporte({ onVolver }) {
   const [ordenCtl, setOrdenCtl] = useState("ultima");
   const control = useMemo(() => {
     const por = {};
-    (rows || []).filter(r => vis(r.email)).forEach(r => { (por[r.email] = por[r.email] || []).push(r); });
-    Object.entries(info).forEach(([email, i]) => {
-      if (i.estado === "aprobado" && !i.esPrueba && i.rol !== "admin" && (incluirExternos || !i.externo) && !por[email]) por[email] = [];
+    (rows || []).filter(r => vis(r.email)).forEach(r => { (por[ck(r.email)] = por[ck(r.email)] || []).push(r); });
+    Object.entries(personas).forEach(([k, i]) => {
+      if (i.estado === "aprobado" && !i.esPrueba && i.rol !== "admin" && (incluirExternos || !i.externo) && !por[k]) por[k] = [];
     });
     const lista = Object.entries(por).map(([email, rs]) => ({ email, nombre: nombre(email), ...resumenPersona(rs) }));
     const f = {
@@ -215,7 +227,7 @@ export default function Reporte({ onVolver }) {
       sinActividad: (a, b) => (a.ses - b.ses) || a.nombre.localeCompare(b.nombre, "es"),
     }[ordenCtl];
     return lista.sort(f);
-  }, [rows, info, incluirAdmins, incluirExternos, ordenCtl]);
+  }, [rows, info, personas, incluirAdmins, incluirExternos, ordenCtl]);
   // Tasa de aciertos del curso por asignatura (suma de todas las respuestas de los alumnos listados)
   const tasaCurso = useMemo(() => {
     const t = { total: { resp: 0, ok: 0 } };
@@ -251,7 +263,7 @@ export default function Reporte({ onVolver }) {
   // Evolución semanal de la tasa de aciertos (curso o alumno; total o una asignatura). Últimas 12 semanas.
   const evo = useMemo(() => {
     const rs = (rows || []).filter(r => vis(r.email)
-      && (quien === "todos" || r.email === quien) && (evoAsig === "total" || asigDe(r.actividad) === evoAsig));
+      && (quien === "todos" || ck(r.email) === quien) && (evoAsig === "total" || asigDe(r.actividad) === evoAsig));
     if (!rs.length) return { semanas: [], total: 0, ok: 0 };
     const por = {};
     rs.forEach(r => { const k = keyDia(lunesDe(r.creado_en)); const x = (por[k] = por[k] || { resp: 0, ok: 0 }); x.resp++; if (r.correcta) x.ok++; });
@@ -284,7 +296,7 @@ export default function Reporte({ onVolver }) {
   const detalle = useMemo(() => (quien === "todos" ? null : control.find(x => x.email === quien) || null), [control, quien]);
 
   const okSel = sel.filter(r => r.correcta).length;
-  const personasSel = new Set(sel.map(r => r.email)).size;
+  const personasSel = new Set(sel.map(r => ck(r.email))).size;
   const visibles = verTodas ? items : items.slice(0, 12);
 
   return (
