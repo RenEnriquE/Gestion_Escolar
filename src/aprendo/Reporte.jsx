@@ -14,7 +14,7 @@ const respuestaCorrecta = (item) => {
   if (item.startsWith("l:efrain:")) return PREG_EFRAIN.find(p => p.key === item)?.correcta || null;
   if (item.startsWith("v:")) { const v = VOCAB.find(x => x.en === item.slice(2)); return v ? `${v.en} = ${v.es}` : null; }
   if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
-  if (item.startsWith("t:") || item.startsWith("s:") || item.startsWith("r:")) return respuestaCorrecta5(item);
+  if (item.startsWith("t:") || item.startsWith("s:") || item.startsWith("r:") || item.startsWith("f:")) return respuestaCorrecta5(item);
   if (item.startsWith("d:")) return construirDivision(item)?.solucion || null;
   if (item.startsWith("c:")) return construirPlantas(item)?.solucion || null;
   if (item.startsWith("m:")) { const p = item.split(":"); return p[2] || null; }
@@ -28,6 +28,7 @@ const card = "#1e293b", border = "#334155", muted = "#94a3b8";
 const ACTIVIDADES = [
   { id: "todas", label: "Todas las actividades" },
   { id: "ingles.unit5", label: "Inglés · Unit 5: Vocabulario" },
+  { id: "ingles.unit5fotos", label: "Inglés · Unit 5: Mira y responde" },
   { id: "ingles.unit5oraciones", label: "Inglés · Unit 5: Complete the sentence" },
   { id: "ingles.unit5lectura", label: "Inglés · Unit 5: Read and answer" },
   { id: "ingles.unit5ensayo", label: "Inglés · Unit 5: Ensayo de la prueba" },

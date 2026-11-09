@@ -10,6 +10,7 @@ const card = "#1e293b", border = "#334155";
 const GRUPOS = [
   { id: "t:", emoji: "🚌", label: "Vocabulario",         una: "palabra",  varias: "palabras" },
   { id: "s:", emoji: "✏️", label: "Complete the sentence", una: "oración",  varias: "oraciones" },
+  { id: "f:", emoji: "📸", label: "Mira y responde",      una: "pregunta", varias: "preguntas" },
   { id: "r:", emoji: "📖", label: "Read and answer",      una: "pregunta", varias: "preguntas" },
 ];
 

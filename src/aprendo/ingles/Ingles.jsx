@@ -15,6 +15,7 @@ const UNIDADES = [
 const ACTIVIDADES = [
   { id: "unit5ensayo", unidad: "5", label: "Unit 5: Ensayo de la prueba", emoji: "📝", desc: "Preguntas mezcladas, como en la prueba", color: "#ef4444" },
   { id: "unit5", unidad: "5", label: "Unit 5: Vocabulario", emoji: "🚌", desc: "Medios de transporte, números, partes y más", color: "#0ea5e9" },
+  { id: "unit5fotos", unidad: "5", label: "Unit 5: Mira y responde", emoji: "📸", desc: "Fotos de transportes: What is it? Is it…?", color: "#14b8a6" },
   { id: "unit5oraciones", unidad: "5", label: "Unit 5: Complete the sentence", emoji: "✏️", desc: "Is it…? Does it have…? Can it…? Completa", color: "#8b5cf6" },
   { id: "unit5lectura", unidad: "5", label: "Unit 5: Read and answer", emoji: "📖", desc: "Londres, Ámsterdam, Venecia, el faro y adivinanzas", color: "#ec4899" },
   { id: "unit5refuerzo", unidad: "5", label: "Unit 5: Reforzar mis errores", emoji: "🎯", desc: "Practica solo lo que más te cuesta", color: "#f59e0b" },
@@ -54,6 +55,7 @@ export default function Ingles({ onVolver }) {
   if (actividad === "refuerzo") return <Unit4Refuerzo onVolver={() => setActividad(null)} />;
   if (actividad === "unit5") return <Unit5Vocabulario onVolver={() => setActividad(null)} />;
   if (actividad === "unit5oraciones") return <Unit5Practica tipo="oraciones" onVolver={() => setActividad(null)} />;
+  if (actividad === "unit5fotos") return <Unit5Practica tipo="fotos" onVolver={() => setActividad(null)} />;
   if (actividad === "unit5lectura") return <Unit5Practica tipo="lectura" onVolver={() => setActividad(null)} />;
   if (actividad === "unit5ensayo") return <Unit5Practica tipo="ensayo" onVolver={() => setActividad(null)} />;
   if (actividad === "unit5refuerzo") return <Unit5Refuerzo onVolver={() => setActividad(null)} />;
