@@ -318,6 +318,50 @@ const Dashboard = ({ alumnos, actividades, encuestas, participacion, tipos, onNa
 };
 
 // ── Alumnos ───────────────────────────────────────────────────────────────────
+// Alumno del curso u "otro curso / hermano": tipo, curso de origen, vínculo y copiar apoderados de otro alumno
+const nombreCompletoAl = a => [a.nombres, a.nombre2, a.apellidos, a.apellido2].filter(Boolean).join(" ") || a.nombre || "";
+const etiquetaExterno = a => "Otro curso" + (a.cursoExterno ? " · " + a.cursoExterno : "");
+const BloqueExterno = ({ form, setForm, alumnos, excluirId }) => {
+  const candidatos = [...alumnos].filter(a => a.id !== excluirId && (a.apod1_nombre || a.apoderado))
+    .sort((a, b) => (a.apellidos || a.nombre || "").localeCompare(b.apellidos || b.nombre || "", "es"));
+  const copiar = (id) => {
+    const o = alumnos.find(x => x.id === id); if (!o) return;
+    setForm(f => ({ ...f,
+      apod1_nombre: o.apod1_nombre || o.apoderado || "", apod1_rut: o.apod1_rut || "", apod1_cel: o.apod1_cel || o.telefono || "",
+      apod1_email: o.apod1_email || o.email || "", apod1_fnac: o.apod1_fnac || "", apod1_sexo: o.apod1_sexo || "",
+      apod2_nombre: o.apod2_nombre || o.apoderado2 || "", apod2_rut: o.apod2_rut || "", apod2_cel: o.apod2_cel || "",
+      apod2_email: o.apod2_email || "", apod2_fnac: o.apod2_fnac || "", apod2_sexo: o.apod2_sexo || "",
+      vinculo: f.vinculo || `Hermano/a de ${nombreCompletoAl(o)}` }));
+  };
+  return (
+    <div style={{ background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <Field label="Tipo de alumno">
+        <Select value={form.externo ? "externo" : "curso"} onChange={e => setForm(f => ({ ...f, externo: e.target.value === "externo" }))}>
+          <option value="curso">Del curso (3° C)</option>
+          <option value="externo">De otro curso o hermano/a (fuera del curso)</option>
+        </Select>
+      </Field>
+      {form.externo && (
+        <>
+          <div style={{ color: PALETTE.muted, fontSize: 12, margin: "-2px 0 10px", lineHeight: 1.4 }}>
+            Puede usar Aprendo y Aprendilandia, pero no cuenta en encuestas, participación ni estadísticas del curso.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Field label="Curso de origen"><Input value={form.cursoExterno || ""} onChange={e => setForm(f => ({ ...f, cursoExterno: e.target.value }))} placeholder="Ej.: 5° B" /></Field>
+            <Field label="Vínculo (opcional)"><Input value={form.vinculo || ""} onChange={e => setForm(f => ({ ...f, vinculo: e.target.value }))} placeholder="Ej.: Hermana de ..." /></Field>
+          </div>
+          <Field label="Copiar apoderados de otro alumno (si comparten apoderado)">
+            <Select value="" onChange={e => copiar(e.target.value)}>
+              <option value="">— No copiar —</option>
+              {candidatos.map(a => <option key={a.id} value={a.id}>{idVisible(a.id)} · {nombreCompletoAl(a)}{a.externo ? " (otro curso)" : ""}</option>)}
+            </Select>
+          </Field>
+        </>
+      )}
+    </div>
+  );
+};
+
 const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdmin, creditosManuales }) => {
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
@@ -326,9 +370,13 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
   const [viewAlumno, setViewAlumno] = useState(null);
   const [editAlumno, setEditAlumno] = useState(null);
   const [form, setForm] = useState({ nombre: "", fechaNac: "", sexo: "M", apoderado: "" });
+  const [grupo, setGrupo] = useState("curso");   // curso | externos | todos
+  const nCurso = alumnos.filter(a => !a.externo).length, nExt = alumnos.filter(a => a.externo).length;
 
   const filtered = alumnos
     .filter(a => {
+      if (grupo === "curso" && a.externo) return false;
+      if (grupo === "externos" && !a.externo) return false;
       if (!a.nombre.toLowerCase().includes(search.toLowerCase())) return false;
       if (!filterTipo) return true;
       const actsOfType = actividades.filter(act => act.tipos.includes(filterTipo));
@@ -348,8 +396,8 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
 
   const actsForTipo = (tipoId) => actividades.filter(a => a.tipos.includes(tipoId) && ["Activa","Finalizada"].includes(a.estado));
   const tiposConActividades = tipos.filter(t => actsForTipo(t.id).length > 0);
-  const emptyForm = { nombres: "", apellidos: "", fechaNac: "", sexo: "M", apoderado: "", apoderado2: "", telefono: "", email: "", observaciones: "", socioAprendilandia: false };
-  const openNew = () => { setForm(emptyForm); setEditAlumno(null); setModalOpen(true); };
+  const emptyForm = { nombres: "", apellidos: "", fechaNac: "", sexo: "M", apoderado: "", apoderado2: "", telefono: "", email: "", observaciones: "", socioAprendilandia: false, externo: false, cursoExterno: "", vinculo: "" };
+  const openNew = () => { setForm({ ...emptyForm, externo: grupo === "externos" }); setEditAlumno(null); setModalOpen(true); };
   const openEdit = (al) => {
     let nombres = al.nombres || "";
     let apellidos = al.apellidos || "";
@@ -365,6 +413,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       apoderado: al.apoderado || "", apoderado2: al.apoderado2 || "",
       telefono: al.telefono || "", email: al.email || "",
       observaciones: al.observaciones || "", socioAprendilandia: al.socioAprendilandia || false,
+      externo: !!al.externo, cursoExterno: al.cursoExterno || "", vinculo: al.vinculo || "",
       apod1_nombre: al.apod1_nombre || al.apoderado || "",
       apod1_rut: al.apod1_rut || "",
       apod1_cel: al.apod1_cel || al.telefono || "",
@@ -393,7 +442,12 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       email: form.apod1_email || form.email,
     };
     if (editAlumno) setAlumnos(prev => prev.map(a => a.id === editAlumno.id ? { ...a, ...data } : a));
-    else setAlumnos(prev => [...prev, { ...data, id: "a" + Date.now() }]);
+    else setAlumnos(prev => {
+      // Alumnos de otro curso: E01, E02... · del curso: id único por fecha
+      const nums = prev.map(a => /^e(\d+)$/i.exec(String(a.id))).filter(Boolean).map(m => Number(m[1]));
+      const id = data.externo ? "e" + ((nums.length ? Math.max(...nums) : 0) + 1) : "a" + Date.now();
+      return [...prev, { ...data, id }];
+    });
     setModalOpen(false);
   };
   const del = (id) => { if (window.confirm("¿Eliminar alumno?")) { setAlumnos(prev => prev.filter(a => a.id !== id)); DB.deleteRow('alumnos', { id }); } };
@@ -410,6 +464,11 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           <option value="">Todos los tipos</option>
           {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
         </Select>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <Btn variant={grupo === "curso" ? "primary" : "ghost"} small onClick={() => setGrupo("curso")}>Del curso ({nCurso})</Btn>
+        <Btn variant={grupo === "externos" ? "primary" : "ghost"} small onClick={() => setGrupo("externos")}>Otros cursos / hermanos ({nExt})</Btn>
+        <Btn variant={grupo === "todos" ? "primary" : "ghost"} small onClick={() => setGrupo("todos")}>Todos ({alumnos.length})</Btn>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {isAdmin && <Btn onClick={openNew}><Icon name="plus" size={15} />Nuevo Alumno</Btn>}
@@ -434,12 +493,14 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
                     <span onClick={() => setViewAlumno(al)} style={{ color: PALETTE.accent, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
                       {al.nombres && al.apellidos ? al.nombres + " " + al.apellidos : al.nombre}
                     </span>
+                    {al.externo && <span style={{ marginLeft: 8 }}><Badge text={etiquetaExterno(al)} color={PALETTE.orange} /></span>}
                   </td>
                   {tiposConActividades.map(t => {
                     const acts = actsForTipo(t.id);
                     const done = acts.filter(a => participacion[a.id]?.[al.id]).length;
                     const total = acts.length;
                     const p = pct(done, total);
+                    if (al.externo) return <td key={t.id} style={{ textAlign: "center", padding: "14px 10px", color: PALETTE.muted }}>—</td>;
                     return (
                       <td key={t.id} style={{ textAlign: "center", padding: "14px 10px" }}>
                         <span style={{ color: pctColor(p), fontWeight: 700, fontSize: 13 }}>{done}/{total}</span>
@@ -448,9 +509,9 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
                     );
                   })}
                   <td style={{ textAlign: "center", padding: "14px 10px" }}>
-                    <span style={{ color: PALETTE.accent, fontWeight: 800, fontSize: 14 }}>
+                    {al.externo ? <span style={{ color: PALETTE.muted }}>—</span> : <span style={{ color: PALETTE.accent, fontWeight: 800, fontSize: 14 }}>
                       ${calcCreditos(al.id, actividades, participacion, creditosManuales).total.toLocaleString("es-CL")}
-                    </span>
+                    </span>}
                   </td>
                   <td style={{ textAlign: "center", padding: "14px 10px" }}>
                     <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
@@ -470,12 +531,12 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
         const totalActs = actsContables.length;
         const partCount = actsContables.filter(act => participacion[act.id]?.[viewAlumno.id]).length;
         // Group activities by tipo
-        const actsByTipo = tipos.map(t => ({
+        const actsByTipo = viewAlumno.externo ? [] : tipos.map(t => ({
           ...t,
           acts: actividades.filter(act => act.tipos.includes(t.id))
         })).filter(t => t.acts.length > 0);
         // Activities with no tipo
-        const sinTipo = actividades.filter(act => act.tipos.length === 0);
+        const sinTipo = viewAlumno.externo ? [] : actividades.filter(act => act.tipos.length === 0);
 
         return (
         <Modal title="Ficha del Alumno" onClose={() => setViewAlumno(null)} wide>
@@ -490,12 +551,14 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           <div style={{ marginBottom: 16 }}>
             <Badge text={viewAlumno.sexo === "M" ? "Masculino" : "Femenino"} color={viewAlumno.sexo === "M" ? PALETTE.accent : PALETTE.purple} />
             {viewAlumno.socioAprendilandia && <span style={{ marginLeft: 8 }}><Badge text="Socio Aprendilandia" color={PALETTE.green} /></span>}
+            {viewAlumno.externo && <span style={{ marginLeft: 8 }}><Badge text={etiquetaExterno(viewAlumno)} color={PALETTE.orange} /></span>}
           </div>
 
           {/* Info grid */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px", marginBottom: 20, fontSize: 13 }}>
             <div><span style={{ color: PALETTE.muted }}>Nacimiento: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.fechaNac || "—"}</span></div>
-            <div><span style={{ color: PALETTE.muted }}>Curso: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>3ro C</span></div>
+            <div><span style={{ color: PALETTE.muted }}>Curso: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.externo ? (viewAlumno.cursoExterno || "Otro curso") : "3ro C"}</span></div>
+            {viewAlumno.externo && viewAlumno.vinculo && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Vínculo: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.vinculo}</span></div>}
             <div><span style={{ color: PALETTE.muted }}>Apoderado: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado || "—"}</span></div>
             <div><span style={{ color: PALETTE.muted }}>Teléfono: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.telefono || "—"}</span></div>
             {viewAlumno.apoderado2 && <div style={{ gridColumn: "1/-1" }}><span style={{ color: PALETTE.muted }}>Apoderado suplente: </span><span style={{ color: PALETTE.text, fontWeight: 600 }}>{viewAlumno.apoderado2}</span></div>}
@@ -504,7 +567,8 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           </div>
 
           {/* Stats bar */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+          {viewAlumno.externo && <div style={{ background: PALETTE.bg, border: `1px solid ${PALETTE.border}`, borderRadius: 10, padding: "10px 14px", marginBottom: 20, color: PALETTE.muted, fontSize: 12 }}>Alumno de otro curso: no participa en las actividades ni encuestas del curso. Su uso de Aprendo se ve en el Reporte.</div>}
+          <div style={{ display: viewAlumno.externo ? "none" : "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
             {[
               { label: "Participación", value: `${partCount}/${totalActs}`, color: PALETTE.accent },
               { label: "% Asistencia", value: totalActs > 0 ? Math.round(partCount/totalActs*100) + "%" : "0%", color: PALETTE.green },
@@ -518,7 +582,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           </div>
 
           {/* Activities by tipo */}
-          <div style={{ color: PALETTE.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Actividades</div>
+          {!viewAlumno.externo && <div style={{ color: PALETTE.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Actividades</div>}
           {actsByTipo.map(t => (
             <div key={t.id} style={{ marginBottom: 20 }}>
               <div style={{ color: t.color, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
@@ -562,6 +626,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
       })()}
       {modalOpen && (
         <Modal title={editAlumno ? "Editar Alumno" : "Nuevo Alumno"} onClose={() => setModalOpen(false)} wide>
+          <BloqueExterno form={form} setForm={setForm} alumnos={alumnos} excluirId={editAlumno?.id} />
           {/* Datos del alumno */}
           <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Datos del alumno</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -591,7 +656,7 @@ const Alumnos = ({ alumnos, setAlumnos, actividades, participacion, tipos, isAdm
           <div style={{ color: PALETTE.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, margin: "14px 0 8px" }}>Apoderado suplente (opcional)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Nombre completo"><Input value={form.apod2_nombre||""} onChange={e => setForm(f => ({ ...f, apod2_nombre: e.target.value.toUpperCase() }))} placeholder="Opcional" /></Field>
-            <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" /></Field>
+            <Field label="RUT"><Input value={form.apod2_rut||""} onChange={e => setForm(f => ({ ...f, apod2_rut: e.target.value }))} placeholder="12345678-9" />{rutRepetido(form.apod1_rut, form.apod2_rut) && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4 }}>⚠ Es el mismo RUT del apoderado titular. Corrígelo o déjalo vacío.</div>}</Field>
             <Field label="Teléfono"><Input value={form.apod2_cel||""} onChange={e => setForm(f => ({ ...f, apod2_cel: e.target.value }))} placeholder="+56 9 1234 5678" /></Field>
             <Field label="Email"><Input type="email" value={form.apod2_email||""} onChange={e => setForm(f => ({ ...f, apod2_email: e.target.value }))} placeholder="correo@email.com" /></Field>
             <Field label="Fecha de nacimiento"><DateInput value={form.apod2_fnac||""} onChange={v => setForm(f => ({ ...f, apod2_fnac: v }))} /></Field>
@@ -1829,7 +1894,14 @@ const Usuarios = ({ visibility, setVisibility, alumnos, miEmail, gruposCfg, setG
             <Field label={editando.rol === "directivo" ? "Alumno asociado (opcional · si tiene un hijo/a en el curso)" : "Alumno asociado (opcional)"}>
               <Select value={editando.alum_id || ""} onChange={e => setEditando(x => ({ ...x, alum_id: e.target.value }))}>
                 <option value="">— Sin alumno asociado —</option>
-                {alumnosOrd.map(a => <option key={a.id} value={a.id}>{a.apellidos} {a.nombres}</option>)}
+                <optgroup label="Del curso">
+                  {alumnosOrd.filter(a => !a.externo).map(a => <option key={a.id} value={a.id}>{a.apellidos} {a.nombres}</option>)}
+                </optgroup>
+                {alumnosOrd.some(a => a.externo) && (
+                  <optgroup label="Otros cursos / hermanos">
+                    {alumnosOrd.filter(a => a.externo).map(a => <option key={a.id} value={a.id}>{a.apellidos} {a.nombres}{a.cursoExterno ? ` (${a.cursoExterno})` : ""}</option>)}
+                  </optgroup>
+                )}
               </Select>
             </Field>
           )}
@@ -2251,7 +2323,7 @@ const ManualCreditForm = ({ alumId, creditosManuales, setCreditosManuales }) => 
 };
 
 // ID para mostrar/exportar: a1 → A01, a15 → A15 (el id interno en la base no cambia)
-const idVisible = id => { const m = /^a(\d{1,3})$/i.exec(String(id||"")); return m ? "A" + m[1].padStart(2,"0") : (id||""); };
+const idVisible = id => { const m = /^([ae])(\d{1,3})$/i.exec(String(id||"")); return m ? m[1].toUpperCase() + m[2].padStart(2,"0") : (id||""); };
 
 // ── RUT: limpiar, validar (módulo 11) y formatear ────────────────────────────
 const rutLimpio = v => String(v||"").replace(/[^0-9kK]/g,"").toUpperCase();
@@ -2272,15 +2344,18 @@ const rutFormato = v => {
 
 const rutMostrar = rutFormato;
 
+// ¿El RUT del suplente es igual al del titular? (dato mal copiado)
+const rutRepetido = (rut1, rut2) => { const x = rutLimpio(rut1); return !!x && x === rutLimpio(rut2); };
+
 // Celda editable: guarda al salir del campo (blur) o con Enter
-const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
+const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder, repetido }) => {
   const ver = x => rut ? rutMostrar(x) : (x || "");
   const [v, setV] = useState(ver(value));
   useEffect(() => { setV(ver(value)); }, [value]);
   const vacio = !String(value||"").trim();
   const malo = rut && !vacio && !rutValido(value);
-  const borde = malo ? PALETTE.red || "#ef4444" : vacio ? "#f59e0b" : PALETTE.border;
-  if (readOnly) return <span style={{ fontSize: 12, color: vacio ? "#f59e0b" : PALETTE.text }}>{ver(value) || "—"}</span>;
+  const borde = malo || repetido ? PALETTE.red || "#ef4444" : vacio ? "#f59e0b" : PALETTE.border;
+  if (readOnly) return <span title={repetido ? "Igual al RUT del titular" : undefined} style={{ fontSize: 12, color: repetido ? "#ef4444" : vacio ? "#f59e0b" : PALETTE.text }}>{ver(value) || "—"}</span>;
   const commit = () => {
     let n = v.trim();
     if (upper) n = n.toUpperCase();
@@ -2292,6 +2367,7 @@ const CeldaEdit = ({ value, onSave, readOnly, rut, upper, placeholder }) => {
     <input value={v} placeholder={placeholder || ""}
       onChange={e => setV(e.target.value)} onBlur={commit}
       onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+      title={repetido ? "Igual al RUT del titular: corrígelo o déjalo vacío" : undefined}
       style={{ width: "100%", boxSizing: "border-box", background: PALETTE.bg, color: PALETTE.text, fontSize: 12, padding: "6px 8px",
                border: `1px solid ${borde}`, borderRadius: 6, outline: "none" }} />
   );
@@ -2326,6 +2402,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
     if (!rutLimpio(a.apod1_rut)) f.push("RUT apoderado");
     if (!a.apod1_sexo) f.push("Sexo apoderado");
     if (t2(a).trim() && !rutLimpio(a.apod2_rut)) f.push("RUT suplente");
+    if (t2(a).trim() && rutRepetido(a.apod1_rut, a.apod2_rut)) f.push("RUT suplente repetido");
     if (t2(a).trim() && !a.apod2_sexo) f.push("Sexo suplente");
     return f;
   };
@@ -2333,6 +2410,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
   const conSupl = todos.filter(a => t2(a).trim());
   const rut1ok = todos.filter(a => rutLimpio(a.apod1_rut)).length;
   const rut2ok = conSupl.filter(a => rutLimpio(a.apod2_rut)).length;
+  const repes = conSupl.filter(a => rutRepetido(a.apod1_rut, a.apod2_rut)).length;
   const pend = todos.filter(a => faltas(a).length > 0).length;
   const ql = q.trim().toLowerCase();
   const filas = todos.filter(a => (!soloPend || faltas(a).length > 0) &&
@@ -2346,6 +2424,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
         <span><b style={{ color: PALETTE.text }}>{pend}</b> de {todos.length} alumnos con datos pendientes</span>
         <span>RUT apoderado: <b style={{ color: PALETTE.text }}>{rut1ok}/{todos.length}</b></span>
         <span>RUT suplente: <b style={{ color: PALETTE.text }}>{rut2ok}/{conSupl.length}</b></span>
+        {repes > 0 && <span style={{ color: "#ef4444" }}>⚠ {repes} suplente{repes === 1 ? "" : "s"} con el mismo RUT que el titular</span>}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 12 }}>
         <button onClick={() => setSoloPend(true)} style={chip(soloPend)}>Solo pendientes</button>
@@ -2354,7 +2433,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
       </div>
       <div style={{ fontSize: 11, color: PALETTE.muted, marginBottom: 8 }}>
         {puedeEditar ? "Escribe directamente en las celdas; se guarda al salir del campo o con Enter. Los nombres se pasan a mayúsculas y el RUT se formatea solo." : "Vista de solo lectura."}
-        {" "}Naranja = falta el dato · Rojo = RUT con dígito verificador inválido.
+        {" "}Naranja = falta el dato · Rojo = RUT con dígito verificador inválido o RUT del suplente igual al del titular.
       </div>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: estrecho ? 1100 : 0, borderCollapse: "collapse", fontSize: 12 }}>
@@ -2372,7 +2451,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
                 <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar} value={a.apod1_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod1_rut: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 110 }}><SexoSel readOnly={!puedeEditar} value={a.apod1_sexo} onSave={v => upd(a.id, { apod1_sexo: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 190 }}><CeldaEdit upper readOnly={!puedeEditar} value={t2(a)} placeholder="(sin suplente)" onSave={v => upd(a.id, { apod2_nombre: v, apoderado2: v })} /></td>
-                <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod2_rut: v })} /></td>
+                <td style={{ padding: "4px 6px", minWidth: 120 }}><CeldaEdit rut repetido={!!t2(a).trim() && rutRepetido(a.apod1_rut, a.apod2_rut)} readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_rut} placeholder="12.345.678-9" onSave={v => upd(a.id, { apod2_rut: v })} /></td>
                 <td style={{ padding: "4px 6px", minWidth: 110 }}><SexoSel readOnly={!puedeEditar || !t2(a).trim()} value={a.apod2_sexo} onSave={v => upd(a.id, { apod2_sexo: v })} /></td>
               </tr>
             ))}
@@ -2414,6 +2493,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
     { id: "apod2_email",  label: "Apod. suplente Email",         get: a => a.apod2_email||"" },
     { id: "apod2_fnac",   label: "Apod. suplente F.Nacimiento",  get: a => toDisplay(a.apod2_fnac)||"" },
     { id: "apod2_sexo",   label: "Apod. suplente Sexo",  get: a => a.apod2_sexo==="M"?"Masculino":a.apod2_sexo==="F"?"Femenino":"" },
+    { id: "grupo",        label: "Curso / tipo",         get: a => a.externo ? etiquetaExterno(a) + (a.vinculo ? " — " + a.vinculo : "") : "3° C" },
   ];
   const [selCols, setSelCols] = useState(new Set(["id","nombre_completo","apod1_nombre","apod2_nombre"]));
   const [showColPicker, setShowColPicker] = useState(false);
@@ -2422,13 +2502,15 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
   const [sort1, setSort1] = useState("nombres");
   const [sort2, setSort2] = useState("apellidos");
   const [sort3, setSort3] = useState("");
+  const [grupoF, setGrupoF] = useState("curso");   // curso | externos | todos
+  const alumnosGrupo = alumnos.filter(a => grupoF === "todos" || (grupoF === "externos" ? a.externo : !a.externo));
 
   const toggleCol = (id) => setSelCols(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
   const getVal = (al, colId) => { if (!colId) return ""; const col = ALL_COLS.find(c => c.id === colId); return col ? col.get(al) : ""; };
 
-  const alumnosOrdenados = [...alumnos]
+  const alumnosOrdenados = [...alumnosGrupo]
     .filter(a => {
       const q = search.toLowerCase();
       if (!q) return true;
@@ -2459,6 +2541,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
       apod2_nombre: al.apod2_nombre||al.apoderado2||"",
       apod2_rut: al.apod2_rut||"", apod2_cel: al.apod2_cel||"",
       apod2_email: al.apod2_email||"", apod2_fnac: al.apod2_fnac||"", apod2_sexo: al.apod2_sexo||"",
+      externo: !!al.externo, cursoExterno: al.cursoExterno||"", vinculo: al.vinculo||"",
     });
     setEditMode(true);
   };
@@ -2469,6 +2552,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
       ...a, nombres: form.nombre.toUpperCase(), nombre2: form.nombre2.toUpperCase(),
       apellidos: form.apellidos.toUpperCase(), apellido2: form.apellido2.toUpperCase(),
       nombre: nombreFull, rut: form.rut, fechaNac: form.fechaNac, sexo: form.sexo,
+      externo: !!form.externo, cursoExterno: form.externo ? (form.cursoExterno||"") : "", vinculo: form.externo ? (form.vinculo||"") : "",
       apoderado: form.apod1_nombre, apoderado2: form.apod2_nombre,
       telefono: form.apod1_cel, email: form.apod1_email,
       apod1_nombre: form.apod1_nombre, apod1_rut: form.apod1_rut,
@@ -2543,8 +2627,13 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
         </div>
       </div>
 
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <Btn variant={grupoF === "curso" ? "primary" : "ghost"} small onClick={() => { setGrupoF("curso"); setSelected(null); }}>Del curso ({alumnos.filter(a => !a.externo).length})</Btn>
+        <Btn variant={grupoF === "externos" ? "primary" : "ghost"} small onClick={() => { setGrupoF("externos"); setSelected(null); }}>Otros cursos / hermanos ({alumnos.filter(a => a.externo).length})</Btn>
+        <Btn variant={grupoF === "todos" ? "primary" : "ghost"} small onClick={() => { setGrupoF("todos"); setSelected(null); }}>Todos ({alumnos.length})</Btn>
+      </div>
       {vista === "pendientes" ? (
-        <DatosPendientes alumnos={alumnos} setAlumnos={setAlumnos} puedeEditar={isAdmin} estrecho={estrecho} />
+        <DatosPendientes alumnos={alumnosGrupo} setAlumnos={setAlumnos} puedeEditar={isAdmin} estrecho={estrecho} />
       ) : (
       <div style={{ display: "grid", gridTemplateColumns: selected && !estrecho ? "230px 1fr" : "1fr", gap: 16 }}>
         {/* Lista */}
@@ -2570,6 +2659,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                 style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${PALETTE.border}`, background: selected?.id === al.id ? PALETTE.accent + "22" : "transparent" }}>
                 <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "2px 8px" }}>
                   <span style={{ color: PALETTE.muted, fontSize: 10, fontWeight: 700, background: PALETTE.border + "55", borderRadius: 4, padding: "1px 5px" }}>{idVisible(al.id)}</span>
+                  {al.externo && <span style={{ color: PALETTE.orange, fontSize: 10, fontWeight: 700, border: `1px solid ${PALETTE.orange}`, borderRadius: 4, padding: "0 5px" }}>{etiquetaExterno(al)}</span>}
                   <span style={{ flex: 1, minWidth: 120, color: selected?.id === al.id ? PALETTE.accent : PALETTE.text, fontSize: 13, fontWeight: 600 }}>
                     {[al.nombres, al.nombre2, al.apellidos, al.apellido2].filter(Boolean).join(" ") || al.nombre}
                   </span>
@@ -2583,7 +2673,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                 {(al.apod2_nombre || al.apoderado2) && (
                   <div style={{ color: PALETTE.muted, fontSize: 11 }}>
                     <span style={{ opacity: .7 }}>Apod. suplente: </span>
-                    <span style={{ marginRight: 6 }}>{rutMostrar(al.apod2_rut) || "Sin RUT"}</span>
+                    <span style={{ marginRight: 6, color: rutRepetido(al.apod1_rut, al.apod2_rut) ? "#ef4444" : undefined }} title={rutRepetido(al.apod1_rut, al.apod2_rut) ? "Igual al RUT del titular" : undefined}>{rutMostrar(al.apod2_rut) || "Sin RUT"}{rutRepetido(al.apod1_rut, al.apod2_rut) ? " ⚠" : ""}</span>
                     <span style={{ color: PALETTE.text }}>{al.apod2_nombre || al.apoderado2}</span>
                   </div>
                 )}
@@ -2686,6 +2776,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
                 <Btn small onClick={save}>Guardar</Btn>
               </div>
             </div>
+            <BloqueExterno form={form} setForm={setForm} alumnos={alumnos} excluirId={selected?.id} />
             <SecTitle t="Datos del alumno" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
               <Field label="Apellido paterno"><Input value={form.apellidos} onChange={e => setForm(f=>({...f,apellidos:e.target.value}))} /></Field>
@@ -2708,7 +2799,7 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
             <SecTitle t="Apoderado suplente" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Nombre"><Input value={form.apod2_nombre} onChange={e => setForm(f=>({...f,apod2_nombre:e.target.value.toUpperCase()}))} /></Field>
-              <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" /></Field>
+              <Field label="RUT"><Input value={form.apod2_rut} onChange={e => setForm(f=>({...f,apod2_rut:e.target.value}))} placeholder="12345678-9" />{rutRepetido(form.apod1_rut, form.apod2_rut) && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 4 }}>⚠ Es el mismo RUT del apoderado titular. Corrígelo o déjalo vacío.</div>}</Field>
               <Field label="Teléfono"><Input value={form.apod2_cel} onChange={e => setForm(f=>({...f,apod2_cel:e.target.value}))} /></Field>
               <Field label="Email"><Input type="email" value={form.apod2_email} onChange={e => setForm(f=>({...f,apod2_email:e.target.value}))} /></Field>
               <Field label="Fecha nacimiento (DD-MM-AAAA)"><DateInput value={form.apod2_fnac} onChange={v => setForm(f=>({...f,apod2_fnac:v}))} /></Field>
@@ -2737,6 +2828,7 @@ const dbToAlumno = r => ({
   apoderado: r.apoderado || "", apoderado2: r.apoderado2 || "",
   telefono: r.telefono || "", email: r.email || "",
   observaciones: r.observaciones || "", socioAprendilandia: r.socio_aprendilandia || false,
+  externo: !!r.externo, cursoExterno: r.curso_externo || "", vinculo: r.vinculo || "",
   apod1_nombre: r.apod1_nombre || "", apod1_rut: r.apod1_rut || "",
   apod1_cel: r.apod1_cel || "", apod1_email: r.apod1_email || "", apod1_fnac: r.apod1_fnac || "", apod1_sexo: r.apod1_sexo || "",
   apod2_nombre: r.apod2_nombre || "", apod2_rut: r.apod2_rut || "",
@@ -2750,6 +2842,7 @@ const alumnoToDB = a => ({
   apoderado: a.apoderado, apoderado2: a.apoderado2,
   telefono: a.telefono, email: a.email,
   observaciones: a.observaciones, socio_aprendilandia: a.socioAprendilandia,
+  externo: !!a.externo, curso_externo: a.cursoExterno || "", vinculo: a.vinculo || "",
   apod1_nombre: a.apod1_nombre || "", apod1_rut: rutGuardar(a.apod1_rut || ""),
   apod1_cel: a.apod1_cel || "", apod1_email: a.apod1_email || "", apod1_fnac: a.apod1_fnac || "", apod1_sexo: a.apod1_sexo || "",
   apod2_nombre: a.apod2_nombre || "", apod2_rut: rutGuardar(a.apod2_rut || ""),
@@ -2965,19 +3058,20 @@ export default function App() {
     if (item?.externo) { const w = window.open(item.externo, "presupuestos"); w?.focus(); setSidebarOpen(false); return; }
     setPage(id); setSidebarOpen(false);
   };
-  const props = { alumnos, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
+  const alumnosCurso = alumnos.filter(a => !a.externo);   // encuestas, participación y estadísticas: solo el curso
+  const props = { alumnos: alumnosCurso, actividades, tipos, encuestas, participacion, setAlumnos, setActividades, setTipos, setEncuestas, setParticipacion, isAdmin, creditosManuales, setCreditosManuales };
 
   const renderPage = () => {
     switch (validPage) {
       case "dashboard":     return <Dashboard {...props} onNavigate={goTo} />;
-      case "alumnos":       return <Alumnos {...props} creditosManuales={creditosManuales} />;
+      case "alumnos":       return <Alumnos {...props} alumnos={alumnos} creditosManuales={creditosManuales} />;
       case "actividades":   return <Actividades {...props} />;
       case "participacion": return <Participacion {...props} encuestas={encuestas} />;
       case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
       case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
-      case "colaboraciones": return <Colaboraciones alumnos={alumnos} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
+      case "colaboraciones": return <Colaboraciones alumnos={alumnosCurso} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "aprendo":       return <PermisosContext.Provider value={{ puede: crearPuede(user.rol, user.grupos, gruposCfg), email: user.email, alumId: user.alumId, esAdmin: isAdmin, alumnos }}><Aprendo /></PermisosContext.Provider>;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} miEmail={user.email} gruposCfg={gruposCfg} setGruposCfg={setGruposCfg} />;
       default: return null;
