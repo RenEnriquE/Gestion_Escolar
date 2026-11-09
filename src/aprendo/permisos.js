@@ -46,6 +46,7 @@ export const CATALOGO = [
     actividades: [
       { id: "ingles.unit5ensayo",    label: "Unit 5: Ensayo de la prueba" },
       { id: "ingles.unit5",          label: "Unit 5: Vocabulario" },
+      { id: "ingles.unit5fotos",     label: "Unit 5: Mira y responde" },
       { id: "ingles.unit5oraciones", label: "Unit 5: Complete the sentence" },
       { id: "ingles.unit5lectura",   label: "Unit 5: Read and answer" },
       { id: "ingles.unit5refuerzo",  label: "Unit 5: Reforzar mis errores" },

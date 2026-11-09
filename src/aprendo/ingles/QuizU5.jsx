@@ -90,7 +90,9 @@ export default function QuizU5({ generar, inicial, refuerzo = false, onSalir, on
               <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Para repasar</div>
               {falladas.map((p, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${border}` }}>
-                  <span style={{ fontSize: 22, width: 28, textAlign: "center" }}>{p.emoji || "📝"}</span>
+                  {p.foto
+                    ? <img src={p.foto} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
+                    : <span style={{ fontSize: 22, width: 28, textAlign: "center" }}>{p.emoji || "📝"}</span>}
                   <span style={{ color: "white", fontWeight: 700, flex: 1, fontSize: 14 }}>{p.etiqueta}</span>
                   <button onClick={() => hablar(p.habla)} title="Escuchar" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18 }}>🔊</button>
                 </div>
@@ -140,7 +142,9 @@ export default function QuizU5({ generar, inicial, refuerzo = false, onSalir, on
       </div>
 
       <div style={{ background: card, border: `2px solid ${azul}`, borderRadius: 16, padding: "20px 18px", textAlign: "center", marginBottom: 14 }}>
-        {q.emoji && <div style={{ fontSize: 60, lineHeight: 1.1, marginBottom: 6 }}>{q.emoji}</div>}
+        {q.foto
+          ? <img src={q.foto} alt="" style={{ width: "100%", maxWidth: 340, height: 210, objectFit: "cover", borderRadius: 12, marginBottom: 10, display: "block", marginLeft: "auto", marginRight: "auto" }} />
+          : q.emoji && <div style={{ fontSize: 60, lineHeight: 1.1, marginBottom: 6 }}>{q.emoji}</div>}
         {q.caption && <div style={{ color: "#94a3b8", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{q.caption}</div>}
         {q.grande ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
