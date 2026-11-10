@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { avanzarSolo } from "./autoAvance.js";
 import { VOCAB, CATEGORIAS } from "./unit4Data.js";
 import { usePermisos } from "../permisos.js";
 import { registrarRespuesta } from "../registro.js";
@@ -92,6 +93,15 @@ export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
     if (actual < preguntas.length - 1) { setActual(a => a + 1); setElegida(null); }
     else setFase("resultado");
   };
+
+  // Al responder: se dice la palabra y se pasa sola a la siguiente pregunta
+  const cancelRef = useRef(null);
+  useEffect(() => {
+    if (elegida === null || fase !== "juego") return;
+    cancelRef.current = avanzarSolo(preguntas[actual].item.en, aciertos[actual], siguiente);
+    return () => { cancelRef.current?.(); cancelRef.current = null; };
+  }, [elegida]);
+  const saltar = () => { cancelRef.current?.(); cancelRef.current = null; siguiente(); };
 
   // ── Configuración ────────────────────────────────────────────────────────
   if (fase === "config") {
@@ -222,7 +232,8 @@ export default function Unit4Vocabulario({ onVolver, refuerzoKeys }) {
           <div style={{ color: aciertos[actual] ? verde : rojo, fontWeight: 700, marginBottom: 10 }}>
             {aciertos[actual] ? "¡Correcto! 🎉" : `Era: ${p.correcta}`}
           </div>
-          <Boton onClick={siguiente}>{actual < preguntas.length - 1 ? "Siguiente →" : "Ver resultado"}</Boton>
+          <div style={{ color: "#475569", fontSize: 13, marginBottom: 10 }}>🔊 Escucha la palabra… pasamos sola a la siguiente</div>
+          <button onClick={saltar} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 13, textDecoration: "underline" }}>{actual < preguntas.length - 1 ? "Continuar ahora →" : "Ver resultado →"}</button>
         </div>
       )}
     </div>

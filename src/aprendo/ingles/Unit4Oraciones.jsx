@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { avanzarSolo } from "./autoAvance.js";
 import { VOCAB } from "./unit4Data.js";
 import { FRASES, INICIO } from "./unit4Oraciones.js";
 import { usePermisos } from "../permisos.js";
@@ -75,13 +76,22 @@ export default function Unit4Oraciones({ onVolver, refuerzoKeys }) {
     setElegida(op);
     setAciertos(a => [...a, op === q.correcta]);
     registrarRespuesta({ actividad: "ingles.unit4oraciones", item: q.key, etiqueta: `${q.animal.en}: ${q.inicio} ${q.correcta}.`, correcta: op === q.correcta, elegida: op, refuerzo, alumId });
-    hablar(`${q.inicio} ${q.correcta}.`);
   };
 
   const siguiente = () => {
     if (actual < preguntas.length - 1) { setActual(a => a + 1); setElegida(null); }
     else setTerminado(true);
   };
+
+  // Al responder: se lee la frase completa y se pasa sola a la siguiente pregunta
+  const cancelRef = useRef(null);
+  useEffect(() => {
+    if (elegida === null || terminado) return;
+    const q = preguntas[actual];
+    cancelRef.current = avanzarSolo(`${q.inicio} ${q.correcta}.`, aciertos[actual], siguiente);
+    return () => { cancelRef.current?.(); cancelRef.current = null; };
+  }, [elegida]);
+  const saltar = () => { cancelRef.current?.(); cancelRef.current = null; siguiente(); };
 
   // ── Resultado ────────────────────────────────────────────────────────────
   if (terminado) {
@@ -175,7 +185,8 @@ export default function Unit4Oraciones({ onVolver, refuerzoKeys }) {
             {aciertos[actual] ? "¡Correcto! 🎉" : `Era: ${q.inicio} ${q.correcta}.`}
           </div>
           {q.es && <div style={{ color: "#475569", fontSize: 13, marginBottom: 10 }}>{q.correcta} = {q.es}</div>}
-          <Boton onClick={siguiente}>{actual < preguntas.length - 1 ? "Siguiente →" : "Ver resultado"}</Boton>
+          <div style={{ color: "#475569", fontSize: 13, marginBottom: 10 }}>🔊 Escucha la frase… pasamos sola a la siguiente</div>
+          <button onClick={saltar} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 13, textDecoration: "underline" }}>{actual < preguntas.length - 1 ? "Continuar ahora →" : "Ver resultado →"}</button>
         </div>
       )}
     </div>
