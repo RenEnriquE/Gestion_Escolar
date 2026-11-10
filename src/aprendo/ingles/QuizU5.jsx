@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { avanzarSolo } from "./autoAvance.js";
 import { usePermisos } from "../permisos.js";
 import { registrarRespuesta } from "../registro.js";
 
@@ -53,13 +54,21 @@ export default function QuizU5({ generar, inicial, refuerzo = false, onSalir, on
     setElegida(op);
     setAciertos(a => [...a, ok]);
     registrarRespuesta({ actividad: q.act, item: q.key, etiqueta: q.etiqueta, correcta: ok, elegida: op, refuerzo, alumId });
-    if (q.hablaAlElegir) hablar(q.habla);
   };
 
   const siguiente = () => {
     if (actual < preguntas.length - 1) { setActual(a => a + 1); setElegida(null); }
     else setTerminado(true);
   };
+
+  // Al responder: se lee la frase y se pasa sola a la siguiente pregunta
+  const cancelRef = useRef(null);
+  useEffect(() => {
+    if (elegida === null || terminado) return;
+    cancelRef.current = avanzarSolo(q.habla, aciertos[actual], siguiente);
+    return () => { cancelRef.current?.(); cancelRef.current = null; };
+  }, [elegida]);
+  const saltar = () => { cancelRef.current?.(); cancelRef.current = null; siguiente(); };
 
   if (preguntas.length === 0) {
     return (
@@ -183,10 +192,8 @@ export default function QuizU5({ generar, inicial, refuerzo = false, onSalir, on
             {ok ? "¡Correcto! 🎉" : `Era: ${q.correcta}`}
           </div>
           {q.explicacion && <div style={{ color: "#475569", fontSize: 13, marginBottom: 10 }}>{q.explicacion}</div>}
-          {q.habla && !q.grande && (
-            <button onClick={() => hablar(q.habla)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 13, marginBottom: 10 }}>🔊 Escuchar</button>
-          )}
-          <div><Boton onClick={siguiente}>{actual < preguntas.length - 1 ? "Siguiente →" : "Ver resultado"}</Boton></div>
+          <div style={{ color: "#475569", fontSize: 13, marginBottom: 10 }}>🔊 Escucha la frase… pasamos sola a la siguiente</div>
+          <button onClick={saltar} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 13, textDecoration: "underline" }}>{actual < preguntas.length - 1 ? "Continuar ahora →" : "Ver resultado →"}</button>
         </div>
       )}
     </div>

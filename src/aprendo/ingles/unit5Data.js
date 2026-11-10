@@ -424,7 +424,7 @@ export const preguntaFrase = (f) => ({
 export const preguntaLectura = (l) => ({
   key: "r:" + l.id, act: ACT_LECT, tipo: "lectura",
   emoji: l.emoji, caption: l.caption,
-  lineas: [l.texto], habla: l.texto.replace("___", "").trim(), hablaAlElegir: false,
+  lineas: [l.texto], habla: l.texto.includes("___") ? l.texto.replace("___", l.correcta) : (l.vf ? l.texto : `${l.texto} ${l.correcta}`), hablaAlElegir: false,
   consigna: l.vf ? "¿Verdadero o falso?" : (l.texto.includes("___") ? "Completa la oración" : "Elige la respuesta correcta"),
   opciones: l.vf ? ["True", "False"] : barajar([l.correcta, ...l.incorrectas]), fijo: l.vf, correcta: l.correcta,
   etiqueta: l.texto + " → " + l.correcta, explicacion: l.es,
@@ -435,7 +435,7 @@ export const preguntaFoto = (f) => {
   return {
     key: "f:" + f.id, act: ACT_FOTOS, tipo: "foto",
     emoji: "", foto: FOTOS[f.foto], caption: id ? "Look and answer" : "Look and answer",
-    lineas: [f.texto], habla: f.texto.replace("___", f.correcta), hablaAlElegir: false,
+    lineas: [f.texto], habla: f.texto.includes("___") ? f.texto.replace("___", f.correcta) : `${f.texto} ${f.correcta}`, hablaAlElegir: false,
     consigna: id ? "¿Qué medio de transporte es?" : (f.texto.includes("___") ? "Completa la oración" : "Elige la respuesta correcta"),
     opciones: barajar([f.correcta, ...(id ? distractoresFoto(f.correcta) : f.incorrectas)]), correcta: f.correcta,
     etiqueta: `📷 ${f.desc}: ${f.texto} → ${f.correcta}`, explicacion: f.es,
