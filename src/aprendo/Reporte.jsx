@@ -3,6 +3,7 @@ import { VOCAB } from "./ingles/unit4Data.js";
 import { INICIO } from "./ingles/unit4Oraciones.js";
 import { respuestaCorrecta5 } from "./ingles/unit5Data.js";
 import { construir as construirDivision } from "./mate/divisionData.js";
+import { construir as construirEcuaciones } from "./mate/ecuacionesData.js";
 import { construir as construirPlantas } from "./ciencias/plantasData.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase.js";
@@ -16,6 +17,7 @@ const respuestaCorrecta = (item) => {
   if (item.startsWith("o:")) { const [animal, tipo, resp] = item.slice(2).split("|"); return INICIO[tipo] ? `${animal}: ${INICIO[tipo]} ${resp}.` : null; }
   if (item.startsWith("t:") || item.startsWith("s:") || item.startsWith("r:") || item.startsWith("f:")) return respuestaCorrecta5(item);
   if (item.startsWith("d:")) return construirDivision(item)?.solucion || null;
+  if (item.startsWith("e:") || item.startsWith("p:")) return construirEcuaciones(item)?.solucion || null;
   if (item.startsWith("c:")) return construirPlantas(item)?.solucion || null;
   if (item.startsWith("m:")) { const p = item.split(":"); return p[2] || null; }
   return null;
@@ -38,11 +40,21 @@ const ACTIVIDADES = [
   { id: "matematicas.cuadricula", label: "Hab. Matemáticas · Encuentra la casilla" },
   { id: "matematicas.localizar", label: "Hab. Matemáticas · Localiza los objetos" },
   { id: "matematicas.mapa", label: "Hab. Matemáticas · Mapa del Reino" },
-  { id: "mate.resta", label: "Matemáticas · Resta repetida" },
-  { id: "mate.reparto", label: "Matemáticas · Repartir en partes iguales" },
-  { id: "mate.tablas", label: "Matemáticas · Tablas y divisiones" },
-  { id: "mate.familias", label: "Matemáticas · Multiplicar y dividir" },
-  { id: "mate.problemas", label: "Matemáticas · Problemas" },
+  { id: "mate.eq_incognita", label: "Matemáticas · Ecuaciones: Encuentra la incógnita" },
+  { id: "mate.eq_balanza", label: "Matemáticas · Ecuaciones: La balanza" },
+  { id: "mate.eq_comprobar", label: "Matemáticas · Ecuaciones: Operación inversa y comprobación" },
+  { id: "mate.eq_figuras", label: "Matemáticas · Ecuaciones: Figuras con valores" },
+  { id: "mate.eq_problemas", label: "Matemáticas · Ecuaciones: Problemas ¿qué número es?" },
+  { id: "mate.eq_plantea", label: "Matemáticas · Ecuaciones: Plantea la ecuación" },
+  { id: "mate.pa_secuencia", label: "Matemáticas · Patrones: Completa la secuencia" },
+  { id: "mate.pa_regla", label: "Matemáticas · Patrones: ¿Cuál es la regla?" },
+  { id: "mate.pa_figuras", label: "Matemáticas · Patrones: Figuras y colores" },
+  { id: "mate.ep_ensayo", label: "Matemáticas · Ecuaciones y Patrones: Ensayo de la prueba" },
+  { id: "mate.resta", label: "Matemáticas · Divisiones: Resta repetida" },
+  { id: "mate.reparto", label: "Matemáticas · Divisiones: Repartir en partes iguales" },
+  { id: "mate.tablas", label: "Matemáticas · Divisiones: Tablas y divisiones" },
+  { id: "mate.familias", label: "Matemáticas · Divisiones: Multiplicar y dividir" },
+  { id: "mate.problemas", label: "Matemáticas · Divisiones: Problemas" },
   { id: "ciencias.partes", label: "Ciencias · Plantas: Partes de la planta" },
   { id: "ciencias.funciones", label: "Ciencias · Plantas: ¿Qué función cumple cada parte?" },
   { id: "ciencias.necesidades", label: "Ciencias · Plantas: Lo que necesitan" },
