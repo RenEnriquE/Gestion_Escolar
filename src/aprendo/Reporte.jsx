@@ -266,6 +266,31 @@ export default function Reporte({ onVolver }) {
     const apoyo = conRegistro.filter(x => x.total >= 5).slice().sort((a, b) => pct(a.ok, a.total) - pct(b.ok, b.total)).slice(0, 5);
     return { activos7, conRegistro, inactivos, apoyo };
   }, [control]);
+  // Destacados: quiénes más practican (por respuestas, constancia o aciertos) en un período y asignatura
+  const [destPer, setDestPer] = useState("7");        // "7" | "30" | "todo"
+  const [destCrit, setDestCrit] = useState("resp");   // resp | dias | aciertos
+  const [destAsig, setDestAsig] = useState("total");
+  const DEST_MIN_ACIERTOS = 10;
+  const destacados = useMemo(() => {
+    const desde = destPer === "todo" ? 0 : Date.now() - Number(destPer) * 24 * 3600 * 1000;
+    const por = {};
+    (rows || []).filter(r => vis(r.email) && (destAsig === "total" || asigDe(r.actividad) === destAsig) && new Date(r.creado_en).getTime() >= desde).forEach(r => {
+      const x = (por[ck(r.email)] = por[ck(r.email)] || { email: ck(r.email), resp: 0, ok: 0, dias: new Set(), ultima: r.creado_en });
+      x.resp++; if (r.correcta) x.ok++;
+      x.dias.add(dia(r.creado_en));
+      if (r.creado_en > x.ultima) x.ultima = r.creado_en;
+    });
+    const lista = Object.values(por).map(x => ({ ...x, nombre: nombre(x.email), nDias: x.dias.size, p: pct(x.ok, x.resp) }));
+    const base = destCrit === "aciertos" ? lista.filter(x => x.resp >= DEST_MIN_ACIERTOS) : lista;
+    const orden = {
+      resp: (a, b) => b.resp - a.resp || b.nDias - a.nDias,
+      dias: (a, b) => b.nDias - a.nDias || b.resp - a.resp,
+      aciertos: (a, b) => b.p - a.p || b.resp - a.resp,
+    }[destCrit];
+    const top = base.slice().sort(orden).slice(0, 5);
+    const maxResp = Math.max(1, ...lista.map(x => x.resp));
+    return { top, n: lista.length, maxResp, resp: lista.reduce((n, x) => n + x.resp, 0) };
+  }, [rows, info, personas, incluirAdmins, incluirExternos, destPer, destCrit, destAsig]);
   // Alertas de baja sostenida: últimas N sesiones de una asignatura, todas bajo el umbral
   const alertas = useMemo(() => {
     const out = [];
@@ -413,6 +438,52 @@ export default function Reporte({ onVolver }) {
                     </button>
                   );
                 })}
+              </div>
+
+              <Titulo>🏆 Quiénes más practican</Titulo>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                {[["7", "Últimos 7 días"], ["30", "Últimos 30 días"], ["todo", "Todo el tiempo"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setDestPer(k)} style={{ background: destPer === k ? azul : "#0f172a", color: "white", border: `1px solid ${destPer === k ? azul : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                {[["resp", "Más respuestas"], ["dias", "Más constantes"], ["aciertos", "Mejores aciertos"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setDestCrit(k)} style={{ background: destCrit === k ? verde : "#0f172a", color: "white", border: `1px solid ${destCrit === k ? verde : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+                ))}
+              </div>
+              <select value={destAsig} onChange={e => setDestAsig(e.target.value)} style={{ ...selectStyle, marginBottom: 8 }}>
+                {ASIGNATURAS.map(a => <option key={a.id} value={a.id}>{a.id === "total" ? "Todas las asignaturas" : a.label}</option>)}
+              </select>
+              {destacados.top.length === 0 ? (
+                <div style={{ color: "#475569", fontSize: 13, padding: 8 }}>
+                  {destCrit === "aciertos" ? `Aún nadie suma ${DEST_MIN_ACIERTOS} respuestas en este período para calcular aciertos.` : "Sin actividad registrada en este período."}
+                </div>
+              ) : (
+                <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
+                  {destacados.top.map((x, i) => (
+                    <button key={x.email} onClick={() => { setQuien(x.email); setTab("actividad"); }}
+                      style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: 14 }}>
+                        <span style={{ width: 28, textAlign: "center", fontWeight: 800, color: i < 3 ? amarillo : muted }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
+                        <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{x.nombre}</span>
+                        <span style={{ fontWeight: 800, whiteSpace: "nowrap", color: destCrit === "aciertos" ? colorAcierto(x.p) : destCrit === "dias" ? verde : azul }}>
+                          {destCrit === "aciertos" ? `${x.p}%` : destCrit === "dias" ? `${x.nDias} ${x.nDias === 1 ? "día" : "días"}` : `${x.resp} resp.`}
+                        </span>
+                      </div>
+                      <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "6px 0 3px 38px" }}>
+                        <div style={{ width: `${destCrit === "aciertos" ? x.p : destCrit === "dias" ? pct(x.nDias, destacados.top[0].nDias) : pct(x.resp, destacados.maxResp)}%`, height: "100%", background: destCrit === "aciertos" ? colorAcierto(x.p) : destCrit === "dias" ? verde : azul, borderRadius: 3 }} />
+                      </div>
+                      <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
+                        {destCrit !== "resp" ? `${x.resp} resp. · ` : ""}{destCrit !== "aciertos" ? `${x.p}% de aciertos · ` : ""}{destCrit !== "dias" ? `${x.nDias} ${x.nDias === 1 ? "día" : "días"} con actividad · ` : ""}última vez {fechaCorta(x.ultima)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>
+                {destacados.n} {destacados.n === 1 ? "persona practicó" : "personas practicaron"} en este período ({destacados.resp} respuestas).
+                {destCrit === "aciertos" ? ` Para "Mejores aciertos" se necesitan al menos ${DEST_MIN_ACIERTOS} respuestas.` : ""}
+                {" "}<button onClick={() => setTab("ranking")} style={{ background: "none", border: "none", color: azul, cursor: "pointer", padding: 0, fontSize: 11, textDecoration: "underline" }}>Ver el ranking completo</button>
               </div>
 
               <Titulo>⚠️ Sin practicar en los últimos 7 días</Titulo>
