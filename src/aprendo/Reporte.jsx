@@ -271,6 +271,7 @@ export default function Reporte({ onVolver }) {
   const [destPer, setDestPer] = useState("todo");     // "7" | "30" | "todo"
   const [destCrit, setDestCrit] = useState("aciertos"); // aciertos | resp | dias
   const [destAsig, setDestAsig] = useState("total");
+  const [histTodas, setHistTodas] = useState({});   // asignatura → ver todas las sesiones en la ficha
   const DEST_MIN = 10;   // respuestas mínimas para entrar al ranking de aciertos
   const destacados = useMemo(() => {
     const desde = destPer === "todo" ? 0 : Date.now() - Number(destPer) * 24 * 3600 * 1000;
@@ -358,6 +359,7 @@ export default function Reporte({ onVolver }) {
         promResp: media(gs.map(g => g.promResp)), promDias: media(gs.map(g => g.promDias)),
         dominados: its.filter(x => x.dominado).length, pendientes: its.filter(x => x.pendiente).length,
         errores, mejor: acts.length > 1 ? acts[0] : null, peor: acts.length > 1 ? acts[acts.length - 1] : null,
+        sesiones: quien === "todos" ? [] : (sel[0].sesiones || []).filter(z => z.asig === a).slice().sort((p, q) => new Date(q.inicio) - new Date(p.inicio)),
       };
     });
     const conAct = sel.filter(x => x.total > 0);
@@ -648,6 +650,7 @@ export default function Reporte({ onVolver }) {
               })()}
 
               <Titulo>Por asignatura</Titulo>
+              {ficha.curso && <div style={{ color: "#64748b", fontSize: 11, margin: "-4px 2px 8px" }}>Elige un alumno arriba para ver cómo le fue en cada sesión de práctica.</div>}
               {ficha.asig.filter(g => g.resp > 0).map(g => {
                 const c = tasaCurso[g.a];
                 return (
@@ -677,6 +680,43 @@ export default function Reporte({ onVolver }) {
                         {" · "}A mejorar: <b style={{ color: "#cbd5e1" }}>{g.peor.label.replace(/^[^·]*· /, "")}</b> <span style={{ color: colorAcierto(pct(g.peor.ok, g.peor.resp)) }}>({pct(g.peor.ok, g.peor.resp)}%)</span>
                       </div>
                     )}
+                    {!ficha.curso && g.sesiones.length > 0 && (() => {
+                      const ses = g.sesiones, cron = ses.slice().reverse();
+                      const val = ses.filter(z => z.resp >= 3);
+                      const prom = val.length ? Math.round(val.reduce((n, z) => n + pct(z.ok, z.resp), 0) / val.length) : null;
+                      const mejorS = val.length ? val.reduce((m, z) => (pct(z.ok, z.resp) > pct(m.ok, m.resp) ? z : m), val[0]) : null;
+                      const todas = !!histTodas[g.a];
+                      const lista = todas ? ses : ses.slice(0, 5);
+                      const labelAct = (id) => (ACTIVIDADES.find(a => a.id === id)?.label || id).replace(/^[^·]*· /, "");
+                      return (
+                        <div style={{ marginTop: 8, borderTop: `1px solid ${border}`, paddingTop: 6 }}>
+                          <div style={{ color: muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Cómo le fue en cada sesión de práctica</div>
+                          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", color: muted, fontSize: 12, margin: "4px 0" }}>
+                            <span>Sesiones: <b style={{ color: "#cbd5e1" }}>{ses.length}</b></span>
+                            {prom !== null && <span>Promedio por sesión: <b style={{ color: colorAcierto(prom) }}>{prom}%</b></span>}
+                            {mejorS && <span>Mejor: <b style={{ color: colorAcierto(pct(mejorS.ok, mejorS.resp)) }}>{pct(mejorS.ok, mejorS.resp)}%</b> ({fechaCorta(mejorS.inicio)})</span>}
+                            <span>Última: <b style={{ color: colorAcierto(pct(ses[0].ok, ses[0].resp)) }}>{pct(ses[0].ok, ses[0].resp)}%</b></span>
+                          </div>
+                          <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 40, margin: "4px 0 6px" }} aria-label="Resultado de cada sesión, de la más antigua a la más reciente">
+                            {cron.slice(-20).map((z, i) => (
+                              <div key={i} title={`${fechaCorta(z.inicio)} · ${z.ok}/${z.resp}`} style={{ flex: 1, maxWidth: 18, height: `${Math.max(4, pct(z.ok, z.resp) * 0.38)}px`, background: colorAcierto(pct(z.ok, z.resp)), borderRadius: 2, opacity: z.resp >= 3 ? 1 : 0.4 }} />
+                            ))}
+                          </div>
+                          {lista.map((z, i) => (
+                            <div key={z.inicio + z.act + i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "3px 0", fontSize: 12, opacity: z.resp >= 3 ? 1 : 0.55 }}>
+                              <span style={{ color: "#cbd5e1", flex: 1, minWidth: 0 }}><span style={{ color: muted }}>{fechaHora(z.inicio)}</span> · {labelAct(z.act)}</span>
+                              <span style={{ whiteSpace: "nowrap" }}><span style={{ color: muted }}>{z.ok}/{z.resp}</span> <b style={{ color: colorAcierto(pct(z.ok, z.resp)) }}>{pct(z.ok, z.resp)}%</b></span>
+                            </div>
+                          ))}
+                          {ses.length > 5 && (
+                            <button onClick={() => setHistTodas(h => ({ ...h, [g.a]: !todas }))} style={{ background: "none", border: "none", color: azul, cursor: "pointer", padding: 0, fontSize: 12, textDecoration: "underline", marginTop: 2 }}>
+                              {todas ? "Ver menos" : `Ver las ${ses.length} sesiones`}
+                            </button>
+                          )}
+                          <div style={{ color: "#64748b", fontSize: 10, marginTop: 2 }}>Una sesión es un bloque de respuestas seguidas en una actividad. Las de menos de 3 respuestas se ven atenuadas y no entran al promedio por sesión.</div>
+                        </div>
+                      );
+                    })()}
                     {g.errores.length > 0 && (
                       <div style={{ marginTop: 8, borderTop: `1px solid ${border}`, paddingTop: 6 }}>
                         <div style={{ color: muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Errores más frecuentes</div>
