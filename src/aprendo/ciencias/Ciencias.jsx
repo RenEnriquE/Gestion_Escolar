@@ -1,16 +1,17 @@
 import { useState } from "react";
 import PlantasJuego from "./PlantasJuego.jsx";
-import OrdenFotosintesis from "./OrdenFotosintesis.jsx";
+import OrdenSecuencia from "./OrdenSecuencia.jsx";
 import Repaso from "./Repaso.jsx";
-import { MODOS } from "./plantasData.js";
+import { MODOS, GRUPOS, SECUENCIAS } from "./plantasData.js";
 import { usePermisos } from "../permisos.js";
 
 // Ciencias Naturales · app "Las Plantas" (preparación de la evaluación)
 const ACTIVIDADES = [
-  { id: "repaso", label: "Repasa la materia", emoji: "📚", desc: "Resumen de lo que se evaluará en la prueba", color: "#14b8a6" },
-  ...MODOS.map(m => ({ id: m.id, label: m.label, emoji: m.emoji, desc: m.desc, color: m.color })),
-  { id: "refuerzo", label: "Reforzar mis errores", emoji: "🎯", desc: "Practica las preguntas que más te cuestan", color: "#f59e0b" },
+  { id: "repaso", grupo: "inicio", label: "Repasa la materia", emoji: "📚", desc: "Resumen de todo lo que se evaluará en la prueba", color: "#14b8a6" },
+  ...MODOS.map(m => ({ id: m.id, grupo: m.grupo, label: m.label, emoji: m.emoji, desc: m.desc, color: m.color })),
+  { id: "refuerzo", grupo: "prueba", label: "Reforzar mis errores", emoji: "🎯", desc: "Practica las preguntas que más te cuestan", color: "#f59e0b" },
 ];
+const SECCIONES = [{ id: "inicio", label: "📚 Empieza aquí" }, ...GRUPOS];
 
 export default function Ciencias({ onVolver }) {
   const [actividad, setActividad] = useState(null);
@@ -19,7 +20,7 @@ export default function Ciencias({ onVolver }) {
   const volver = () => setActividad(null);
 
   if (actividad === "repaso") return <Repaso onVolver={volver} />;
-  if (actividad === "orden") return <OrdenFotosintesis onVolver={volver} />;
+  if (SECUENCIAS[actividad]) return <OrdenSecuencia key={actividad} modo={actividad} onVolver={volver} />;
   if (actividad) return <PlantasJuego modo={actividad} onVolver={volver} />;
 
   return (
@@ -34,16 +35,25 @@ export default function Ciencias({ onVolver }) {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {visibles.length === 0 && <div style={{ color: "#475569", fontSize: 14, textAlign: "center", padding: 20 }}>Aún no hay actividades habilitadas para ti en esta asignatura.</div>}
-        {visibles.map(act => (
-          <button key={act.id} onClick={() => setActividad(act.id)}
-            style={{ background: "#1e293b", border: `2px solid ${act.color}`, borderRadius: 14, padding: "18px 20px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 16, transition: "all 0.2s" }}>
-            <span style={{ fontSize: 34 }}>{act.emoji}</span>
-            <div>
-              <div style={{ color: "white", fontSize: 16, fontWeight: 700 }}>{act.label}</div>
-              <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>{act.desc}</div>
+        {SECCIONES.map(sec => {
+          const items = visibles.filter(a => a.grupo === sec.id);
+          if (items.length === 0) return null;
+          return (
+            <div key={sec.id} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 800, margin: "10px 2px 0" }}>{sec.label}</div>
+              {items.map(act => (
+                <button key={act.id} onClick={() => setActividad(act.id)}
+                  style={{ background: "#1e293b", border: `2px solid ${act.color}`, borderRadius: 14, padding: "16px 18px", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 16, transition: "all 0.2s" }}>
+                  <span style={{ fontSize: 32 }}>{act.emoji}</span>
+                  <div>
+                    <div style={{ color: "white", fontSize: 16, fontWeight: 700 }}>{act.label}</div>
+                    <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>{act.desc}</div>
+                  </div>
+                </button>
+              ))}
             </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

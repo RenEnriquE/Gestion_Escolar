@@ -48,6 +48,17 @@ const ACTIVIDADES = [
   { id: "ciencias.necesidades", label: "Ciencias · Plantas: Lo que necesitan" },
   { id: "ciencias.fotosintesis", label: "Ciencias · Plantas: Fotosíntesis" },
   { id: "ciencias.orden", label: "Ciencias · Plantas: Ordena la fotosíntesis" },
+  { id: "ciencias.flor", label: "Ciencias · Plantas: La flor y sus partes" },
+  { id: "ciencias.polinizacion", label: "Ciencias · Plantas: Polinización" },
+  { id: "ciencias.ordenpolin", label: "Ciencias · Plantas: Ordena la polinización" },
+  { id: "ciencias.dispersion", label: "Ciencias · Plantas: Dispersión de las semillas" },
+  { id: "ciencias.germinacion", label: "Ciencias · Plantas: Germinación" },
+  { id: "ciencias.ciclo", label: "Ciencias · Plantas: Ciclo de vida" },
+  { id: "ciencias.ordenciclo", label: "Ciencias · Plantas: Ordena el ciclo de vida" },
+  { id: "ciencias.ordenviaje", label: "Ciencias · Plantas: De la flor a una planta nueva" },
+  { id: "ciencias.tipos", label: "Ciencias · Plantas: Tipos de plantas" },
+  { id: "ciencias.usos", label: "Ciencias · Plantas: Usos de las plantas" },
+  { id: "ciencias.nativas", label: "Ciencias · Plantas: Plantas nativas de Chile" },
   { id: "ciencias.ensayo", label: "Ciencias · Plantas: Ensayo de la prueba" },
 ];
 

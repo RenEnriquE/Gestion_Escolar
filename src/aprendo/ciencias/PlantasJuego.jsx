@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { MODOS, construir, clavesDe, clavesEnsayo, esClavePlantas } from "./plantasData.js";
 import PlantaSVG from "./PlantaSVG.jsx";
+import FlorSVG from "./FlorSVG.jsx";
 import { usePermisos } from "../permisos.js";
 import { registrarRespuesta, cargarRespuestas, analizarItems } from "../registro.js";
 
@@ -37,7 +38,7 @@ export default function PlantasJuego({ modo, onVolver }) {
   const { email, alumId } = usePermisos();
   const info = modo === "refuerzo" ? REFUERZO : MODOS.find(m => m.id === modo);
   const color = info.color;
-  const TOTAL = modo === "ensayo" ? 15 : 10;
+  const TOTAL = modo === "ensayo" ? 20 : 10;
   const [fase, setFase] = useState("config"); // config | juego | resultado
   const [modoRefuerzo, setModoRefuerzo] = useState(false);
   const [pendientes, setPendientes] = useState(null); // null = cargando
@@ -117,6 +118,12 @@ export default function PlantasJuego({ modo, onVolver }) {
         {modo === "partes" && (
           <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: 12, marginBottom: 18 }}>
             <PlantaSVG revelar ancho={240} />
+          </div>
+        )}
+
+        {modo === "flor" && (
+          <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 14, padding: 12, marginBottom: 18 }}>
+            <FlorSVG revelar ancho={240} />
           </div>
         )}
 
@@ -208,6 +215,11 @@ export default function PlantasJuego({ modo, onVolver }) {
         <div style={{ color: m.color, fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{m.emoji} {m.label}</div>
         <div style={{ color: "white", fontSize: 19, fontWeight: 800, lineHeight: 1.4, textAlign: "center" }}>{q.enunciado}</div>
         {q.sub && <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 6, textAlign: "center" }}>{q.sub}</div>}
+        {q.visual?.tipo === "flor" && (
+          <div style={{ marginTop: 12 }}>
+            <FlorSVG marca={q.visual.marca} revelar={respondida} ancho={240} />
+          </div>
+        )}
         {q.visual?.tipo === "planta" && (
           <div style={{ marginTop: 12 }}>
             <PlantaSVG marca={q.visual.marca} revelar={respondida} ancho={250} />
