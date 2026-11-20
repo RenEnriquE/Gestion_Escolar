@@ -87,8 +87,19 @@ function bInc([forma, xs, as, si]) {
   const expl = forma === "r"
     ? `Es una resta, así que usas la operación inversa (suma): ${c} + ${a} = ${x}. Comprobación: ${x} − ${a} = ${c} ✓`
     : `Es una suma, así que usas la operación inversa (resta): ${c} − ${a} = ${x}. Comprobación: ${a} + ${x} = ${c} ✓`;
+  const pasos = forma === "r" ? [
+    `La ecuación es ${texto}. La incógnita es ${S}: el número que no conocemos.`,
+    `Con ${S} se resta ${a}. La operación inversa de restar es sumar.`,
+    `En tu hoja: ${c} + ${a} = ${x}. Entonces ${S} = ${x}.`,
+    `Comprueba: ${x} − ${a} = ${c} ✓ (se cumple la igualdad).`,
+  ] : [
+    `La ecuación es ${texto}. La incógnita es ${S}: el número que no conocemos.`,
+    `Con ${S} se suma ${a}. La operación inversa de sumar es restar.`,
+    `En tu hoja: ${c} − ${a} = ${x}. Entonces ${S} = ${x}.`,
+    `Comprueba: ${a} + ${x} = ${c} ✓ (se cumple la igualdad).`,
+  ];
   return { modo: "eq_incognita", estilo: "ecuacion", enunciado: texto, sub: `¿Cuánto vale ${S}?`, etiqueta: texto,
-    correcta: String(x), malas, explicacion: expl, solucion: `${S} = ${x}` };
+    correcta: String(x), malas, explicacion: expl, pasos, solucion: `${S} = ${x}` };
 }
 
 // ── Balanza ───────────────────────────────────────────────────────────────────
@@ -101,7 +112,13 @@ function bBal([tipo, xs, as]) {
   return { modo: "eq_balanza", estilo: "ecuacion", enunciado: texto, sub: "La balanza está equilibrada. ¿Qué número falta?", etiqueta: `Balanza: ${texto}`,
     visual: { tipo: "balanza", izq, der, x },
     correcta: String(x), malas: tres(x, [T + a, a, T, x + 1, x - 1, x + 10, x - 10]),
-    explicacion: `Los dos lados pesan lo mismo. ${T} − ${a} = ${x}. Comprobación: ${a} + ${x} = ${T} ✓`, solucion: `? = ${x}` };
+    explicacion: `Los dos lados pesan lo mismo. ${T} − ${a} = ${x}. Comprobación: ${a} + ${x} = ${T} ✓`,
+    pasos: [
+      `La balanza está equilibrada: los dos lados valen lo mismo (${texto}).`,
+      `Un lado tiene ${a} y el otro lado vale ${T}. Falta cuánto hay que sumarle a ${a} para llegar a ${T}.`,
+      `La operación inversa de sumar es restar. En tu hoja: ${T} − ${a} = ${x}.`,
+      `Comprueba: ${a} + ${x} = ${T} ✓ (los dos lados quedan iguales).`,
+    ], solucion: `? = ${x}` };
 }
 
 // ── Operación inversa y comprobación ──────────────────────────────────────────
@@ -119,6 +136,15 @@ function bCom([tipo, forma, xs, as, si]) {
     return { modo: "eq_comprobar", estilo: "ecuacion", enunciado: texto, sub: `¿Qué cálculo haces en tu hoja para encontrar ${S}?`, etiqueta: `Operación inversa: ${texto}`,
       correcta: ok, malas: unicos(ok, malasOp),
       explicacion: esResta ? `La ecuación resta, entonces usas la operación inversa: sumar. ${c} + ${a} = ${x}.` : `La ecuación suma, entonces usas la operación inversa: restar. ${c} − ${a} = ${x}.`,
+      pasos: esResta ? [
+        `Mira la ecuación ${texto}: con ${S} se resta ${a}.`,
+        `La operación inversa de restar es sumar. Por eso el cálculo es ${ok} (el resultado ${c} más el número que se restó, ${a}).`,
+        `En tu hoja: ${ok} = ${x}. Entonces ${S} = ${x}.`,
+      ] : [
+        `Mira la ecuación ${texto}: con ${S} se suma ${a}.`,
+        `La operación inversa de sumar es restar. Por eso el cálculo es ${ok} (al resultado ${c} le quitas el número que ya está, ${a}).`,
+        `En tu hoja: ${ok} = ${x}. Entonces ${S} = ${x}.`,
+      ],
       solucion: `${ok} = ${x}` };
   }
   const comp = forma === "s" ? `${x} + ${a} = ${c}` : forma === "t" ? `${a} + ${x} = ${c}` : `${x} − ${a} = ${c}`;
@@ -128,6 +154,12 @@ function bCom([tipo, forma, xs, as, si]) {
   return { modo: "eq_comprobar", estilo: "ecuacion", enunciado: texto, sub: `Si ${S} = ${x}, ¿cuál es la comprobación correcta?`, etiqueta: `Comprobación: ${texto} (${S} = ${x})`,
     correcta: comp, malas: unicos(comp, malasC),
     explicacion: `Para comprobar, cambias ${S} por ${x} en la ecuación original y revisas que se cumpla: ${comp} ✓`,
+    pasos: [
+      `La ecuación original es ${texto} y ${S} = ${x}.`,
+      `Comprobar es cambiar ${S} por ${x} en la ecuación original, sin cambiar la operación: ${comp}.`,
+      `Revisa que ambos lados den lo mismo: ${comp.replace(" = ", " → ").split(" → ")[0]} da ${c} ✓.`,
+      `Las otras alternativas cambian la operación o los números de lugar, y no se cumplen.`,
+    ],
     solucion: comp };
 }
 
@@ -141,7 +173,13 @@ function bFig([tipo, ...p]) {
     const texto = Array(n).fill(E).join(" + ") + ` = ${T}`;
     return { modo: "eq_figuras", estilo: "ecuacion", enunciado: texto, sub: `¿Cuánto vale cada ${E}?`, etiqueta: texto,
       correcta: String(x), malas: tres(x, tipo === "d" ? [T, x + 1, x - 1, x + 2, x * 2 + 2] : [T, x + 1, x - 1, T - x, x + 2]),
-      explicacion: `${n === 2 ? "Dos" : "Tres"} dibujos iguales suman ${T}: ${Array(n).fill(x).join(" + ")} = ${T}. Cada ${E} vale ${x}.`, solucion: `${E} = ${x}` };
+      explicacion: `${n === 2 ? "Dos" : "Tres"} dibujos iguales suman ${T}: ${Array(n).fill(x).join(" + ")} = ${T}. Cada ${E} vale ${x}.`,
+      pasos: [
+        `Los dibujos iguales valen lo mismo: hay ${n === 2 ? "dos" : "tres"} ${E} y juntos suman ${T}.`,
+        `Buscamos el número que, sumado ${n === 2 ? "2 veces" : "3 veces"}, da ${T}. Puedes probar con la tabla del ${n}.`,
+        `${Array(n).fill(x).join(" + ")} = ${T}, y también ${n} • ${x} = ${T}. (Como división: ${T} : ${n} = ${x}).`,
+        `Entonces cada ${E} vale ${x}.`,
+      ], solucion: `${E} = ${x}` };
   }
   const x1 = +p[0], a = +p[1], x2 = +p[2], i = +p[3] || 0;
   const E1 = ANIMALES[i % ANIMALES.length], E2 = ANIMALES[(i + 1) % ANIMALES.length];
@@ -149,7 +187,14 @@ function bFig([tipo, ...p]) {
   const texto = `${E1} + ${a} = ${c1}\n${E1} + ${E2} = ${c2}`;
   return { modo: "eq_figuras", estilo: "ecuacion", enunciado: texto, sub: `¿Cuánto vale ${E2}?`, etiqueta: `${E1} + ${a} = ${c1} · ${E1} + ${E2} = ${c2}`,
     correcta: String(x2), malas: tres(x2, [x1, c2, c1, x2 + 1, x2 - 1, x2 + 2]),
-    explicacion: `Primero la ecuación con un solo dibujo: ${c1} − ${a} = ${x1}, entonces ${E1} = ${x1}. Luego ${c2} − ${x1} = ${x2}, entonces ${E2} = ${x2}.`, solucion: `${E2} = ${x2}` };
+    explicacion: `Primero la ecuación con un solo dibujo: ${c1} − ${a} = ${x1}, entonces ${E1} = ${x1}. Luego ${c2} − ${x1} = ${x2}, entonces ${E2} = ${x2}.`,
+    pasos: [
+      `Empieza por la ecuación que tiene un solo dibujo: ${E1} + ${a} = ${c1}.`,
+      `Operación inversa: ${c1} − ${a} = ${x1}. Entonces ${E1} = ${x1}.`,
+      `Usa ese valor en la otra ecuación: ${E1} + ${E2} = ${c2} queda ${x1} + ${E2} = ${c2}.`,
+      `Operación inversa: ${c2} − ${x1} = ${x2}. Entonces ${E2} = ${x2}.`,
+      `Comprueba: ${x1} + ${x2} = ${c2} ✓`,
+    ], solucion: `${E2} = ${x2}` };
 }
 
 // ── Problemas ─────────────────────────────────────────────────────────────────
@@ -177,6 +222,15 @@ const problemaTexto = (t, x, a, n) => {
 };
 const ecPlantea = (t, a, c) => ({ S: `□ + ${a} = ${c}`, G: `□ + ${a} = ${c}`, R: `□ − ${a} = ${c}`, P: `□ − ${a} = ${c}`, O: `${c} = □ + ${a}`, F: `${a} − □ = ${c}` }[t]);
 
+const PISTA = {
+  S: "“Le sumé” significa que el número aumentó: □ + número = resultado.",
+  R: "“Le resté” significa que el número disminuyó: □ − número = resultado.",
+  O: "“Obtuve… después de sumarle” significa que el resultado es □ + número.",
+  G: "“Me regalaron más” significa sumar: lo que tenía + lo que me dieron = lo que tengo ahora.",
+  P: "“Regalé” significa restar: lo que tenía − lo que regalé = lo que me quedó.",
+  F: "Tenía una cantidad, regalé algunas (□) y me quedaron otras: cantidad − □ = lo que quedó.",
+};
+
 function bPro([t, xs, as, ns]) {
   const x = +xs, a = +as;
   const { c, txt } = problemaTexto(t, x, a, +ns);
@@ -185,7 +239,13 @@ function bPro([t, xs, as, ns]) {
   const op = suma ? `${c} − ${a} = ${x}` : t === "F" ? `${a} − ${c} = ${x}` : `${c} + ${a} = ${x}`;
   const comp = suma ? `${x} + ${a} = ${c}` : t === "F" ? `${a} − ${x} = ${c}` : `${x} − ${a} = ${c}`;
   return { modo: "eq_problemas", estilo: "problema", enunciado: txt, etiqueta: txt, correcta: String(x), malas: tres(x, cand),
-    explicacion: `Ecuación: ${ecPlantea(t, a, c)}. Operación inversa: ${op}. Comprobación: ${comp} ✓`, solucion: `${x} (${ecPlantea(t, a, c)})` };
+    explicacion: `Ecuación: ${ecPlantea(t, a, c)}. Operación inversa: ${op}. Comprobación: ${comp} ✓`,
+    pasos: [
+      `Datos (en rojo): ${a} y ${c}. Pregunta (en azul): el número que no conocemos, lo llamamos □.`,
+      `${PISTA[t]} La ecuación es ${ecPlantea(t, a, c)}.`,
+      `Resuelve con la operación inversa. En tu hoja: ${op}. Entonces □ = ${x}.`,
+      `Comprueba: ${comp} ✓`,
+    ], solucion: `${x} (${ecPlantea(t, a, c)})` };
 }
 
 function bPla([t, xs, as, ns]) {
@@ -199,7 +259,13 @@ function bPla([t, xs, as, ns]) {
     F: [`□ − ${a} = ${c}`, `□ + ${a} = ${c}`, `${c} − ${a} = □`],
   }[t];
   return { modo: "eq_plantea", estilo: "problema", enunciado: txt, sub: "¿Qué ecuación representa el problema? (□ es el número que no conocemos)", etiqueta: `Plantea: ${txt}`,
-    correcta: ok, malas: unicos(ok, mal), explicacion: `La ecuación es ${ok}. Al resolverla: el número es ${x}.`, solucion: ok };
+    correcta: ok, malas: unicos(ok, mal), explicacion: `La ecuación es ${ok}. Al resolverla: el número es ${x}.`,
+    pasos: [
+      `Datos (en rojo): ${a} y ${c}. El número que no conocemos lo escribimos como □.`,
+      PISTA[t],
+      `La ecuación correcta es ${ok}.`,
+      `Para comprobar que es la correcta, resuélvela: □ = ${x} y ${ok.replace("□", x)} ✓. Las otras alternativas no se cumplen con ${x}.`,
+    ], solucion: ok };
 }
 
 // ── Patrones numéricos ────────────────────────────────────────────────────────
@@ -218,7 +284,13 @@ function bSec([ss, ps, pos]) {
   return { modo: "pa_secuencia", estilo: "texto", enunciado: "Completa la secuencia", sub: "Calcula en tu hoja y elige el número que falta", etiqueta: vista,
     visual: { tipo: "seq", terms: t, hueco: h },
     correcta: String(x), malas,
-    explicacion: `La regla es ${verbo(p).toLowerCase()} ${m}: ${prev} ${p > 0 ? "+" : "−"} ${m} = ${x}.`, solucion: `${x} (${verbo(p).toLowerCase()} ${m})` };
+    explicacion: `La regla es ${verbo(p).toLowerCase()} ${m}: ${prev} ${p > 0 ? "+" : "−"} ${m} = ${x}.`,
+    pasos: [
+      `Busca la regla con dos números seguidos que sí se ven: de ${t[0]} a ${t[1]} ${p > 0 ? "sube" : "baja"} ${m} (${p > 0 ? `${t[1]} − ${t[0]}` : `${t[0]} − ${t[1]}`} = ${m}).`,
+      `Los números ${p > 0 ? "suben" : "bajan"}, así que la regla es ${verbo(p).toLowerCase()} ${m} cada vez.`,
+      `Aplica la regla al número anterior al hueco: ${prev} ${p > 0 ? "+" : "−"} ${m} = ${x}.`,
+      ...(h < t.length - 1 ? [`Comprueba con el que sigue: ${x} ${p > 0 ? "+" : "−"} ${m} = ${t[h + 1]} ✓`] : [`Comprueba con el anterior: ${x} ${p > 0 ? "−" : "+"} ${m} = ${prev} ✓`]),
+    ], solucion: `${x} (${verbo(p).toLowerCase()} ${m})` };
 }
 
 function bReg([ss, ps]) {
@@ -232,7 +304,13 @@ function bReg([ss, ps]) {
   return { modo: "pa_regla", estilo: "texto", enunciado: "¿Cuál es la regla del patrón?", sub: "Mira cuánto cambia de un número al siguiente", etiqueta: t.join(", "),
     visual: { tipo: "seq", terms: t, hueco: -1 },
     correcta: ok, malas,
-    explicacion: `De ${t[0]} a ${t[1]} ${p > 0 ? "sube" : "baja"} ${m}, y pasa lo mismo en todo el patrón: la regla es ${ok.toLowerCase()}.${tabla}`, solucion: ok };
+    explicacion: `De ${t[0]} a ${t[1]} ${p > 0 ? "sube" : "baja"} ${m}, y pasa lo mismo en todo el patrón: la regla es ${ok.toLowerCase()}.${tabla}`,
+    pasos: [
+      `Mira si los números suben o bajan: de ${t[0]} a ${t[1]} ${p > 0 ? "suben" : "bajan"}, así que la regla es ${p > 0 ? "sumar" : "restar"}.`,
+      `Calcula cuánto cambia entre dos números seguidos: ${p > 0 ? `${t[1]} − ${t[0]}` : `${t[0]} − ${t[1]}`} = ${m}.`,
+      `Comprueba con otro par: ${p > 0 ? `${t[3]} − ${t[2]}` : `${t[2]} − ${t[3]}`} = ${m} ✓. Siempre cambia lo mismo.`,
+      `La regla es ${ok.toLowerCase()}.${tabla}`,
+    ], solucion: ok };
 }
 
 // ── Patrones de figuras ───────────────────────────────────────────────────────
@@ -251,7 +329,12 @@ function bPFig([pat, set, js]) {
   return { modo: "pa_figuras", estilo: "texto", enunciado: "¿Qué figura sigue en el patrón?", sub: "Encuentra el grupo que se repite", etiqueta: `${seq.join(" ")} ?`,
     visual: { tipo: "fig", items: seq }, opGrande: true,
     correcta: sig, malas,
-    explicacion: `El grupo que se repite es ${unidad}. Después de ${seq.slice(-1)[0]} sigue ${sig}.`, solucion: sig };
+    explicacion: `El grupo que se repite es ${unidad}. Después de ${seq.slice(-1)[0]} sigue ${sig}.`,
+    pasos: [
+      `Busca el grupo que se repite: ${unidad}.`,
+      `En el dibujo ese grupo aparece completo ${Math.floor(n / cyc)} veces${n % cyc ? ` y después empieza otra vez: ${seq.slice(n - (n % cyc)).join(" ")}` : ""}.`,
+      `Falta la figura número ${(n % cyc) + 1} del grupo: ${sig}.`,
+    ], solucion: sig };
 }
 
 // ── Construcción y listas de claves ───────────────────────────────────────────
