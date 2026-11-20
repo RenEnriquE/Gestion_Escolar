@@ -75,6 +75,7 @@ const fechaCorta = (f) => { try { return new Date(f).toLocaleDateString("es-CL",
 
 const TABS = [
   { id: "resumen", emoji: "📌", label: "Resumen" },
+  { id: "detalle", emoji: "🧾", label: "Detalle" },
   { id: "aciertos", emoji: "🎯", label: "Aciertos" },
   { id: "evolucion", emoji: "📈", label: "Evolución" },
   { id: "actividad", emoji: "📅", label: "Actividad" },
@@ -101,6 +102,8 @@ const selectStyle = { background: "#0f172a", color: "white", border: `1px solid 
 // ── Control de actividad ─────────────────────────────────────────────────────
 // Una "sesión" = bloque de respuestas seguidas en una misma actividad; se corta tras 30 min sin responder.
 const GAP_SESION = 30 * 60 * 1000;
+const SEM_VENT = 12;   // semanas máximas para los promedios semanales
+const fmt1 = (n) => (Math.round(n * 10) / 10).toString().replace(".", ",");
 const NOMBRE_ASIG = { ingles: "Inglés", lenguaje: "Lenguaje", mate: "Matemáticas", matematicas: "Hab. Matemáticas", ciencias: "Ciencias Naturales" };
 const ASIGS = ["ingles", "lenguaje", "mate", "matematicas", "ciencias"];
 // Tiempo estimado: suma de los intervalos entre respuestas seguidas (máx. 2 min por pregunta) + 15 s por sesión
@@ -118,8 +121,15 @@ const fechaDia = (iso) => { try { return new Date(iso + "T12:00:00").toLocaleDat
 // rs: respuestas de UNA persona (cualquier orden). Devuelve datos por actividad y por asignatura.
 function resumenPersona(rs) {
   const act = {}, asig = {};
-  ASIGS.forEach(a => { asig[a] = { ses: 0, resp: 0, ok: 0, ms: 0, ultima: null, dias: {}, sem: [0,0,0,0,0,0,0] }; });
+  ASIGS.forEach(a => { asig[a] = { ses: 0, resp: 0, ok: 0, ms: 0, ultima: null, dias: {}, sem: [0,0,0,0,0,0,0], vResp: 0, vDias: new Set() }; });
   const orden = [...rs].sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+  // Promedio semanal: semanas (lunes a domingo) desde su primera práctica, máx. las últimas SEM_VENT, contando las semanas sin práctica
+  const SEM = 7 * 24 * 3600 * 1000;
+  const lunesAhora = lunesDe(new Date().toISOString()).getTime();
+  let ini = 0, nSem = 0;
+  if (orden.length) { ini = Math.max(lunesDe(orden[0].creado_en).getTime(), lunesAhora - (SEM_VENT - 1) * SEM); nSem = Math.round((lunesAhora - ini) / SEM) + 1; }
+  const vent = { resp: 0, dias: new Set() };
+  const semanas8 = Array.from({ length: 8 }, (_, i) => ({ ini: new Date(lunesAhora - (7 - i) * SEM), resp: 0 }));
   const prev = {}, cur = {}, sesiones = [];
   orden.forEach(r => {
     const a = (act[r.actividad] = act[r.actividad] || { ses: 0, resp: 0, ok: 0, ms: 0, ultima: null });
@@ -140,11 +150,16 @@ function resumenPersona(rs) {
       g.resp++; if (r.correcta) g.ok++; g.ultima = r.creado_en;
       const d = dia(r.creado_en); g.dias[d] = (g.dias[d] || 0) + 1;
       g.sem[new Date(r.creado_en).getDay()]++;
+      if (t >= ini) { g.vResp++; g.vDias.add(d); }
     }
+    if (t >= ini) { vent.resp++; vent.dias.add(dia(r.creado_en)); }
+    const wi = t >= lunesAhora ? 7 : 7 - Math.ceil((lunesAhora - t) / SEM);
+    if (wi >= 0 && wi < 8) semanas8[wi].resp++;
   });
   Object.keys(act).forEach(k => { const g = asig[asigDe(k)]; if (g) g.ses += act[k].ses; });
   const dias = new Set(rs.map(r => dia(r.creado_en)));
-  return { act, asig, sesiones, ms: Object.values(act).reduce((n, x) => n + x.ms, 0), ok: rs.filter(r => r.correcta).length, nDias: dias.size, ses: Object.values(act).reduce((n, x) => n + x.ses, 0), ultima: orden.length ? orden[orden.length - 1].creado_en : null, total: rs.length };
+  ASIGS.forEach(a => { const g = asig[a]; g.promResp = nSem ? g.vResp / nSem : 0; g.promDias = nSem ? g.vDias.size / nSem : 0; });
+  return { nSem, promResp: nSem ? vent.resp / nSem : 0, promDias: nSem ? vent.dias.size / nSem : 0, semanas8, act, asig, sesiones, ms: Object.values(act).reduce((n, x) => n + x.ms, 0), ok: rs.filter(r => r.correcta).length, nDias: dias.size, ses: Object.values(act).reduce((n, x) => n + x.ses, 0), ultima: orden.length ? orden[orden.length - 1].creado_en : null, total: rs.length };
 }
 
 export default function Reporte({ onVolver }) {
@@ -212,21 +227,6 @@ export default function Reporte({ onVolver }) {
     }).sort((a, b) => a.p - b.p);
   }, [base, info, personas]);
 
-  // Ranking de uso: cuenta respuestas (no tiempo) de todas las actividades, sin el filtro de actividad
-  const [rankAsig, setRankAsig] = useState("total");
-  const ranking = useMemo(() => {
-    const por = {};
-    (rows || []).filter(r => vis(r.email)).forEach(r => {
-      const x = (por[ck(r.email)] = por[ck(r.email)] || { email: ck(r.email), total: 0, ingles: 0, lenguaje: 0, mate: 0, matematicas: 0, ciencias: 0, dias: new Set(), ultima: r.creado_en });
-      const a = (r.actividad || "").split(".")[0];
-      x.total++; if (x[a] !== undefined) x[a]++;
-      x.dias.add(dia(r.creado_en));
-      if (r.creado_en > x.ultima) x.ultima = r.creado_en;
-    });
-    return Object.values(por).map(x => ({ ...x, nombre: nombre(x.email), nDias: x.dias.size }))
-      .filter(x => x[rankAsig] > 0).sort((a, b) => b[rankAsig] - a[rankAsig] || b.nDias - a.nDias);
-  }, [rows, info, personas, incluirAdmins, incluirExternos, rankAsig]);
-  const maxRank = ranking[0]?.[rankAsig] || 1;
 
 
   // Control de actividad por persona (sin el filtro de actividad). Incluye a quienes tienen acceso y aún no registran nada.
@@ -264,33 +264,114 @@ export default function Reporte({ onVolver }) {
     const inactivos = control.filter(x => !x.ultima || ahora - new Date(x.ultima).getTime() > SEMANA)
       .sort((a, b) => (a.ultima ? new Date(a.ultima).getTime() : 0) - (b.ultima ? new Date(b.ultima).getTime() : 0));
     const apoyo = conRegistro.filter(x => x.total >= 5).slice().sort((a, b) => pct(a.ok, a.total) - pct(b.ok, b.total)).slice(0, 5);
-    return { activos7, conRegistro, inactivos, apoyo };
+    const prom = (k) => (conRegistro.length ? conRegistro.reduce((n, x) => n + x[k], 0) / conRegistro.length : 0);
+    return { activos7, conRegistro, inactivos, apoyo, promResp: prom("promResp"), promDias: prom("promDias") };
   }, [control]);
-  // Destacados: quiénes más practican (por respuestas, constancia o aciertos) en un período y asignatura
-  const [destPer, setDestPer] = useState("7");        // "7" | "30" | "todo"
-  const [destCrit, setDestCrit] = useState("resp");   // resp | dias | aciertos
+  // Ranking de rendimiento: mejores aciertos (o más respuestas / más constantes) en un período y asignatura
+  const [destPer, setDestPer] = useState("todo");     // "7" | "30" | "todo"
+  const [destCrit, setDestCrit] = useState("aciertos"); // aciertos | resp | dias
   const [destAsig, setDestAsig] = useState("total");
-  const DEST_MIN_ACIERTOS = 10;
+  const DEST_MIN = 10;   // respuestas mínimas para entrar al ranking de aciertos
   const destacados = useMemo(() => {
     const desde = destPer === "todo" ? 0 : Date.now() - Number(destPer) * 24 * 3600 * 1000;
     const por = {};
-    (rows || []).filter(r => vis(r.email) && (destAsig === "total" || asigDe(r.actividad) === destAsig) && new Date(r.creado_en).getTime() >= desde).forEach(r => {
-      const x = (por[ck(r.email)] = por[ck(r.email)] || { email: ck(r.email), resp: 0, ok: 0, dias: new Set(), ultima: r.creado_en });
+    (rows || []).filter(r => vis(r.email) && new Date(r.creado_en).getTime() >= desde).forEach(r => {
+      const x = (por[ck(r.email)] = por[ck(r.email)] || { email: ck(r.email), resp: 0, ok: 0, dias: new Set(), ultima: r.creado_en, asig: {} });
+      const a = asigDe(r.actividad);
+      const g = (x.asig[a] = x.asig[a] || { resp: 0, ok: 0 });
+      g.resp++; if (r.correcta) g.ok++;
+      if (destAsig !== "total" && a !== destAsig) return;
       x.resp++; if (r.correcta) x.ok++;
       x.dias.add(dia(r.creado_en));
       if (r.creado_en > x.ultima) x.ultima = r.creado_en;
     });
-    const lista = Object.values(por).map(x => ({ ...x, nombre: nombre(x.email), nDias: x.dias.size, p: pct(x.ok, x.resp) }));
-    const base = destCrit === "aciertos" ? lista.filter(x => x.resp >= DEST_MIN_ACIERTOS) : lista;
+    const lista = Object.values(por).filter(x => x.resp > 0).map(x => ({ ...x, nombre: nombre(x.email), nDias: x.dias.size, p: pct(x.ok, x.resp) }));
     const orden = {
       resp: (a, b) => b.resp - a.resp || b.nDias - a.nDias,
       dias: (a, b) => b.nDias - a.nDias || b.resp - a.resp,
-      aciertos: (a, b) => b.p - a.p || b.resp - a.resp,
+      aciertos: (a, b) => b.p - a.p || b.resp - a.resp || b.nDias - a.nDias,
     }[destCrit];
-    const top = base.slice().sort(orden).slice(0, 5);
+    const clasif = destCrit === "aciertos" ? lista.filter(x => x.resp >= DEST_MIN) : lista;
+    const todos = clasif.slice().sort(orden);
+    const bajoMin = destCrit === "aciertos" ? lista.filter(x => x.resp < DEST_MIN).sort((a, b) => b.p - a.p || b.resp - a.resp) : [];
     const maxResp = Math.max(1, ...lista.map(x => x.resp));
-    return { top, n: lista.length, maxResp, resp: lista.reduce((n, x) => n + x.resp, 0) };
+    return { todos, top: todos.slice(0, 5), bajoMin, n: lista.length, maxResp, resp: lista.reduce((n, x) => n + x.resp, 0) };
   }, [rows, info, personas, incluirAdmins, incluirExternos, destPer, destCrit, destAsig]);
+
+  const chipDest = (activo, color, onClick, label) => (
+    <button key={label} onClick={onClick} style={{ background: activo ? color : "#0f172a", color: "white", border: `1px solid ${activo ? color : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+  );
+  const filtrosDest = (
+    <>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        {[["aciertos", "Mejores aciertos"], ["resp", "Más respuestas"], ["dias", "Más constantes"]].map(([k, l]) => chipDest(destCrit === k, verde, () => setDestCrit(k), l))}
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        {[["7", "Últimos 7 días"], ["30", "Últimos 30 días"], ["todo", "Todo el tiempo"]].map(([k, l]) => chipDest(destPer === k, azul, () => setDestPer(k), l))}
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+        {ASIGNATURAS.map(a => chipDest(destAsig === a.id, "#8b5cf6", () => setDestAsig(a.id), a.id === "total" ? "Todas" : a.label))}
+      </div>
+    </>
+  );
+  const filaDest = (x, i) => (
+    <button key={x.email} onClick={() => { setQuien(x.email); setTab("detalle"); }}
+      style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: "pointer" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: 14 }}>
+        <span style={{ width: 28, textAlign: "center", fontWeight: 800, color: i < 3 ? amarillo : muted }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
+        <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{x.nombre}</span>
+        <span style={{ fontWeight: 800, whiteSpace: "nowrap", color: destCrit === "dias" ? verde : destCrit === "resp" ? azul : colorAcierto(x.p) }}>
+          {destCrit === "dias" ? `${x.nDias} ${x.nDias === 1 ? "día" : "días"}` : destCrit === "resp" ? `${x.resp} resp.` : `${x.p}%`}
+        </span>
+      </div>
+      <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "6px 0 3px 38px" }}>
+        <div style={{ width: `${destCrit === "dias" ? pct(x.nDias, destacados.todos[0]?.nDias || 1) : destCrit === "resp" ? pct(x.resp, destacados.maxResp) : x.p}%`, height: "100%", background: destCrit === "dias" ? verde : destCrit === "resp" ? azul : colorAcierto(x.p), borderRadius: 3 }} />
+      </div>
+      <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
+        {destCrit !== "aciertos" ? `${x.p}% de aciertos · ` : ""}{x.ok}/{x.resp} resp. · {x.nDias} {x.nDias === 1 ? "día" : "días"} con actividad · última {fechaCorta(x.ultima)}
+        {destAsig === "total" && ASIGS.filter(a => x.asig[a]?.resp > 0).length > 1 && (
+          <div style={{ marginTop: 2 }}>{ASIGS.filter(a => x.asig[a]?.resp > 0).map((a, j) => <span key={a}>{j > 0 ? " · " : ""}{NOMBRE_ASIG[a].replace(" Naturales", "")} <b style={{ color: colorAcierto(pct(x.asig[a].ok, x.asig[a].resp)) }}>{pct(x.asig[a].ok, x.asig[a].resp)}%</b></span>)}</div>
+        )}
+      </div>
+    </button>
+  );
+  // Ficha de detalle: un alumno (o todo el curso) por asignatura
+  const ficha = useMemo(() => {
+    const sel = control.filter(x => (quien === "todos" ? x.total > 0 : x.email === quien));
+    if (!sel.length || !sel.some(x => x.total > 0)) return null;
+    const rsAll = (rows || []).filter(r => vis(r.email) && (quien === "todos" || ck(r.email) === quien));
+    const media = (arr) => (arr.length ? arr.reduce((n, v) => n + v, 0) / arr.length : 0);
+    const asig = ASIGS.map(a => {
+      const gs = sel.map(x => x.asig[a]).filter(g => g.resp > 0);
+      const resp = gs.reduce((n, g) => n + g.resp, 0), ok = gs.reduce((n, g) => n + g.ok, 0);
+      const its = Object.values(analizarItems(rsAll.filter(r => asigDe(r.actividad) === a)));
+      const errores = its.filter(x => x.errores > 0).sort((p, q) => q.errores - p.errores || pct(q.errores, q.intentos) - pct(p.errores, p.intentos)).slice(0, 3);
+      const acts = ACTIVIDADES.filter(ac => ac.id !== "todas" && asigDe(ac.id) === a).map(ac => {
+        const t = { id: ac.id, label: ac.label, resp: 0, ok: 0 };
+        sel.forEach(x => { const d = x.act[ac.id]; if (d) { t.resp += d.resp; t.ok += d.ok; } });
+        return t;
+      }).filter(t => t.resp >= 3).sort((p, q) => pct(q.ok, q.resp) - pct(p.ok, p.resp));
+      return {
+        a, resp, ok, p: pct(ok, resp), n: gs.length,
+        ses: gs.reduce((n, g) => n + g.ses, 0), ms: gs.reduce((n, g) => n + g.ms, 0),
+        ultima: gs.reduce((m, g) => (!m || g.ultima > m ? g.ultima : m), null),
+        promResp: media(gs.map(g => g.promResp)), promDias: media(gs.map(g => g.promDias)),
+        dominados: its.filter(x => x.dominado).length, pendientes: its.filter(x => x.pendiente).length,
+        errores, mejor: acts.length > 1 ? acts[0] : null, peor: acts.length > 1 ? acts[acts.length - 1] : null,
+      };
+    });
+    const conAct = sel.filter(x => x.total > 0);
+    const semanas = Array.from({ length: 8 }, (_, i) => ({ ini: sel[0].semanas8[i].ini, resp: sel.reduce((n, x) => n + x.semanas8[i].resp, 0) }));
+    const resp = conAct.reduce((n, x) => n + x.total, 0), ok = conAct.reduce((n, x) => n + x.ok, 0);
+    return {
+      curso: quien === "todos", nombre: quien === "todos" ? "Todo el curso" : sel[0].nombre, n: conAct.length,
+      resp, ok, ms: conAct.reduce((n, x) => n + x.ms, 0), ses: conAct.reduce((n, x) => n + x.ses, 0),
+      nDias: quien === "todos" ? null : sel[0].nDias, ultima: conAct.reduce((m, x) => (!m || x.ultima > m ? x.ultima : m), null),
+      promResp: media(conAct.map(x => x.promResp)), promDias: media(conAct.map(x => x.promDias)), nSem: quien === "todos" ? null : sel[0].nSem,
+      semanas, asig,
+    };
+  }, [control, rows, quien, info, personas, incluirAdmins, incluirExternos]);
+
   // Alertas de baja sostenida: últimas N sesiones de una asignatura, todas bajo el umbral
   const alertas = useMemo(() => {
     const out = [];
@@ -378,7 +459,7 @@ export default function Reporte({ onVolver }) {
                 {ASIGS.map(a => <option key={a} value={a}>{NOMBRE_ASIG[a]}</option>)}
               </select>
             )}
-            {(tab === "errores" || tab === "actividad" || tab === "evolucion") && (
+            {(tab === "errores" || tab === "actividad" || tab === "evolucion" || tab === "detalle") && (
               <select value={quien} onChange={e => setQuien(e.target.value)} style={selectStyle}>
                 <option value="todos">Todo el curso</option>
                 {alumnosTabla.map(a => <option key={a.email} value={a.email}>{a.nombre}</option>)}
@@ -402,7 +483,10 @@ export default function Reporte({ onVolver }) {
                 <Tile valor={tasaCurso.total.resp} label="respuestas" />
                 <Tile valor={tasaCurso.total.resp ? `${pct(tasaCurso.total.ok, tasaCurso.total.resp)}%` : "—"} label="aciertos del curso" color={tasaCurso.total.resp ? colorAcierto(pct(tasaCurso.total.ok, tasaCurso.total.resp)) : "white"} />
                 <Tile valor={fmtMin(control.reduce((n, x) => n + x.ms, 0))} label="práctica estimada del curso" />
+                <Tile valor={fmt1(resumen.promResp)} label="respuestas por alumno por semana" color={azul} />
+                <Tile valor={fmt1(resumen.promDias)} label="días activos por alumno por semana" color={azul} />
               </div>
+              <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Promedios por alumno con actividad, sobre las semanas (lunes a domingo) desde su primera práctica (máx. últimas {SEM_VENT}), contando las semanas sin práctica.</div>
 
               <Titulo>🚨 Alertas de baja sostenida</Titulo>
               {alertas.length === 0 ? (
@@ -440,50 +524,20 @@ export default function Reporte({ onVolver }) {
                 })}
               </div>
 
-              <Titulo>🏆 Quiénes más practican</Titulo>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                {[["7", "Últimos 7 días"], ["30", "Últimos 30 días"], ["todo", "Todo el tiempo"]].map(([k, l]) => (
-                  <button key={k} onClick={() => setDestPer(k)} style={{ background: destPer === k ? azul : "#0f172a", color: "white", border: `1px solid ${destPer === k ? azul : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                {[["resp", "Más respuestas"], ["dias", "Más constantes"], ["aciertos", "Mejores aciertos"]].map(([k, l]) => (
-                  <button key={k} onClick={() => setDestCrit(k)} style={{ background: destCrit === k ? verde : "#0f172a", color: "white", border: `1px solid ${destCrit === k ? verde : border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
-                ))}
-              </div>
-              <select value={destAsig} onChange={e => setDestAsig(e.target.value)} style={{ ...selectStyle, marginBottom: 8 }}>
-                {ASIGNATURAS.map(a => <option key={a.id} value={a.id}>{a.id === "total" ? "Todas las asignaturas" : a.label}</option>)}
-              </select>
+              <Titulo>🏆 Mejores rendimientos</Titulo>
+              {filtrosDest}
               {destacados.top.length === 0 ? (
                 <div style={{ color: "#475569", fontSize: 13, padding: 8 }}>
-                  {destCrit === "aciertos" ? `Aún nadie suma ${DEST_MIN_ACIERTOS} respuestas en este período para calcular aciertos.` : "Sin actividad registrada en este período."}
+                  {destCrit === "aciertos" ? `Aún nadie suma ${DEST_MIN} respuestas en este período para calcular aciertos.` : "Sin actividad registrada en este período."}
                 </div>
               ) : (
                 <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
-                  {destacados.top.map((x, i) => (
-                    <button key={x.email} onClick={() => { setQuien(x.email); setTab("actividad"); }}
-                      style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: "pointer" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: 14 }}>
-                        <span style={{ width: 28, textAlign: "center", fontWeight: 800, color: i < 3 ? amarillo : muted }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
-                        <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{x.nombre}</span>
-                        <span style={{ fontWeight: 800, whiteSpace: "nowrap", color: destCrit === "aciertos" ? colorAcierto(x.p) : destCrit === "dias" ? verde : azul }}>
-                          {destCrit === "aciertos" ? `${x.p}%` : destCrit === "dias" ? `${x.nDias} ${x.nDias === 1 ? "día" : "días"}` : `${x.resp} resp.`}
-                        </span>
-                      </div>
-                      <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "6px 0 3px 38px" }}>
-                        <div style={{ width: `${destCrit === "aciertos" ? x.p : destCrit === "dias" ? pct(x.nDias, destacados.top[0].nDias) : pct(x.resp, destacados.maxResp)}%`, height: "100%", background: destCrit === "aciertos" ? colorAcierto(x.p) : destCrit === "dias" ? verde : azul, borderRadius: 3 }} />
-                      </div>
-                      <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
-                        {destCrit !== "resp" ? `${x.resp} resp. · ` : ""}{destCrit !== "aciertos" ? `${x.p}% de aciertos · ` : ""}{destCrit !== "dias" ? `${x.nDias} ${x.nDias === 1 ? "día" : "días"} con actividad · ` : ""}última vez {fechaCorta(x.ultima)}
-                      </div>
-                    </button>
-                  ))}
+                  {destacados.top.map(filaDest)}
                 </div>
               )}
               <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>
-                {destacados.n} {destacados.n === 1 ? "persona practicó" : "personas practicaron"} en este período ({destacados.resp} respuestas).
-                {destCrit === "aciertos" ? ` Para "Mejores aciertos" se necesitan al menos ${DEST_MIN_ACIERTOS} respuestas.` : ""}
-                {" "}<button onClick={() => setTab("ranking")} style={{ background: "none", border: "none", color: azul, cursor: "pointer", padding: 0, fontSize: 11, textDecoration: "underline" }}>Ver el ranking completo</button>
+                {destCrit === "aciertos" ? `Aciertos ÷ respuestas; entran quienes suman al menos ${DEST_MIN} respuestas. ` : ""}
+                <button onClick={() => setTab("ranking")} style={{ background: "none", border: "none", color: azul, cursor: "pointer", padding: 0, fontSize: 11, textDecoration: "underline" }}>Ver el ranking completo</button>
               </div>
 
               <Titulo>⚠️ Sin practicar en los últimos 7 días</Titulo>
@@ -521,40 +575,136 @@ export default function Reporte({ onVolver }) {
 
           {tab === "ranking" && (
           <>
-          <Titulo>🏆 Ranking de uso · quién practica más</Titulo>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-            {ASIGNATURAS.map(a => (
-              <button key={a.id} onClick={() => setRankAsig(a.id)}
-                style={{ background: rankAsig === a.id ? azul : "#0f172a", color: "white", border: `1px solid ${rankAsig === a.id ? azul : border}`, borderRadius: 20, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                {a.label}
-              </button>
-            ))}
-          </div>
-          {ranking.length === 0 ? (
-            <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Aún no hay actividad registrada en esta asignatura.</div>
+          <Titulo>🏆 Ranking de rendimiento</Titulo>
+          {filtrosDest}
+          {destacados.todos.length === 0 ? (
+            <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>
+              {destCrit === "aciertos" ? `Aún nadie suma ${DEST_MIN} respuestas en este período y asignatura.` : "Aún no hay actividad registrada en este período y asignatura."}
+            </div>
           ) : (
             <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden" }}>
-              {ranking.map((x, i) => (
-                <div key={x.email} style={{ padding: "9px 14px", borderBottom: `1px solid ${border}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: "white", fontSize: 14 }}>
-                    <span style={{ width: 28, textAlign: "center", fontWeight: 800, color: i < 3 ? amarillo : muted }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
-                    <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{x.nombre}</span>
-                    <span style={{ fontWeight: 800, color: azul, whiteSpace: "nowrap" }}>{x[rankAsig]} resp.</span>
-                  </div>
-                  <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "6px 0 3px 38px" }}>
-                    <div style={{ width: `${pct(x[rankAsig], maxRank)}%`, height: "100%", background: azul, borderRadius: 3 }} />
-                  </div>
-                  <div style={{ color: muted, fontSize: 11, marginLeft: 38 }}>
-                    {rankAsig === "total"
-                      ? `Inglés ${x.ingles} · Lenguaje ${x.lenguaje} · Matemáticas ${x.mate} · Hab. Mat. ${x.matematicas} · Ciencias ${x.ciencias} · `
-                      : ""}
-                    {x.nDias} {x.nDias === 1 ? "día" : "días"} con actividad · última vez {fechaCorta(x.ultima)}
-                  </div>
-                </div>
-              ))}
+              {destacados.todos.map(filaDest)}
             </div>
           )}
-          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>Cuenta respuestas registradas de todas las actividades. Matemáticas y Habilidades Matemáticas se registran desde esta versión.</div>
+          {destacados.bajoMin.length > 0 && (
+            <>
+              <Titulo>Aún con pocas respuestas (menos de {DEST_MIN})</Titulo>
+              <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, overflow: "hidden", opacity: 0.85 }}>
+                {destacados.bajoMin.map(x => (
+                  <button key={x.email} onClick={() => { setQuien(x.email); setTab("detalle"); }}
+                    style={{ width: "100%", display: "flex", justifyContent: "space-between", gap: 10, background: "transparent", border: "none", borderBottom: `1px solid ${border}`, padding: "9px 14px", cursor: "pointer", textAlign: "left" }}>
+                    <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>{x.nombre}</span>
+                    <span style={{ color: muted, fontSize: 12, whiteSpace: "nowrap" }}>{x.ok}/{x.resp} resp. · {x.p}%</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div style={{ color: "#64748b", fontSize: 11, margin: "6px 2px 0" }}>
+            {destacados.n} {destacados.n === 1 ? "persona practicó" : "personas practicaron"} en este período ({destacados.resp} respuestas). El ranking por aciertos exige al menos {DEST_MIN} respuestas, para que no gane quien contestó 2 y acertó 2. Toca una fila para ver su detalle.
+          </div>
+          </>
+          )}
+
+          {tab === "detalle" && (
+          <>
+          <Titulo>🧾 Detalle por alumno y asignatura</Titulo>
+          <div style={{ color: "#64748b", fontSize: 11, margin: "0 2px 8px" }}>
+            Elige un alumno arriba para ver su ficha, o deja "Todo el curso". Los promedios semanales se calculan sobre las semanas (lunes a domingo) desde su primera práctica (máx. últimas {SEM_VENT}), contando las semanas sin práctica.
+          </div>
+          {!ficha ? (
+            <div style={{ color: "#475569", fontSize: 13, padding: 12 }}>Aún no hay respuestas registradas para esta selección.</div>
+          ) : (
+            <>
+              <div style={{ color: "#0f172a", fontSize: 16, fontWeight: 800, margin: "4px 2px 8px" }}>
+                {ficha.nombre}{ficha.curso && <span style={{ color: "#475569", fontSize: 12, fontWeight: 600 }}> · {ficha.n} {ficha.n === 1 ? "alumno con actividad" : "alumnos con actividad"} · promedios por alumno</span>}
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Tile valor={`${pct(ficha.ok, ficha.resp)}%`} label={`aciertos (${ficha.ok}/${ficha.resp})`} color={colorAcierto(pct(ficha.ok, ficha.resp))} />
+                <Tile valor={fmt1(ficha.promResp)} label="respuestas por semana" color={azul} />
+                <Tile valor={fmt1(ficha.promDias)} label="días activos por semana" color={azul} />
+                <Tile valor={`~${fmtMin(ficha.ms)}`} label={ficha.curso ? "práctica estimada total" : "tiempo de práctica estimado"} />
+                {!ficha.curso && <Tile valor={ficha.nDias} label={ficha.nDias === 1 ? "día con actividad" : "días con actividad"} />}
+                {!ficha.curso && <Tile valor={ficha.ultima ? fechaHora(ficha.ultima) : "—"} label="última actividad" />}
+              </div>
+
+              {(() => {
+                const mx = Math.max(1, ...ficha.semanas.map(w => w.resp));
+                return (
+                  <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "10px 12px", marginTop: 12 }}>
+                    <div style={{ color: "white", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Uso por semana · respuestas (últimas 8 semanas)</div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 84 }}>
+                      {ficha.semanas.map((w, i) => (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                          <div style={{ color: w.resp ? "#cbd5e1" : "#475569", fontSize: 10, fontWeight: 700 }}>{w.resp}</div>
+                          <div style={{ width: "100%", maxWidth: 34, height: `${Math.max(3, (w.resp / mx) * 58)}px`, background: w.resp ? azul : "#334155", borderRadius: 3, opacity: i === 7 ? 0.7 : 1 }} />
+                          <div style={{ color: muted, fontSize: 9, marginTop: 2 }}>{fechaCorta(w.ini)}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 10, marginTop: 4 }}>Cada barra es una semana (fecha = lunes). La última semana aún está en curso.</div>
+                  </div>
+                );
+              })()}
+
+              <Titulo>Por asignatura</Titulo>
+              {ficha.asig.filter(g => g.resp > 0).map(g => {
+                const c = tasaCurso[g.a];
+                return (
+                  <div key={g.a} style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                      <div>
+                        <div style={{ color: "white", fontSize: 15, fontWeight: 800 }}>{NOMBRE_ASIG[g.a]}</div>
+                        <div style={{ color: muted, fontSize: 11 }}>{g.ok}/{g.resp} resp. · {g.ses} {g.ses === 1 ? "sesión" : "sesiones"} · ~{fmtMin(g.ms)} · última {fechaHora(g.ultima)}</div>
+                      </div>
+                      <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ color: colorAcierto(g.p), fontSize: 22, fontWeight: 900 }}>{g.p}%</div>
+                        {!ficha.curso && c.resp > 0 && <div style={{ color: muted, fontSize: 11 }}>curso: {pct(c.ok, c.resp)}%</div>}
+                      </div>
+                    </div>
+                    <div style={{ height: 5, background: "#0f172a", borderRadius: 3, margin: "8px 0" }}>
+                      <div style={{ width: `${g.p}%`, height: "100%", background: colorAcierto(g.p), borderRadius: 3 }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 14, flexWrap: "wrap", color: muted, fontSize: 12 }}>
+                      <span>Resp. por semana: <b style={{ color: azul }}>{fmt1(g.promResp)}</b></span>
+                      <span>Días activos por semana: <b style={{ color: azul }}>{fmt1(g.promDias)}</b></span>
+                      <span>Dominadas: <b style={{ color: verde }}>{g.dominados}</b></span>
+                      <span>Por reforzar: <b style={{ color: g.pendientes ? amarillo : verde }}>{g.pendientes}</b></span>
+                    </div>
+                    {g.mejor && (
+                      <div style={{ color: muted, fontSize: 12, marginTop: 6 }}>
+                        Mejor actividad: <b style={{ color: "#cbd5e1" }}>{g.mejor.label.replace(/^[^·]*· /, "")}</b> <span style={{ color: colorAcierto(pct(g.mejor.ok, g.mejor.resp)) }}>({pct(g.mejor.ok, g.mejor.resp)}%)</span>
+                        {" · "}A mejorar: <b style={{ color: "#cbd5e1" }}>{g.peor.label.replace(/^[^·]*· /, "")}</b> <span style={{ color: colorAcierto(pct(g.peor.ok, g.peor.resp)) }}>({pct(g.peor.ok, g.peor.resp)}%)</span>
+                      </div>
+                    )}
+                    {g.errores.length > 0 && (
+                      <div style={{ marginTop: 8, borderTop: `1px solid ${border}`, paddingTop: 6 }}>
+                        <div style={{ color: muted, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Errores más frecuentes</div>
+                        {g.errores.map(it => {
+                          const corr = respuestaCorrecta(it.item);
+                          return (
+                            <div key={it.item} style={{ padding: "5px 0", fontSize: 12 }}>
+                              <div style={{ color: "white" }}>{it.etiqueta} <span style={{ color: "#fca5a5", fontWeight: 700 }}>· falló {it.errores} de {it.intentos}</span></div>
+                              {corr && <div style={{ color: verde, fontWeight: 700 }}>✓ {corr}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 6, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <button onClick={() => { setEvoAsig(g.a); setTab("evolucion"); }} style={{ background: "none", border: "none", color: azul, cursor: "pointer", padding: 0, fontSize: 12, textDecoration: "underline" }}>Ver evolución</button>
+                      <button onClick={() => { setAct("todas"); setTab("errores"); }} style={{ background: "none", border: "none", color: azul, cursor: "pointer", padding: 0, fontSize: 12, textDecoration: "underline" }}>Ver todos los errores</button>
+                    </div>
+                  </div>
+                );
+              })}
+              {ficha.asig.some(g => g.resp === 0) && (
+                <div style={{ color: "#64748b", fontSize: 12, margin: "4px 2px" }}>
+                  Sin actividad en: {ficha.asig.filter(g => g.resp === 0).map(g => NOMBRE_ASIG[g.a]).join(", ")}.
+                </div>
+              )}
+            </>
+          )}
           </>
           )}
 
