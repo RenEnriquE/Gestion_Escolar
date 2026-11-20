@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MODOS, construir, clavesDe, clavesEnsayo, esClaveEcuaciones } from "./ecuacionesData.js";
 import { Balanza, Secuencia, FilaFiguras } from "./Visuales.jsx";
 import { usePermisos } from "../permisos.js";
@@ -7,7 +7,6 @@ import { registrarRespuesta, cargarRespuestas, analizarItems } from "../registro
 const verde = "#22c55e", rojo = "#ef4444", naranja = "#f59e0b", azulTexto = "#60a5fa";
 const card = "#1e293b", border = "#334155";
 const ESPERA_OK = 1500;      // ms que se muestra un acierto antes de pasar a la siguiente
-const ESPERA_ERROR = 4500;   // ms que se muestra la explicación tras un error
 
 const REFUERZO = { id: "ep_refuerzo", label: "Reforzar mis errores", emoji: "🎯", color: naranja,
   desc: "Practica las preguntas de Ecuaciones y Patrones que más te cuestan",
@@ -103,10 +102,16 @@ export default function EcuacionesJuego({ modo, onVolver }) {
     else { setFase("resultado"); cargarPendientes(); }
   };
 
+  // Si acierta pasa solo a la siguiente; si se equivoca se queda en la pantalla para leer la resolución paso a paso
+  const refPasos = useRef(null);
   useEffect(() => {
     if (fase !== "juego" || elegida === null) return;
     const ok = elegida === preguntas[actual].correcta;
-    const t = setTimeout(avanzar, ok ? ESPERA_OK : ESPERA_ERROR);
+    if (!ok) {
+      const t = setTimeout(() => refPasos.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" }), 150);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(avanzar, ESPERA_OK);
     return () => clearTimeout(t);
   }, [elegida, fase, actual]);
 
@@ -251,17 +256,31 @@ export default function EcuacionesJuego({ modo, onVolver }) {
         })}
       </div>
 
-      {/* Espacio fijo para el aviso, así los botones no se mueven al responder */}
-      <div style={{ minHeight: 110, textAlign: "center" }}>
-        {respondida && (
-          <button onClick={avanzar} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, width: "100%" }}>
-            <div style={{ color: acerto ? verde : rojo, fontWeight: 700, fontSize: 15 }}>
-              {acerto ? "¡Correcto! 🎉" : "Revisa la respuesta · toca para seguir →"}
-            </div>
-            <div style={{ color: "#475569", fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>{q.explicacion}</div>
-          </button>
-        )}
-      </div>
+      {/* Acierto: aviso breve y pasa solo. Error: resolución paso a paso y botón para seguir */}
+      {respondida && acerto && (
+        <div style={{ textAlign: "center", minHeight: 110 }}>
+          <div style={{ color: verde, fontWeight: 700, fontSize: 15 }}>¡Correcto! 🎉</div>
+          <div style={{ color: "#475569", fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>{q.explicacion}</div>
+        </div>
+      )}
+      {respondida && !acerto && (
+        <div ref={refPasos} style={{ background: card, border: `2px solid ${naranja}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
+          <div style={{ color: rojo, fontWeight: 800, fontSize: 15 }}>Todavía no 🙂 · la respuesta correcta es <span style={{ color: verde }}>{q.correcta}</span></div>
+          <div style={{ color: naranja, fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, margin: "12px 0 8px" }}>📝 Así se resuelve, paso a paso</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(q.pasos || [q.explicacion]).map((paso, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ flex: "0 0 24px", height: 24, borderRadius: "50%", background: naranja, color: "#1e293b", fontWeight: 900, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>{i + 1}</div>
+                <div style={{ color: "white", fontSize: 14.5, lineHeight: 1.5 }}>{paso}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ color: "#94a3b8", fontSize: 12.5, marginTop: 12, lineHeight: 1.4 }}>Repítelo tú en tu hoja y compruébalo antes de seguir.</div>
+          <Boton color={verde} onClick={avanzar} style={{ width: "100%", marginTop: 12, padding: "14px 20px", fontSize: 16 }}>
+            {actual < preguntas.length - 1 ? "Entendido, siguiente →" : "Entendido, ver resultado →"}
+          </Boton>
+        </div>
+      )}
     </div>
   );
 }
