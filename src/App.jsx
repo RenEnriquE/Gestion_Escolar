@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "./supabase.js";
+import Paseos from "./paseos.jsx";
 import Aprendo from "./aprendo/Aprendo.jsx";
 import { PermisosContext, crearPuede, CATALOGO } from "./aprendo/permisos.js";
 import * as XLSX from "xlsx";
@@ -2464,7 +2465,7 @@ const DatosPendientes = ({ alumnos, setAlumnos, puedeEditar, estrecho }) => {
 };
 
 // ── Fichas de Alumnos ─────────────────────────────────────────────────────────
-const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, creditosManuales, setCreditosManuales }) => {
+const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, creditosManuales, setCreditosManuales, paseos, setPaseos }) => {
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
@@ -2595,9 +2596,15 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <h1 style={{ color: PALETTE.text, fontSize: 24, fontWeight: 800, margin: 0 }}>Fichas</h1>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn variant={vista === "paseos" ? "primary" : "ghost"} small onClick={() => setVista(v => v === "paseos" ? "lista" : "paseos")}>
+            {vista === "paseos" ? "← Volver a fichas" : "🚌 Paseos y listados"}
+          </Btn>
+          {vista !== "paseos" && (
           <Btn variant={vista === "pendientes" ? "primary" : "ghost"} small onClick={() => setVista(v => v === "pendientes" ? "lista" : "pendientes")}>
             {vista === "pendientes" ? "← Volver a fichas" : "Datos pendientes"}
           </Btn>
+          )}
+          {vista !== "paseos" && (
           <div style={{ position: "relative" }}>
             <Btn variant="ghost" small onClick={() => setShowColPicker(s => !s)}>
               <Icon name="tag" size={13} /> Columnas ({selCols.size})
@@ -2621,18 +2628,25 @@ const Fichas = ({ alumnos, setAlumnos, isAdmin, actividades, participacion, cred
               </>
             )}
           </div>
+          )}
+          {vista !== "paseos" && (
           <Btn variant="ghost" small onClick={exportExcel}>
             <Icon name="stats" size={13} /> Exportar Excel
           </Btn>
+          )}
         </div>
       </div>
 
+      {vista !== "paseos" && (
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <Btn variant={grupoF === "curso" ? "primary" : "ghost"} small onClick={() => { setGrupoF("curso"); setSelected(null); }}>Del curso ({alumnos.filter(a => !a.externo).length})</Btn>
         <Btn variant={grupoF === "externos" ? "primary" : "ghost"} small onClick={() => { setGrupoF("externos"); setSelected(null); }}>Otros cursos / hermanos ({alumnos.filter(a => a.externo).length})</Btn>
         <Btn variant={grupoF === "todos" ? "primary" : "ghost"} small onClick={() => { setGrupoF("todos"); setSelected(null); }}>Todos ({alumnos.length})</Btn>
       </div>
-      {vista === "pendientes" ? (
+      )}
+      {vista === "paseos" ? (
+        <Paseos alumnos={alumnos} cols={ALL_COLS} data={paseos} setData={setPaseos} isAdmin={isAdmin} ui={{ PALETTE, Btn, Input, Modal }} />
+      ) : vista === "pendientes" ? (
         <DatosPendientes alumnos={alumnosGrupo} setAlumnos={setAlumnos} puedeEditar={isAdmin} estrecho={estrecho} />
       ) : (
       <div style={{ display: "grid", gridTemplateColumns: selected && !estrecho ? "230px 1fr" : "1fr", gap: 16 }}>
@@ -2877,6 +2891,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [visibility, setVisibility] = useState(SEED_VISIBILITY);
   const [gruposCfg, setGruposCfg] = useState({ grupos: [], permisos: {} });
+  const [paseos, setPaseos] = useState({ eventos: [] });
+  const paseosEditado = useRef(false);   // solo se guarda si el administrador cambió algo (así nunca se pisa lo guardado con una lista vacía)
+  const actualizarPaseos = (fn) => { paseosEditado.current = true; setPaseos(fn); };
 
   const [alumnos, setAlumnos] = useState(SEED_ALUMNOS);
   const [actividades, setActividades] = useState(SEED_ACTIVIDADES);
@@ -2934,11 +2951,12 @@ export default function App() {
     (async () => {
       setLoading(true);
       try {
-        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis, dbGrupos] = await Promise.all([
+        const [dbAlumnos, dbTipos, dbActividades, dbEnc, dbPart, dbVis, dbGrupos, dbPaseos] = await Promise.all([
           DB.getAll('alumnos'), DB.getAll('tipos'), DB.getAll('actividades'),
           DB.getAll('encuestas'), DB.getAll('participacion'),
           DB.getConfig('visibility'),
           DB.getConfig('grupos'),
+          DB.getConfig('paseos'),
         ]);
 
         if (dbAlumnos?.length) setAlumnos(dbAlumnos.map(dbToAlumno));
@@ -2974,6 +2992,7 @@ export default function App() {
 
         if (dbVis) setVisibility(dbVis);
         if (dbGrupos) setGruposCfg({ grupos: dbGrupos.grupos || [], permisos: dbGrupos.permisos || {} });
+        if (dbPaseos?.eventos) setPaseos({ eventos: dbPaseos.eventos });
       } catch (e) { console.error("Load error", e); }
       setLoading(false);
     })();
@@ -2992,6 +3011,7 @@ export default function App() {
   useEffect(() => { if (!loading && puedeEscribir) debounceSave('encuestas', () => DB.upsert('encuestas', encuestas.map(encToDB))); }, [encuestas, loading]);
   useEffect(() => { if (!loading && puedeEscribir) debounceSave('visibility', () => DB.setConfig('visibility', visibility)); }, [visibility, loading]);
   useEffect(() => { if (!loading && puedeEscribir) debounceSave('grupos', () => DB.setConfig('grupos', gruposCfg)); }, [gruposCfg, loading]);
+  useEffect(() => { if (!loading && puedeEscribir && paseosEditado.current) debounceSave('paseos', () => DB.setConfig('paseos', paseos)); }, [paseos, loading]);
   useEffect(() => { S.set("ge_colaboraciones", colaboraciones); }, [colaboraciones]);
   useEffect(() => { S.set("ge_creditos_manuales", creditosManuales); }, [creditosManuales]);
   // Participacion saves individually per change (more granular)
@@ -3070,7 +3090,7 @@ export default function App() {
       case "encuestas":     return <Encuestas {...props} actividades={actividades} setActividades={setActividades} />;
       case "estadisticas":  return <Estadisticas {...props} />;
       case "tipos":         return <TiposActividad {...props} />;
-      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} />;
+      case "ficha":         return <Fichas alumnos={alumnos} setAlumnos={setAlumnos} isAdmin={isAdmin} actividades={actividades} participacion={participacion} creditosManuales={creditosManuales} setCreditosManuales={setCreditosManuales} paseos={paseos} setPaseos={actualizarPaseos} />;
       case "colaboraciones": return <Colaboraciones alumnos={alumnosCurso} colaboraciones={colaboraciones} setColaboraciones={setColaboraciones} isAdmin={isAdmin} />;
       case "aprendo":       return <PermisosContext.Provider value={{ puede: crearPuede(user.rol, user.grupos, gruposCfg), email: user.email, alumId: user.alumId, esAdmin: isAdmin, alumnos }}><Aprendo /></PermisosContext.Provider>;
       case "usuarios":      return <Usuarios visibility={visibility} setVisibility={setVisibility} alumnos={alumnos} miEmail={user.email} gruposCfg={gruposCfg} setGruposCfg={setGruposCfg} />;
